@@ -11,8 +11,6 @@ website:
   - https://github.com/canonical/mongos-k8s-operator
   - https://chat.charmhub.io/charmhub/channels/data-platform
 summary: A mongos k8s operator charm
-series:
-  - jammy
 
 peers:
   router-peers:

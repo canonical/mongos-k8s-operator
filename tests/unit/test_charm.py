@@ -6,7 +6,7 @@ import unittest
 
 from ops.testing import Harness
 
-from charm import MongosOperatorCharm
+from charm import MongosCharm
 
 
 class TestCharm(unittest.TestCase):
@@ -14,7 +14,7 @@ class TestCharm(unittest.TestCase):
 
     def setUp(self, *unused):
         """Set up the charm for each unit test."""
-        self.harness = Harness(MongosOperatorCharm)
+        self.harness = Harness(MongosCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
 
