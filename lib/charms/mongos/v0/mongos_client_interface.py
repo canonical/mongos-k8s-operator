@@ -7,11 +7,13 @@ This class handles the sharing of secrets between sharded components, adding sha
 shards.
 """
 import logging
-
-from charms.data_platform_libs.v0.data_interfaces import DatabaseProvides
-from charms.mongodb.v1.mongos import MongosConfiguration
-from ops.charm import CharmBase
 from ops.framework import Object
+from ops.charm import CharmBase
+from charms.data_platform_libs.v0.data_interfaces import (
+    DatabaseProvides,
+)
+
+from charms.mongodb.v1.mongos import MongosConfiguration
 
 logger = logging.getLogger(__name__)
 DATABASE_KEY = "database"
