@@ -56,16 +56,16 @@ jobs:
       cache: true
 
   integration-test:
-    name: Integration test charm | 3.4.4
+    name: Integration test charm
     needs:
       - lint
       - unit-test
       - build
     uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v16.7.0
     with:
-      artifact-prefix: packed-charm-cache-true
+      artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
       cloud: microk8s
-      microk8s-snap-channel: 1.29-strict/stable
-      juju-agent-version: 3.4.4
+      microk8s-snap-channel: 1.29-strict/stable # renovate: latest microk8s
+      juju-agent-version: 3.4.4 # renovate: juju-agent-pin-minor
     permissions:
       contents: write # Needed for Allure Report beta
