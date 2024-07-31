@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Charm code for mongos service on Kubernetes."""
+
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 from ops.charm import CharmBase
