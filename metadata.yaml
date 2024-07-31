@@ -1,0 +1,50 @@
+# Copyright 2024 Canonical Ltd.
+# See LICENSE file for licensing details.
+name: mongos-k8s
+display-name: mongos-k8s
+description: |
+  mongos is a router/proxy used for sharded MongoDB clusters. This charm
+  deploys and operates mongos as a charm on K8s.
+source: https://github.com/canonical/mongos-k8s-operator
+issues: https://github.com/canonical/mongos-k8s-operator/issues
+website:
+  - https://github.com/canonical/mongos-k8s-operator
+  - https://chat.charmhub.io/charmhub/channels/data-platform
+summary: A mongos k8s operator charm
+
+peers:
+  router-peers:
+    interface: mongos-peers
+  upgrade-version-a:
+    # Relation versioning scheme:
+    # DA056 - Upgrading in-place upgrade protocol
+    # https://docs.google.com/document/d/1H7qy5SAwLiCOKO9xMQJbbQP5_-jGV6Lhi-mJOk4gZ08/edit
+    interface: upgrade
+
+requires:
+  certificates:
+    interface: tls-certificates
+    limit: 1
+  cluster:
+    interface: config-server
+    limit: 1
+
+containers:
+  mongod:
+    resource: mongodb-image
+    mounts:
+      - storage: mongodb
+        location: /var/lib/mongodb
+resources:
+  mongodb-image:
+    type: oci-image
+    description: OCI image for mongodb
+    # TODO: Update sha whenever upstream rock changes
+    upstream-source: ghcr.io/canonical/charmed-mongodb:6.0.6-22.04_edge@sha256:b4b3edb805b20de471da57802643bfadbf979f112d738bc540ab148d145ddcfe
+storage:
+  mongodb:
+    type: filesystem
+    location: /var/lib/mongodb
+  mongodb-logs:
+    type: filesystem
+    location: /var/log/mongodb
