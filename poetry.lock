@@ -1747,8 +1747,8 @@ develop = false
 [package.source]
 type = "git"
 url = "https://github.com/canonical/data-platform-workflows"
-reference = "v16.7.0"
-resolved_reference = "9e3a54bc14e015cc1a5e793370f613daa0a71ff0"
+reference = "v17.0.1"
+resolved_reference = "07f8ca137cdede5e7cca982e31426cfaab77923b"
 subdirectory = "python/pytest_plugins/github_secrets"
 
 [[package]]
@@ -2374,4 +2374,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10.12"
-content-hash = "5cdf942ada3e2b88f4f75aacf6b22344ab9a1d0047cf091a5046d56d7a567e2a"
+content-hash = "122c87ee2da95240d259ad8868e80e5e11228e348b32786f1fa955832e75e4c2"
