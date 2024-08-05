@@ -7,6 +7,7 @@ from ops.charm import CharmBase
 from ops.framework import Object
 from ops.model import StatusBase
 
+
 # The unique Charmhub library identifier, never change it
 LIBID = "0713372afa0841359edbb777273ecdbf"
 
