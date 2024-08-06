@@ -2,17 +2,12 @@
 """Charm code for `mongos` daemon."""
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
-import os
 import json
-import pwd
-from charms.mongodb.v1.helpers import (
-    add_args_to_env,
-    get_mongos_args,
-    copy_licenses_to_unit,
-    KEY_FILE,
-)
-from charms.operator_libs_linux.v1 import snap
-from pathlib import Path
+
+from exceptions import MissingSecretError
+
+from ops.pebble import PathError, ProtocolError
+
 
 from typing import Set, Optional, Dict
 
@@ -29,13 +24,8 @@ from charms.mongodb.v1.users import (
 from config import Config
 
 import ops
-from ops.model import (
-    BlockedStatus,
-    MaintenanceStatus,
-    Relation,
-    ActiveStatus,
-)
-from ops.charm import InstallEvent, StartEvent, RelationDepartedEvent
+from ops.model import BlockedStatus, Container, Relation, ActiveStatus, Unit
+from ops.charm import StartEvent, RelationDepartedEvent
 
 import logging
 
@@ -63,7 +53,7 @@ class MongosCharm(ops.CharmBase):
 
     def __init__(self, *args):
         super().__init__(*args)
-        self.framework.observe(self.on.install, self._on_install)
+        self.framework.observe(self.on.mongos_pebble_ready, self._on_mongos_pebble_ready)
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.update_status, self._on_update_status)
 
@@ -72,19 +62,37 @@ class MongosCharm(ops.CharmBase):
         self.status = MongosStatusHandler(self)
 
     # BEGIN: hook functions
-    def _on_install(self, event: InstallEvent) -> None:
-        """Handle the install event (fired on startup)."""
-        self.status.set_and_share_status(MaintenanceStatus("installing mongos"))
-        try:
-            self.install_snap_packages(packages=Config.SNAP_PACKAGES)
-
-        except snap.SnapError as e:
-            logger.info("Failed to install snap, error: %s", e)
-            self.status.set_and_share_status(BlockedStatus("couldn't install mongos"))
+    def _on_mongos_pebble_ready(self, event) -> None:
+        """Configure MongoDB pebble layer specification."""
+        if not self.is_integrated_to_config_server():
+            logger.info(
+                "mongos service not starting. Cannot start until application is integrated to a config-server."
+            )
             return
 
-        # add licenses
-        copy_licenses_to_unit()
+        # Get a reference the container attribute
+        container = self.unit.get_container(Config.CONTAINER_NAME)
+        if not container.can_connect():
+            logger.debug("mongos container is not ready yet.")
+            event.defer()
+            return
+
+        try:
+            # mongod needs keyFile and TLS certificates on filesystem
+            self._push_keyfile_to_workload(container)
+            self._pull_licenses(container)
+            self._set_data_dir_permissions(container)
+
+        except (PathError, ProtocolError, MissingSecretError) as e:
+            logger.error("Cannot initialize workload: %r", e)
+            event.defer()
+            return
+
+        # Add initial Pebble config layer using the Pebble API
+        container.add_layer(Config.CONTAINER_NAME, self._mongos_layer, combine=True)
+
+        # Restart changed services and start startup-enabled services.
+        container.replan()
 
     def _on_start(self, event: StartEvent) -> None:
         """Handle the start event."""
@@ -98,7 +106,7 @@ class MongosCharm(ops.CharmBase):
         if self.unit.status == Config.Status.UNHEALTHY_UPGRADE:
             return
 
-        if not self.model.relations[Config.Relations.CLUSTER_RELATIONS_NAME]:
+        if not self.is_integrated_to_config_server():
             logger.info(
                 "Missing integration to config-server. mongos cannot run unless connected to config-server."
             )
@@ -110,6 +118,10 @@ class MongosCharm(ops.CharmBase):
     # END: hook functions
 
     # BEGIN: helper functions
+    def is_integrated_to_config_server(self) -> bool:
+        """Returns True if the mongos application is integrated to a config-server."""
+        return self.model.relations[Config.Relations.CLUSTER_RELATIONS_NAME] is not None
+
     def _get_mongos_config_for_user(
         self, user: MongoDBUser, hosts: Set[str]
     ) -> MongosConfiguration:
@@ -171,83 +183,16 @@ class MongosCharm(ops.CharmBase):
         content[key] = Config.Secrets.SECRET_DELETED_LABEL
         secret.set_content(content)
 
-    def get_keyfile_contents(self) -> str:
-        """Retrieves the contents of the keyfile on host machine."""
-        # wait for keyFile to be created by leader unit
-        if not self.get_secret(APP_SCOPE, Config.Secrets.SECRET_KEYFILE_NAME):
-            logger.debug("waiting for leader unit to generate keyfile contents")
-            return
+    def restart_charm_services(self):
+        """Restart mongod service."""
+        container = self.unit.get_container(Config.CONTAINER_NAME)
+        container.stop(Config.SERVICE_NAME)
 
-        key_file_path = f"{Config.MONGOD_CONF_DIR}/{KEY_FILE}"
-        key_file = Path(key_file_path)
-        if not key_file.is_file():
-            logger.info("no keyfile present")
-            return
+        container.add_layer(Config.CONTAINER_NAME, self._mongod_layer, combine=True)
+        container.replan()
 
-        with open(key_file_path, "r") as file:
-            key = file.read()
-
-        return key
-
-    def push_file_to_unit(self, parent_dir, file_name, file_contents) -> None:
-        """K8s charms can push files to their containers easily, this is a vm charm workaround."""
-        Path(parent_dir).mkdir(parents=True, exist_ok=True)
-        file_name = f"{parent_dir}/{file_name}"
-        with open(file_name, "w") as write_file:
-            write_file.write(file_contents)
-
-        # MongoDB limitation; it is needed 400 rights for keyfile and we need 440 rights on tls
-        # certs to be able to connect via MongoDB shell
-        if Config.TLS.KEY_FILE_NAME in file_name:
-            os.chmod(file_name, 0o400)
-        else:
-            os.chmod(file_name, 0o440)
-        mongodb_user = pwd.getpwnam(MONGO_USER)
-        os.chown(file_name, mongodb_user.pw_uid, ROOT_USER_GID)
-
-    def start_mongos_service(self) -> None:
-        """Starts the mongos service.
-
-        Raises:
-            snap.SnapError
-        """
-        snap_cache = snap.SnapCache()
-        mongodb_snap = snap_cache["charmed-mongodb"]
-        mongodb_snap.start(services=["mongos"], enable=True)
-
-    def stop_mongos_service(self) -> None:
-        """Stops the mongos service.
-
-        Raises:
-            snap.SnapError
-        """
-        snap_cache = snap.SnapCache()
-        mongodb_snap = snap_cache["charmed-mongodb"]
-        mongodb_snap.stop(services=["mongos"])
-
-    def restart_charm_services(self) -> None:
-        """Retarts the mongos service.
-
-        Raises:
-            snap.SnapError
-        """
-        self.stop_mongos_service()
-        self.update_mongos_args()
-        self.start_mongos_service()
-
-    def update_mongos_args(self, config_server_db: Optional[str] = None):
-        config_server_db = config_server_db or self.config_server_db
-        if config_server_db is None:
-            logger.error("cannot start mongos without a config_server_db")
-            raise MissingConfigServerError()
-
-        mongos_start_args = get_mongos_args(
-            self.mongos_config,
-            snap_install=True,
-            config_server_db=config_server_db,
-            external_connectivity=self.is_external_client,
-        )
-        add_args_to_env(MONGOS_VAR, mongos_start_args)
+        self._connect_mongodb_exporter()
+        self._connect_pbm_agent()
 
     def set_database(self, database: str) -> None:
         """Updates the database requested for the mongos user."""
@@ -320,9 +265,7 @@ class MongosCharm(ops.CharmBase):
         The host for mongos can be either the Unix Domain Socket or an IP address depending on how
         the client wishes to connect to mongos (inside Juju or outside).
         """
-        if self.is_external_client:
-            return self._unit_ip
-        return Config.MONGOS_SOCKET_URI_FMT
+        return self.unit_host
 
     @staticmethod
     def _generate_relation_departed_key(rel_id: int) -> str:
@@ -337,16 +280,87 @@ class MongosCharm(ops.CharmBase):
         """Checks if application is running in provided role."""
         return self.role == role_name
 
-    def remove_file_from_unit(self, parent_dir, file_name) -> None:
-        """Remove file from vm unit."""
-        if os.path.exists(f"{parent_dir}/{file_name}"):
-            os.remove(f"{parent_dir}/{file_name}")
-
     def is_db_service_ready(self) -> bool:
         """Returns True if the underlying database service is ready."""
         with MongosConnection(self.mongos_config) as mongos:
             return mongos.is_ready
 
+    def _push_keyfile_to_workload(self, container: Container) -> None:
+        """Upload the keyFile to a workload container."""
+        keyfile = self.get_secret(APP_SCOPE, Config.Secrets.SECRET_KEYFILE_NAME)
+        if not keyfile:
+            raise MissingSecretError(f"No secret defined for {APP_SCOPE}, keyfile")
+        else:
+            self.push_file_to_unit(
+                container=container,
+                parent_dir=Config.MONGOD_CONF_DIR,
+                file_name=Config.TLS.KEY_FILE_NAME,
+                file_contents=keyfile,
+            )
+
+    @staticmethod
+    def _pull_licenses(container: Container) -> None:
+        """Pull licences from workload."""
+        licenses = [
+            "snap",
+            "rock",
+            "percona-server",
+        ]
+
+        for license_name in licenses:
+            try:
+                license_file = container.pull(path=Config.get_license_path(license_name))
+                f = open("LICENSE", "x")
+                f.write(str(license_file.read()))
+                f.close()
+            except FileExistsError:
+                pass
+
+    @staticmethod
+    def _set_data_dir_permissions(container: Container) -> None:
+        """Ensure the data directory for mongodb is writable for the "mongodb" user.
+
+        Until the ability to set fsGroup and fsGroupChangePolicy via Pod securityContext
+        is available, we fix permissions incorrectly with chown.
+        """
+        for path in [Config.DATA_DIR, Config.LOG_DIR, Config.LogRotate.LOG_STATUS_DIR]:
+            paths = container.list_files(path, itself=True)
+            assert len(paths) == 1, "list_files doesn't return only the directory itself"
+            logger.debug(f"Data directory ownership: {paths[0].user}:{paths[0].group}")
+            if paths[0].user != Config.UNIX_USER or paths[0].group != Config.UNIX_GROUP:
+                container.exec(
+                    f"chown {Config.UNIX_USER}:{Config.UNIX_GROUP} -R {path}".split(" ")
+                )
+
+    def push_file_to_unit(
+        self, parent_dir: str, file_name: str, file_contents: str, container: Container = None
+    ) -> None:
+        """Push the file on the container, with the right permissions."""
+        container = container or self.unit.get_container(Config.CONTAINER_NAME)
+        container.push(
+            f"{parent_dir}/{file_name}",
+            file_contents,
+            make_dirs=True,
+            permissions=0o400,
+            user=Config.UNIX_USER,
+            group=Config.UNIX_GROUP,
+        )
+
+    def unit_host(self, unit: Unit) -> str:
+        """Create a DNS name for a MongoDB unit.
+
+        Args:
+            unit_name: the juju unit name, e.g. "mongodb/1".
+
+        Returns:
+            A string representing the hostname of the MongoDB unit.
+        """
+        unit_id = unit.name.split("/")[1]
+        return f"{self.app.name}-{unit_id}.{self.app.name}-endpoints"
+
+    # END: helper functions
+
+    # BEGIN: properties
     @property
     def mongos_initialised(self) -> bool:
         """Check if mongos is initialised."""
@@ -360,9 +374,6 @@ class MongosCharm(ops.CharmBase):
         elif "mongos_initialised" in self.app_peer_data:
             del self.app_peer_data["mongos_initialised"]
 
-    # END: helper functions
-
-    # BEGIN: properties
     @property
     def _unit_ip(self) -> str:
         """Returns the ip address of the unit."""
@@ -435,29 +446,6 @@ class MongosCharm(ops.CharmBase):
         return self._peers.data[self.app]
 
     @property
-    def config_server_db(self) -> str:
-        """Fetch current the config server database that this unit is connected to."""
-
-        env_var = Path(ENV_VAR_PATH)
-        if not env_var.is_file():
-            logger.info("no environment variable file")
-            return ""
-
-        with open(ENV_VAR_PATH, "r") as file:
-            env_vars = file.read()
-
-        for env_var in env_vars.split("\n"):
-            if MONGOS_VAR not in env_var:
-                continue
-            if CONFIG_ARG not in env_var:
-                return ""
-
-            # parse config db variable
-            return env_var.split(CONFIG_ARG)[1].strip().split(" ")[0]
-
-        return ""
-
-    @property
     def upgrade_in_progress(self) -> bool:
         """Returns true if an upgrade is currently in progress.
 
@@ -469,4 +457,4 @@ class MongosCharm(ops.CharmBase):
 
 
 if __name__ == "__main__":
-    ops.main(MongosOperatorCharm)
+    ops.main(MongosCharm)

@@ -14,6 +14,7 @@ class Config:
     MONGOS_PORT = 27018
     MONGODB_PORT = 27017
     SUBSTRATE = "k8s"
+    CONTAINER_NAME = "mongos"
 
     class Relations:
         """Relations related config for MongoDB Charm."""
