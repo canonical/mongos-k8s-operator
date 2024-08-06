@@ -2,9 +2,7 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-
 from typing import Literal
-from urllib.parse import quote
 from ops.model import BlockedStatus
 
 
