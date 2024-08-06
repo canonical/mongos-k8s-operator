@@ -71,7 +71,7 @@ jobs:
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
       cloud: microk8s
       microk8s-snap-channel: 1.29-strict/stable
-      juju-agent-version: 3.4.4 # renovate: juju-agent-pin-minor
+      juju-agent-version: 3.4.5 # renovate: juju-agent-pin-minor
       _beta_allure_report: true
     permissions:
       contents: write # Needed for Allure Report beta
