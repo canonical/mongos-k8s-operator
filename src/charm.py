@@ -323,7 +323,7 @@ class MongosCharm(ops.CharmBase):
                 license_file = container.pull(
                     path=Config.get_license_path(license_name)
                 )
-                f = open("LICENSE", "x")
+                f = open(license_name, "x")
                 f.write(str(license_file.read()))
                 f.close()
             except FileExistsError:
@@ -400,7 +400,12 @@ class MongosCharm(ops.CharmBase):
 
     @property
     def is_external_client(self) -> Optional[str]:
-        """Returns the database requested by the hosting application of the subordinate charm."""
+        """Returns the connectivity mode which mongos should use.
+
+        This is determined by checking the modes requested by the client(s).
+
+        TODO: Future PR. This should be modified to work for many clients.
+        """
         if EXTERNAL_CONNECTIVITY_TAG not in self.app_peer_data:
             return False
 
@@ -408,7 +413,10 @@ class MongosCharm(ops.CharmBase):
 
     @property
     def database(self) -> Optional[str]:
-        """Returns the database requested by the hosting application of the subordinate charm."""
+        """Returns a mapping of databases requested by integrated clients.
+
+        TODO: Future PR. This should be modified to work for many clients.
+        """
         if not self._peers:
             logger.info("Peer relation not joined yet.")
             # TODO future PR implement relation interface between host application mongos and use
@@ -419,7 +427,10 @@ class MongosCharm(ops.CharmBase):
 
     @property
     def extra_user_roles(self) -> Set[str]:
-        """Returns the user roles requested by the hosting application of the subordinate charm."""
+        """Returns a mapping of user roles requested by integrated clients.
+
+        TODO: Future PR. This should be modified to work for many clients.
+        """
         if not self._peers:
             logger.info("Peer relation not joined yet.")
             return None
@@ -430,6 +441,7 @@ class MongosCharm(ops.CharmBase):
     def mongos_config(self) -> MongosConfiguration:
         """Generates a MongoDBConfiguration object for mongos in the deployment of MongoDB."""
         hosts = [self.get_mongos_host()]
+        # TODO: Future PR. Ensure that this works for external connections with NodePort
         port = Config.MONGOS_PORT if self.is_external_client else None
         external_ca, _ = self.tls.get_tls_files(internal=False)
         internal_ca, _ = self.tls.get_tls_files(internal=True)
@@ -456,13 +468,19 @@ class MongosCharm(ops.CharmBase):
 
     @property
     def unit_peer_data(self) -> Dict:
-        """Unit peer relation data object."""
-        return self._peers.data[self.unit]
+        """Peer relation data object."""
+        if not self.peers:
+            return {}
+
+        return self.peers.data[self.unit]
 
     @property
     def app_peer_data(self) -> Dict:
-        """App peer relation data object."""
-        return self._peers.data[self.app]
+        """Peer relation data object."""
+        if not self.peers:
+            return {}
+
+        return self.peers.data[self.app]
 
     @property
     def upgrade_in_progress(self) -> bool:
