@@ -1,4 +1,4 @@
-"""Configuration for MongoDB Charm."""
+"""Configuration for Mongos Charm."""
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 

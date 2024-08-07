@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Charm code for MongoDB service."""
+"""Charm code for `mongos` daemon."""
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 

@@ -193,7 +193,7 @@ class MongosCharm(ops.CharmBase):
         secret.set_content(content)
 
     def restart_charm_services(self):
-        """Restart mongod service."""
+        """Restart mongos service."""
         container = self.unit.get_container(Config.CONTAINER_NAME)
         container.stop(Config.SERVICE_NAME)
 
@@ -446,7 +446,7 @@ class MongosCharm(ops.CharmBase):
         )
 
     @property
-    def _peers(self) -> Optional[Relation]:
+    def _peers(self) -> Relation | None:
         """Fetch the peer relation.
 
         Returns:
