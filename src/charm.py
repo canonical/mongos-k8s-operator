@@ -323,7 +323,7 @@ class MongosCharm(ops.CharmBase):
                 license_file = container.pull(
                     path=Config.get_license_path(license_name)
                 )
-                f = open(license_name, "x")
+                f = open(f"LICENSE_{license_name}", "x")
                 f.write(str(license_file.read()))
                 f.close()
             except FileExistsError:
