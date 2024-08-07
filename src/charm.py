@@ -469,18 +469,18 @@ class MongosCharm(ops.CharmBase):
     @property
     def unit_peer_data(self) -> Dict:
         """Peer relation data object."""
-        if not self.peers:
+        if not self._peers:
             return {}
 
-        return self.peers.data[self.unit]
+        return self._peers.data[self.unit]
 
     @property
     def app_peer_data(self) -> Dict:
         """Peer relation data object."""
-        if not self.peers:
+        if not self._peers:
             return {}
 
-        return self.peers.data[self.app]
+        return self._peers.data[self.app]
 
     @property
     def upgrade_in_progress(self) -> bool:
