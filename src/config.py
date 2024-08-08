@@ -11,8 +11,10 @@ class Config:
 
     MONGOS_PORT = 27018
     MONGODB_PORT = 27017
-    SUBSTRATE = "k8s"
+    K8S_SUBSTRATE = "k8s"
+    VM_SUBSTRATE = "vm"
     CONTAINER_NAME = "mongos"
+    USER_ROLE_CREATE_USERS = "admin"
 
     class Relations:
         """Relations related config for MongoDB Charm."""
