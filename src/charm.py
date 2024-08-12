@@ -49,6 +49,10 @@ class MissingConfigServerError(Exception):
     """Raised when mongos expects to be connected to a config-server but is not."""
 
 
+class ExtraDataDirError:
+    """Raised when there is unexpected data in the data directory."""
+
+
 class MongosCharm(ops.CharmBase):
     """Charm the service."""
 
@@ -335,9 +339,10 @@ class MongosCharm(ops.CharmBase):
         """
         for path in [Config.DATA_DIR, Config.LOG_DIR, Config.LogRotate.LOG_STATUS_DIR]:
             paths = container.list_files(path, itself=True)
-            assert (
-                len(paths) == 1
-            ), "list_files doesn't return only the directory itself"
+            if not len(paths) == 1:
+                raise ExtraDataDirError(
+                    "list_files doesn't return only the directory itself"
+                )
             logger.debug(f"Data directory ownership: {paths[0].user}:{paths[0].group}")
             if paths[0].user != Config.UNIX_USER or paths[0].group != Config.UNIX_GROUP:
                 container.exec(
