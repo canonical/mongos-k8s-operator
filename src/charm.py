@@ -291,7 +291,7 @@ class MongosCharm(ops.CharmBase):
         The host for mongos can be either the Unix Domain Socket or an IP address depending on how
         the client wishes to connect to mongos (inside Juju or outside).
         """
-        return self.unit_host
+        return self.unit_host(self.unit)
 
     @staticmethod
     def _generate_relation_departed_key(rel_id: int) -> str:
@@ -411,7 +411,6 @@ class MongosCharm(ops.CharmBase):
                         self.mongos_config,
                         snap_install=False,
                         config_server_db=self.cluster.get_config_server_uri(),
-                        external_connectivity=self.is_external_client,
                     ),
                     "startup": "enabled",
                     "user": Config.UNIX_USER,
@@ -474,8 +473,6 @@ class MongosCharm(ops.CharmBase):
     def mongos_config(self) -> MongosConfiguration:
         """Generates a MongoDBConfiguration object for mongos in the deployment of MongoDB."""
         hosts = [self.get_mongos_host()]
-        # TODO: Future PR. Ensure that this works for external connections with NodePort
-        port = Config.MONGOS_PORT if self.is_external_client else None
         external_ca, _ = self.tls.get_tls_files(internal=False)
         internal_ca, _ = self.tls.get_tls_files(internal=True)
 
@@ -484,7 +481,8 @@ class MongosCharm(ops.CharmBase):
             username=self.get_secret(APP_SCOPE, Config.Secrets.USERNAME),
             password=self.get_secret(APP_SCOPE, Config.Secrets.PASSWORD),
             hosts=hosts,
-            port=port,
+            # unlike the vm mongos charm, the K8s charm does not communicate with the unix socket
+            port=Config.MONGOS_PORT,
             roles=self.extra_user_roles,
             tls_external=external_ca is not None,
             tls_internal=internal_ca is not None,
