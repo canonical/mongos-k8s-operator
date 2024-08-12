@@ -15,6 +15,12 @@ class Config:
     VM_SUBSTRATE = "vm"
     CONTAINER_NAME = "mongos"
     USER_ROLE_CREATE_USERS = "admin"
+    SERVICE_NAME = "mongod"  # this must match the name of the service in the ROCK
+    MONGOD_CONF_DIR = "/etc/mongod"
+    UNIX_USER = "mongodb"
+    UNIX_GROUP = "mongodb"
+    LICENSE_PATH = "/licenses/LICENSE"
+    DATA_DIR = "/var/lib/mongodb"
 
     class Relations:
         """Relations related config for MongoDB Charm."""

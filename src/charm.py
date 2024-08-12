@@ -7,7 +7,7 @@ import json
 
 from exceptions import MissingSecretError
 
-from ops.pebble import PathError, ProtocolError
+from ops.pebble import PathError, ProtocolError, Layer, APIError
 
 
 from typing import Set, Optional, Dict
@@ -16,12 +16,15 @@ from charms.mongodb.v0.config_server_interface import ClusterRequirer
 
 from charms.mongos.v0.set_status import MongosStatusHandler
 
+from charms.mongodb.v0.mongodb_tls import MongoDBTLS
 from charms.mongodb.v0.mongodb_secrets import SecretCache
 from charms.mongodb.v0.mongodb_secrets import generate_secret_label
 from charms.mongodb.v1.mongos import MongosConfiguration, MongosConnection
 from charms.mongodb.v1.users import (
     MongoDBUser,
 )
+
+from charms.mongodb.v1.helpers import get_mongos_args
 
 from config import Config
 
@@ -58,11 +61,12 @@ class MongosCharm(ops.CharmBase):
         self.framework.observe(self.on.mongos_pebble_ready, self._on_mongos_pebble_ready)
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.update_status, self._on_update_status)
+        self.tls = MongoDBTLS(self, Config.Relations.PEERS, substrate=Config.K8S_SUBSTRATE)
 
         self.role = Config.Role.MONGOS
         self.secrets = SecretCache(self)
         self.status = MongosStatusHandler(self)
-        self.cluster = ClusterRequirer(self)
+        self.cluster = ClusterRequirer(self, substrate=Config.K8S_SUBSTRATE)
 
     # BEGIN: hook functions
     def _on_mongos_pebble_ready(self, event) -> None:
@@ -81,7 +85,7 @@ class MongosCharm(ops.CharmBase):
             return
 
         try:
-            # mongod needs keyFile and TLS certificates on filesystem
+            # mongos needs keyFile and TLS certificates on filesystem
             self._push_keyfile_to_workload(container)
             self._pull_licenses(container)
             self._set_data_dir_permissions(container)
@@ -121,6 +125,20 @@ class MongosCharm(ops.CharmBase):
     # END: hook functions
 
     # BEGIN: helper functions
+    def get_keyfile_contents(self) -> str:
+        """Retrieves the contents of the keyfile on host machine."""
+        # wait for keyFile to be created by leader unit
+        if not self.get_secret(APP_SCOPE, Config.Secrets.SECRET_KEYFILE_NAME):
+            logger.debug("waiting for leader unit to generate keyfile contents")
+
+        try:
+            container = self.unit.get_container(Config.CONTAINER_NAME)
+            key = container.pull(f"{Config.MONGOD_CONF_DIR}/{Config.TLS.KEY_FILE_NAME}")
+            return key.read()
+        except PathError:
+            logger.info("no keyfile present")
+            return
+
     def is_integrated_to_config_server(self) -> bool:
         """Returns True if the mongos application is integrated to a config-server."""
         return self.model.relations[Config.Relations.CLUSTER_RELATIONS_NAME] is not None
@@ -194,9 +212,12 @@ class MongosCharm(ops.CharmBase):
     def restart_charm_services(self):
         """Restart mongos service."""
         container = self.unit.get_container(Config.CONTAINER_NAME)
-        container.stop(Config.SERVICE_NAME)
+        try:
+            container.stop(Config.SERVICE_NAME)
+        except APIError:
+            pass
 
-        container.add_layer(Config.CONTAINER_NAME, self._mongod_layer, combine=True)
+        container.add_layer(Config.CONTAINER_NAME, self._mongos_layer, combine=True)
         container.replan()
 
     def set_database(self, database: str) -> None:
@@ -328,7 +349,7 @@ class MongosCharm(ops.CharmBase):
         Until the ability to set fsGroup and fsGroupChangePolicy via Pod securityContext
         is available, we fix permissions incorrectly with chown.
         """
-        for path in [Config.DATA_DIR, Config.LOG_DIR, Config.LogRotate.LOG_STATUS_DIR]:
+        for path in [Config.DATA_DIR]:
             paths = container.list_files(path, itself=True)
             assert len(paths) == 1, "list_files doesn't return only the directory itself"
             logger.debug(f"Data directory ownership: {paths[0].user}:{paths[0].group}")
@@ -370,6 +391,36 @@ class MongosCharm(ops.CharmBase):
     # END: helper functions
 
     # BEGIN: properties
+    @property
+    def _mongos_layer(self) -> Layer:
+        """Returns a Pebble configuration layer for mongos."""
+
+        if not self.cluster.get_config_server_uri():
+            logger.error("cannot start mongos without a config_server_db")
+            raise MissingConfigServerError()
+
+        layer_config = {
+            "summary": "mongos layer",
+            "description": "Pebble config layer for mongos router",
+            "services": {
+                "mongos": {
+                    "override": "replace",
+                    "summary": "mongos",
+                    "command": "mongos "
+                    + get_mongos_args(
+                        self.mongos_config,
+                        snap_install=False,
+                        config_server_db=self.cluster.get_config_server_uri(),
+                        external_connectivity=self.is_external_client,
+                    ),
+                    "startup": "enabled",
+                    "user": Config.UNIX_USER,
+                    "group": Config.UNIX_GROUP,
+                }
+            },
+        }
+        return Layer(layer_config)  # type: ignore
+
     @property
     def mongos_initialised(self) -> bool:
         """Check if mongos is initialised."""
@@ -471,6 +522,14 @@ class MongosCharm(ops.CharmBase):
         TODO implement this function once upgrades are supported.
         """
         return False
+
+    @property
+    def config_server_db(self) -> str:
+        """Fetch current the config server database that this unit is connected to."""
+        if not self.is_integrated_to_config_server():
+            return ""
+
+        return self.model.get_relation(Config.Relations.CLUSTER_RELATIONS_NAME).app.name
 
     # END: properties
 
