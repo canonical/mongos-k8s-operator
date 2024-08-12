@@ -8,7 +8,11 @@ import pytest
 import yaml
 from pytest_operator.plugin import OpsTest
 
-MONGOS_APP_NAME = "mongos"
+from .helpers import (
+    wait_for_mongos_units_blocked,
+    MONGOS_APP_NAME,
+)
+
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 
 
@@ -28,4 +32,18 @@ async def test_build_and_deploy(ops_test: OpsTest):
         resources=resources,
         application_name=MONGOS_APP_NAME,
         series="jammy",
+    )
+
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_waits_for_config_server(ops_test: OpsTest) -> None:
+    """Verifies that the application and unit are active."""
+
+    # verify that Charmed Mongos is blocked and reports incorrect credentials
+    await wait_for_mongos_units_blocked(
+        ops_test,
+        MONGOS_APP_NAME,
+        status="Missing relation to config-server.",
+        timeout=300,
     )
