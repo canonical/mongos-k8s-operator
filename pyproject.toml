@@ -7,7 +7,7 @@ package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.10"
-ops = ">=2.15.0"
+ops = "^2.15.0"
 pymongo = "^4.7.3"
 tenacity = "^8.2.3"
 pyyaml = "^6.0.1"
@@ -18,8 +18,7 @@ rpds-py = "<0.19"
 
 [tool.poetry.group.charm-libs.dependencies]
 # data_platform_libs/v0/data_interfaces.py
-pytest-operator = "^0.34.0" # mongodb config_server lib 
-ops = ">=2.15.0"
+ops = "^2.15.0"
 pydantic = "^1.10.7"  # cos_agent lib
 cryptography = "^42.0.5"  # tls_certificates lib v3
 jsonschema = "^4.22.0"  # tls_certificates lib v3
@@ -45,7 +44,7 @@ pytest = "^8.1.1"
 parameterized = "^0.9.0"
 
 [tool.poetry.group.integration.dependencies]
-ops = ">=2.15.0"
+ops = "^2.15.0"
 allure-pytest = "^2.13.5"
 tenacity = "^8.2.3"
 pymongo = "^4.7.3"
