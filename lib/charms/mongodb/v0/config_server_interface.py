@@ -1,4 +1,4 @@
-# Copyright 2023 Canonical Ltd.
+# Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 """In this class, we manage relations between config-servers and shards.
@@ -8,9 +8,6 @@ shards.
 """
 import logging
 from typing import Optional
-
-from pytest_operator.plugin import OpsTest
-import ops
 
 from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProvides,
@@ -45,7 +42,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 6
+LIBPATCH = 9
 
 
 class ClusterProvider(Object):
@@ -247,6 +244,13 @@ class ClusterRequirer(Object):
         )
 
     def _on_database_created(self, event) -> None:
+        if self.charm.upgrade_in_progress:
+            logger.warning(
+                "Processing client applications is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
+            )
+            event.defer()
+            return
+
         if not self.charm.unit.is_leader():
             return
 
@@ -296,6 +300,7 @@ class ClusterRequirer(Object):
             return
 
         self.charm.status.set_and_share_status(ActiveStatus())
+        self.charm.mongos_intialised = True
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         # Only relation_deparated events can check if scaling down
@@ -349,6 +354,13 @@ class ClusterRequirer(Object):
                 str(type(event)),
             )
 
+            event.defer()
+            return False
+
+        if self.charm.upgrade_in_progress:
+            logger.warning(
+                "Processing client applications is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
+            )
             event.defer()
             return False
 
@@ -421,7 +433,6 @@ class ClusterRequirer(Object):
 
     def get_config_server_uri(self) -> str:
         """Returns the short form URI of the config server."""
-
         return self.database_requires.fetch_relation_field(
             self.model.get_relation(Config.Relations.CLUSTER_RELATIONS_NAME).id,
             CONFIG_SERVER_DB_KEY,
