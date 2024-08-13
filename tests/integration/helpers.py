@@ -3,17 +3,33 @@
 # See LICENSE file for licensing details.
 
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 import logging
+
+from pathlib import Path
+import yaml
+from pymongo import MongoClient
 
 from dateutil.parser import parse
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
+from tenacity import (
+    RetryError,
+)
 
 logger = logging.getLogger(__name__)
 
 
-MONGOS_APP_NAME = "mongos"
+MONGOS_APP_NAME = "mongos-k8s"
+MONGODB_CHARM_NAME = "mongodb-k8s"
+CONFIG_SERVER_APP_NAME = "config-server"
+SHARD_APP_NAME = "shard0"
+MONGOS_PORT = 27018
+SHARD_REL_NAME = "sharding"
+CONFIG_SERVER_REL_NAME = "config-server"
+CLUSTER_REL_NAME = "cluster"
+
+METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 
 
 class Status:
@@ -145,3 +161,188 @@ async def wait_for_mongos_units_blocked(
                 await check_all_units_blocked_with_status(ops_test, db_app_name, status)
     finally:
         await ops_test.model.set_config({hook_interval_key: old_interval})
+
+
+async def deploy_cluster_components(ops_test: OpsTest) -> None:
+    """Deploys all cluster components and waits for idle."""
+    mongos_charm = await ops_test.build_charm(".")
+    resources = {
+        "mongodb-image": METADATA["resources"]["mongodb-image"]["upstream-source"]
+    }
+    await ops_test.model.deploy(
+        mongos_charm,
+        resources=resources,
+        application_name=MONGOS_APP_NAME,
+        series="jammy",
+    )
+
+    await ops_test.model.deploy(
+        MONGODB_CHARM_NAME,
+        application_name=CONFIG_SERVER_APP_NAME,
+        channel="6/edge",
+        resources=resources,
+        config={"role": "config-server"},
+    )
+    await ops_test.model.deploy(
+        MONGODB_CHARM_NAME,
+        application_name=SHARD_APP_NAME,
+        channel="6/edge",
+        resources=resources,
+        config={"role": "shard"},
+    )
+
+    await ops_test.model.wait_for_idle(
+        apps=[MONGOS_APP_NAME, SHARD_APP_NAME, CONFIG_SERVER_APP_NAME],
+        idle_period=10,
+        raise_on_blocked=False,
+    )
+
+
+async def get_application_name(ops_test: OpsTest, application_name: str) -> str:
+    """Returns the Application in the juju model that matches the provided application name.
+
+    This enables us to retrieve the name of the deployed application in an existing model, while
+     ignoring some test specific applications.
+    Note: if multiple applications with the application name exist, the first one found will be
+     returned.
+    """
+    status = await ops_test.model.get_status()
+
+    for application in ops_test.model.applications:
+        # note that format of the charm field is not exactly "mongodb" but instead takes the form
+        # of `local:focal/mongodb-6`
+        if application_name in status["applications"][application]["charm"]:
+            return application
+
+    return None
+
+
+async def get_address_of_unit(
+    ops_test: OpsTest, unit_id: int, app_name: str = MONGOS_APP_NAME
+) -> str:
+    """Retrieves the address of the unit based on provided id."""
+    status = await ops_test.model.get_status()
+    return status["applications"][app_name]["units"][f"{app_name}/{unit_id}"]["address"]
+
+
+async def get_secret_data(ops_test, secret_uri) -> Dict:
+    """Returns secret relation data."""
+    secret_unique_id = secret_uri.split("/")[-1]
+    complete_command = f"show-secret {secret_uri} --reveal --format=json"
+    _, stdout, _ = await ops_test.juju(*complete_command.split())
+    return json.loads(stdout)[secret_unique_id]["content"]["Data"]
+
+
+async def get_application_relation_data(
+    ops_test: OpsTest,
+    application_name: str,
+    relation_name: str,
+    key: str,
+    relation_id: str = None,
+    relation_alias: str = None,
+) -> Optional[str]:
+    """Get relation data for an application.
+
+    Args:
+        ops_test: The ops test framework instance
+        application_name: The name of the application
+        relation_name: name of the relation to get connection data from
+        key: key of data to be retrieved
+        relation_id: id of the relation to get connection data from
+        relation_alias: alias of the relation (like a connection name)
+            to get connection data from
+    Returns:
+        the that that was requested or None
+            if no data in the relation
+    Raises:
+        ValueError if it's not possible to get application unit data
+            or if there is no data for the particular relation endpoint
+            and/or alias.
+    """
+    unit = ops_test.model.applications[application_name].units[0]
+    raw_data = (await ops_test.juju("show-unit", unit.name))[1]
+    if not raw_data:
+        raise ValueError(f"no unit info could be grabbed for { unit.name}")
+    data = yaml.safe_load(raw_data)
+    # Filter the data based on the relation name.
+    relation_data = [
+        v for v in data[unit.name]["relation-info"] if v["endpoint"] == relation_name
+    ]
+
+    if relation_id:
+        # Filter the data based on the relation id.
+        relation_data = [v for v in relation_data if v["relation-id"] == relation_id]
+
+    if relation_alias:
+        # Filter the data based on the cluster/relation alias.
+        relation_data = [
+            v
+            for v in relation_data
+            if json.loads(v["application-data"]["data"])["alias"] == relation_alias
+        ]
+
+    if len(relation_data) == 0:
+        raise ValueError(
+            f"no relation data could be grabbed on relation with endpoint {relation_name} and alias {relation_alias}"
+        )
+
+    return relation_data[0]["application-data"].get(key)
+
+
+async def get_mongos_user_password(
+    ops_test: OpsTest, app_name=MONGOS_APP_NAME
+) -> Tuple[str, str]:
+    secret_uri = await get_application_relation_data(
+        ops_test, app_name, relation_name="cluster", key="secret-user"
+    )
+
+    secret_data = await get_secret_data(ops_test, secret_uri)
+    return secret_data.get("username"), secret_data.get("password")
+
+
+async def check_mongos(
+    ops_test: OpsTest,
+    unit_id: int,
+    auth: bool = True,
+    app_name=MONGOS_APP_NAME,
+    uri: str = None,
+) -> bool:
+    """Returns True if mongos is running on the provided unit."""
+    mongos_client = await get_direct_mongos_client(
+        ops_test, unit_id, auth, app_name, uri
+    )
+
+    try:
+        # wait 10 seconds in case the daemon was just started
+        for attempt in Retrying(stop=stop_after_delay(10)):
+            with attempt:
+                mongos_client.admin.command("ping")
+    except RetryError:
+        return False
+
+    return True
+
+
+async def get_mongos_uri(
+    ops_test: OpsTest, unit_id: int, auth: bool = True, app_name=MONGOS_APP_NAME
+):
+    mongos_host = await get_address_of_unit(ops_test, unit_id)
+
+    if not auth:
+        return f"mongodb://{mongos_host}:{MONGOS_PORT}"
+    else:
+        username, password = await get_mongos_user_password(ops_test, app_name)
+        return f"mongodb://{username}:{password}@{mongos_host}:{MONGOS_PORT}"
+
+
+async def get_direct_mongos_client(
+    ops_test: OpsTest,
+    unit_id: int,
+    auth: bool = True,
+    app_name: str = MONGOS_APP_NAME,
+    uri: str = None,
+) -> MongoClient:
+    """Returns a direct mongodb client potentially passing over some of the units."""
+    mongos_uri = uri or await get_mongos_uri(ops_test, unit_id, auth, app_name)
+
+    return MongoClient(mongos_uri, directConnection=True)
