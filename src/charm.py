@@ -58,14 +58,10 @@ class MongosCharm(ops.CharmBase):
 
     def __init__(self, *args):
         super().__init__(*args)
-        self.framework.observe(
-            self.on.mongos_pebble_ready, self._on_mongos_pebble_ready
-        )
+        self.framework.observe(self.on.mongos_pebble_ready, self._on_mongos_pebble_ready)
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.update_status, self._on_update_status)
-        self.tls = MongoDBTLS(
-            self, Config.Relations.PEERS, substrate=Config.K8S_SUBSTRATE
-        )
+        self.tls = MongoDBTLS(self, Config.Relations.PEERS, substrate=Config.K8S_SUBSTRATE)
 
         self.role = Config.Role.MONGOS
         self.secrets = SecretCache(self)
@@ -110,9 +106,7 @@ class MongosCharm(ops.CharmBase):
         # start hooks are fired before relation hooks and `mongos` requires a config-server in
         # order to start. Wait to receive config-server info from the relation event before
         # starting `mongos` daemon
-        self.status.set_and_share_status(
-            BlockedStatus("Missing relation to config-server.")
-        )
+        self.status.set_and_share_status(BlockedStatus("Missing relation to config-server."))
 
     def _on_update_status(self, _):
         """Handle the update status event"""
@@ -123,9 +117,7 @@ class MongosCharm(ops.CharmBase):
             logger.info(
                 "Missing integration to config-server. mongos cannot run unless connected to config-server."
             )
-            self.status.set_and_share_status(
-                BlockedStatus("Missing relation to config-server.")
-            )
+            self.status.set_and_share_status(BlockedStatus("Missing relation to config-server."))
             return
 
         self.status.set_and_share_status(ActiveStatus())
@@ -137,7 +129,7 @@ class MongosCharm(ops.CharmBase):
         """Retrieves the contents of the keyfile on host machine."""
         # wait for keyFile to be created by leader unit
         if not self.get_secret(APP_SCOPE, Config.Secrets.SECRET_KEYFILE_NAME):
-            logger.debug("waiting for leader unit to generate keyfile contents")
+            logger.debug("waiting to recieve keyfile contents from config-server.")
 
         try:
             container = self.unit.get_container(Config.CONTAINER_NAME)
@@ -206,9 +198,7 @@ class MongosCharm(ops.CharmBase):
         content = secret.get_content()
 
         if not content.get(key) or content[key] == Config.Secrets.SECRET_DELETED_LABEL:
-            logger.error(
-                f"Non-existing secret {scope}:{key} was attempted to be removed."
-            )
+            logger.error(f"Non-existing secret {scope}:{key} was attempted to be removed.")
             return
 
         content[key] = Config.Secrets.SECRET_DELETED_LABEL
@@ -225,6 +215,7 @@ class MongosCharm(ops.CharmBase):
         try:
             container.stop(Config.SERVICE_NAME)
         except APIError:
+            # stopping a service that is not running results in an APIError which can be ignored.
             pass
 
         container.add_layer(Config.CONTAINER_NAME, self._mongos_layer, combine=True)
@@ -238,9 +229,7 @@ class MongosCharm(ops.CharmBase):
             return
 
         # a mongos shard can only be related to one config server
-        config_server_rel = self.model.relations[
-            Config.Relations.CLUSTER_RELATIONS_NAME
-        ][0]
+        config_server_rel = self.model.relations[Config.Relations.CLUSTER_RELATIONS_NAME][0]
         self.cluster.database_requires.update_relation_data(
             config_server_rel.id, {DATABASE_TAG: database}
         )
@@ -347,9 +336,7 @@ class MongosCharm(ops.CharmBase):
 
         for license_name in licenses:
             try:
-                license_file = container.pull(
-                    path=Config.get_license_path(license_name)
-                )
+                license_file = container.pull(path=Config.get_license_path(license_name))
                 f = open(f"LICENSE_{license_name}", "x")
                 f.write(str(license_file.read()))
                 f.close()
@@ -365,9 +352,7 @@ class MongosCharm(ops.CharmBase):
         """
         for path in [Config.DATA_DIR]:
             paths = container.list_files(path, itself=True)
-            assert (
-                len(paths) == 1
-            ), "list_files doesn't return only the directory itself"
+            assert len(paths) == 1, "list_files doesn't return only the directory itself"
             logger.debug(f"Data directory ownership: {paths[0].user}:{paths[0].group}")
             if paths[0].user != Config.UNIX_USER or paths[0].group != Config.UNIX_GROUP:
                 container.exec(
@@ -458,14 +443,10 @@ class MongosCharm(ops.CharmBase):
     def is_external_client(self) -> Optional[str]:
         """Returns the connectivity mode which mongos should use.
 
-        This is determined by checking the modes requested by the client(s).
-
-        TODO: Future PR. This should be modified to work for many clients.
+        Note that for K8s routers this should always default to True. However we still include
+        this function so that we can have parity on properties with the K8s and VM routers.
         """
-        if EXTERNAL_CONNECTIVITY_TAG not in self.app_peer_data:
-            return False
-
-        return json.loads(self.app_peer_data.get(EXTERNAL_CONNECTIVITY_TAG))
+        return True
 
     @property
     def database(self) -> Optional[str]:
