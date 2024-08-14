@@ -9,7 +9,7 @@ from exceptions import MissingSecretError
 
 from ops.pebble import PathError, ProtocolError, Layer, APIError
 
-
+from node_port import NodePortManager
 from typing import Set, Optional, Dict
 
 from charms.mongodb.v0.config_server_interface import ClusterRequirer
@@ -74,9 +74,17 @@ class MongosCharm(ops.CharmBase):
         self.status = MongosStatusHandler(self)
         self.cluster = ClusterRequirer(self, substrate=Config.SUBSTRATE)
 
+        self.node_port_manager = NodePortManager(
+            self, pod_name=self.unit.name.replace("/", "-"), namespace=self.model.name
+        )
+
     # BEGIN: hook functions
     def _on_mongos_pebble_ready(self, event) -> None:
         """Configure MongoDB pebble layer specification."""
+        # any external services must be created before setting of properties
+        # TODO: add this same logic to upgrade and potentially to clients events (joined+broken)
+        self.update_external_services()
+
         if not self.is_integrated_to_config_server():
             logger.info(
                 "mongos service not starting. Cannot start until application is integrated to a config-server."
@@ -135,6 +143,17 @@ class MongosCharm(ops.CharmBase):
     # END: hook functions
 
     # BEGIN: helper functions
+    def update_external_services(self) -> None:
+        """Attempts to update any external Kubernetes services."""
+        if not self.is_external_client:
+            return
+
+        # every unit attempts to create a bootstrap service
+        # if exists, will silently continue
+        self.node_port_manager.apply_service(
+            service=self.node_port_manager.build_node_port_services()
+        )
+
     def get_keyfile_contents(self) -> str:
         """Retrieves the contents of the keyfile on host machine."""
         # wait for keyFile to be created by leader unit
@@ -222,6 +241,8 @@ class MongosCharm(ops.CharmBase):
 
     def restart_charm_services(self):
         """Restart mongos service."""
+        self.update_external_services()
+
         container = self.unit.get_container(Config.CONTAINER_NAME)
         try:
             container.stop(Config.SERVICE_NAME)
