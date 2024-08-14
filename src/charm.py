@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Charm code for `mongos` daemon."""
 
-# Copyright 2023 Canonical Ltd.
+# Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 import json
 
@@ -51,6 +51,10 @@ EXTERNAL_CONNECTIVITY_TAG = "external-connectivity"
 
 class MissingConfigServerError(Exception):
     """Raised when mongos expects to be connected to a config-server but is not."""
+
+
+class ExtraDataDirError:
+    """Raised when there is unexpected data in the data directory."""
 
 
 class MongosCharm(ops.CharmBase):
@@ -160,8 +164,7 @@ class MongosCharm(ops.CharmBase):
     def get_secret(self, scope: str, key: str) -> Optional[str]:
         """Get secret from the secret storage."""
         label = generate_secret_label(self, scope)
-        secret = self.secrets.get(label)
-        if not secret:
+        if not (secret := self.secrets.get(label)):
             return
 
         value = secret.get_content().get(key)
@@ -240,9 +243,7 @@ class MongosCharm(ops.CharmBase):
         Relation departed and relation broken events occur during scaling down or during relation
         removal, only relation departed events have access to metadata to determine which case.
         """
-        scaling_down = self.set_scaling_down(event)
-
-        if scaling_down:
+        if self.set_scaling_down(event):
             logger.info(
                 "Scaling down the application, no need to process removed relation in broken hook."
             )
@@ -352,12 +353,11 @@ class MongosCharm(ops.CharmBase):
         """
         for path in [Config.DATA_DIR]:
             paths = container.list_files(path, itself=True)
-            assert len(paths) == 1, "list_files doesn't return only the directory itself"
+            if not len(paths) == 1:
+                raise ExtraDataDirError("list_files doesn't return only the directory itself")
             logger.debug(f"Data directory ownership: {paths[0].user}:{paths[0].group}")
             if paths[0].user != Config.UNIX_USER or paths[0].group != Config.UNIX_GROUP:
-                container.exec(
-                    f"chown {Config.UNIX_USER}:{Config.UNIX_GROUP} -R {path}".split(" ")
-                )
+                container.exec(f"chown {Config.UNIX_USER}:{Config.UNIX_GROUP} -R {path}".split())
 
     def push_file_to_unit(
         self,
