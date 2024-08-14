@@ -11,8 +11,7 @@ class Config:
 
     MONGOS_PORT = 27018
     MONGODB_PORT = 27017
-    K8S_SUBSTRATE = "k8s"
-    VM_SUBSTRATE = "vm"
+    SUBSTRATE = "k8s"
     CONTAINER_NAME = "mongos"
     USER_ROLE_CREATE_USERS = "admin"
     SERVICE_NAME = "mongod"  # this must match the name of the service in the ROCK
@@ -69,6 +68,12 @@ class Config:
 
         # TODO Future PR add more status messages here as constants
         UNHEALTHY_UPGRADE = BlockedStatus("Unhealthy after upgrade.")
+
+    class Substrate:
+        """Substrate related constants."""
+
+        VM = "vm"
+        K8S = "k8s"
 
     class Role:
         """Role config names for MongoDB Charm."""

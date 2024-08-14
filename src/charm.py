@@ -61,12 +61,12 @@ class MongosCharm(ops.CharmBase):
         self.framework.observe(self.on.mongos_pebble_ready, self._on_mongos_pebble_ready)
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.update_status, self._on_update_status)
-        self.tls = MongoDBTLS(self, Config.Relations.PEERS, substrate=Config.K8S_SUBSTRATE)
+        self.tls = MongoDBTLS(self, Config.Relations.PEERS, substrate=Config.SUBSTRATE)
 
         self.role = Config.Role.MONGOS
         self.secrets = SecretCache(self)
         self.status = MongosStatusHandler(self)
-        self.cluster = ClusterRequirer(self, substrate=Config.K8S_SUBSTRATE)
+        self.cluster = ClusterRequirer(self, substrate=Config.SUBSTRATE)
 
     # BEGIN: hook functions
     def _on_mongos_pebble_ready(self, event) -> None:
