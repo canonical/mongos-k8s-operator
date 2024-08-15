@@ -11,8 +11,6 @@ from pytest_operator.plugin import OpsTest
 from .helpers import (
     assert_node_port_available,
     wait_for_mongos_units_blocked,
-    get_public_k8s_ip,
-    get_port_from_node_port,
     MONGOS_APP_NAME,
 )
 
@@ -27,7 +25,9 @@ async def test_build_and_deploy(ops_test: OpsTest):
     Assert on the unit status before any relations/configurations take place.
     """
     charm = await ops_test.build_charm(".")
-    resources = {"mongodb-image": METADATA["resources"]["mongodb-image"]["upstream-source"]}
+    resources = {
+        "mongodb-image": METADATA["resources"]["mongodb-image"]["upstream-source"]
+    }
     await ops_test.model.deploy(
         charm,
         resources=resources,

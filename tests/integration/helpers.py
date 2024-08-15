@@ -139,7 +139,9 @@ async def wait_for_mongos_units_blocked(
     try:
         old_interval = (await ops_test.model.get_config())[hook_interval_key]
         await ops_test.model.set_config({hook_interval_key: "1m"})
-        for attempt in Retrying(stop=stop_after_delay(timeout), wait=wait_fixed(1), reraise=True):
+        for attempt in Retrying(
+            stop=stop_after_delay(timeout), wait=wait_fixed(1), reraise=True
+        ):
             with attempt:
                 await check_all_units_blocked_with_status(ops_test, db_app_name, status)
     finally:
@@ -147,9 +149,7 @@ async def wait_for_mongos_units_blocked(
 
 
 def get_port_from_node_port(ops_test: OpsTest, node_port_name: str) -> None:
-    node_port_cmd = (
-        f"kubectl get svc  -n  {ops_test.model.name} |  grep NodePort | grep {node_port_name}"
-    )
+    node_port_cmd = f"kubectl get svc  -n  {ops_test.model.name} |  grep NodePort | grep {node_port_name}"
     result = subprocess.run(node_port_cmd, shell=True, capture_output=True, text=True)
     if result.returncode:
         logger.info("was not able to find nodeport")
@@ -173,7 +173,9 @@ def assert_node_port_available(ops_test: OpsTest, node_port_name: str) -> None:
 
 
 def get_public_k8s_ip() -> str:
-    result = subprocess.run("kubectl get nodes", shell=True, capture_output=True, text=True)
+    result = subprocess.run(
+        "kubectl get nodes", shell=True, capture_output=True, text=True
+    )
 
     if result.returncode:
         logger.info("failed to retrieve public facing k8s IP")
