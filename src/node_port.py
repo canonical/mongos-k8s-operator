@@ -7,7 +7,7 @@
 import logging
 from functools import cached_property
 from ops.charm import CharmBase
-from lightkube.models.meta_v1 import ObjectMeta
+from lightkube.models.meta_v1 import ObjectMeta, OwnerReference
 from lightkube.core.client import Client
 from lightkube.core.exceptions import ApiError
 from lightkube.resources.core_v1 import Pod, Service
@@ -29,14 +29,11 @@ class NodePortManager:
     def __init__(
         self,
         charm: CharmBase,
-        pod_name: str,
-        namespace: str,
     ):
         self.charm = charm
-        self.pod_name = pod_name
-        self.app_name = "-".join(pod_name.split("-")[:-1])
-        self.namespace = namespace
-        self.nodeport_service_name = f"{self.app_name}-nodeport"
+        self.pod_name = self.charm.unit.name.replace("/", "-")
+        self.app_name = self.charm.app.name
+        self.namespace = self.charm.model.name
 
     @cached_property
     def client(self) -> Client:
@@ -67,10 +64,19 @@ class NodePortManager:
         unit_id = self.charm.unit.name.split("/")[1]
         return Service(
             metadata=ObjectMeta(
-                name=f"{self.charm.app.name}-{unit_id}-external",
+                name=f"{self.app_name}-{unit_id}-external",
                 namespace=self.namespace,
-                # owned by the StatefulSet
-                ownerReferences=pod.metadata.ownerReferences,
+                # When we scale-down K8s will keep the Services for the deleted 2 units around,
+                # unless the Services' owner is also deleted.
+                ownerReferences=[
+                    OwnerReference(
+                        apiVersion=pod.apiVersion,
+                        kind=pod.kind,
+                        name=self.pod_name,
+                        uid=pod.metadata.uid,
+                        blockOwnerDeletion=False,
+                    )
+                ],
             ),
             spec=ServiceSpec(
                 type="NodePort",
@@ -80,7 +86,7 @@ class NodePortManager:
                         protocol="TCP",
                         port=port,
                         targetPort=port,
-                        name=f"{self.charm.app.name}",
+                        name=f"{self.app_name}",
                     )
                 ],
             ),

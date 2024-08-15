@@ -62,9 +62,7 @@ class MongosCharm(ops.CharmBase):
         self.secrets = SecretCache(self)
         self.status = MongosStatusHandler(self)
 
-        self.node_port_manager = NodePortManager(
-            self, pod_name=self.unit.name.replace("/", "-"), namespace=self.model.name
-        )
+        self.node_port_manager = NodePortManager(self)
 
     # BEGIN: hook functions
     def _on_mongos_pebble_ready(self, event) -> None:
