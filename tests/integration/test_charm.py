@@ -9,7 +9,10 @@ import yaml
 from pytest_operator.plugin import OpsTest
 
 from .helpers import (
+    assert_node_port_available,
     wait_for_mongos_units_blocked,
+    get_public_k8s_ip,
+    get_port_from_node_port,
     MONGOS_APP_NAME,
 )
 
@@ -24,9 +27,7 @@ async def test_build_and_deploy(ops_test: OpsTest):
     Assert on the unit status before any relations/configurations take place.
     """
     charm = await ops_test.build_charm(".")
-    resources = {
-        "mongodb-image": METADATA["resources"]["mongodb-image"]["upstream-source"]
-    }
+    resources = {"mongodb-image": METADATA["resources"]["mongodb-image"]["upstream-source"]}
     await ops_test.model.deploy(
         charm,
         resources=resources,
@@ -47,3 +48,20 @@ async def test_waits_for_config_server(ops_test: OpsTest) -> None:
         status="Missing relation to config-server.",
         timeout=300,
     )
+
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_mongos_external_connections(ops_test: OpsTest) -> None:
+    """Tests that mongos is accessible externally."""
+    assert_node_port_available(ops_test, node_port_name="mongos-k8s-nodeport")
+
+    # TODO add this in once DPE-5040 / PR #20 merges
+    # exposed_node_port = get_port_from_node_port(ops_test, node_port_name="mongos-k8s-nodeport")
+    # public_k8s_ip = get_public_k8s_ip()
+    # username, password = await get_mongos_user_password(ops_test, MONGOS_APP_NAME)
+    # external_mongos_client = MongoClient(
+    #     f"mongodb://{username}:{password}@{public_k8s_ip}:{exposed_node_port}"
+    # )
+    # external_mongos_client.admin.command("usersInfo")
+    # external_mongos_client.close()
