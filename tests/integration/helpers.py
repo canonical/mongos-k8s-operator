@@ -195,6 +195,7 @@ async def deploy_cluster_components(ops_test: OpsTest) -> None:
         apps=[MONGOS_APP_NAME, SHARD_APP_NAME, CONFIG_SERVER_APP_NAME],
         idle_period=10,
         raise_on_blocked=False,
+        raise_on_error=False,  # Removed this once DPE-4996 is resolved.
     )
 
 

@@ -149,9 +149,11 @@ class MongosCharm(ops.CharmBase):
             logger.info("no keyfile present")
             return
 
-    def is_integrated_to_config_server(self) -> bool:
+    def is_integrated_to_config_server(self) -> True:
         """Returns True if the mongos application is integrated to a config-server."""
-        return self.model.relations[Config.Relations.CLUSTER_RELATIONS_NAME] is not None
+        return (
+            self.model.get_relation(Config.Relations.CLUSTER_RELATIONS_NAME) is not None
+        )
 
     def _get_mongos_config_for_user(
         self, user: MongoDBUser, hosts: Set[str]
@@ -411,8 +413,7 @@ class MongosCharm(ops.CharmBase):
     @property
     def _mongos_layer(self) -> Layer:
         """Returns a Pebble configuration layer for mongos."""
-
-        if not self.cluster.get_config_server_uri():
+        if not (get_config_server_uri := self.cluster.get_config_server_uri()):
             logger.error("cannot start mongos without a config_server_db")
             raise MissingConfigServerError()
 
@@ -427,7 +428,7 @@ class MongosCharm(ops.CharmBase):
                     + get_mongos_args(
                         self.mongos_config,
                         snap_install=False,
-                        config_server_db=self.cluster.get_config_server_uri(),
+                        config_server_db=get_config_server_uri,
                     ),
                     "startup": "enabled",
                     "user": Config.UNIX_USER,
@@ -537,10 +538,14 @@ class MongosCharm(ops.CharmBase):
     @property
     def config_server_db(self) -> str:
         """Fetch current the config server database that this unit is connected to."""
-        if not self.is_integrated_to_config_server():
+        if not (
+            config_server_relation := self.model.get_relation(
+                Config.Relations.CLUSTER_RELATIONS_NAME
+            )
+        ):
             return ""
 
-        return self.model.get_relation(Config.Relations.CLUSTER_RELATIONS_NAME).app.name
+        return config_server_relation.app.name
 
     # END: properties
 
