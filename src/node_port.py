@@ -95,7 +95,7 @@ class NodePortManager:
             f"Unable to find NodePort using {auth_map.protocol} and {auth_map.mechanism} for the {service} service"
         )
 
-    def build_node_port_services(self) -> Service:
+    def build_node_port_services(self, port: str) -> Service:
         """Builds a ClusterIP service for initial client connection."""
         pod = self.get_pod(pod_name=self.pod_name)
         if not pod.metadata:
@@ -114,8 +114,8 @@ class NodePortManager:
                 ports=[
                     ServicePort(
                         protocol="TCP",
-                        port=27018,  # TODO map this to our constants file
-                        targetPort=27018,  # TODO map this to our constants file
+                        port=port,
+                        targetPort=port,
                         name=f"{self.charm.app.name}-nodeport",
                     )
                 ],
@@ -144,8 +144,3 @@ class NodePortManager:
                 return
             else:
                 raise
-
-
-# TODO TLS - common name - SANS - you need each K8s-worker name  !!! Watch out for any changes !!!
-# Context: nodeport lets you reach any mongos , then K8s resolves and sends to the correct pod
-# if the pod goes away and spins up a new hosts, then we need to issue new certificates

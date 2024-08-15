@@ -91,7 +91,9 @@ async def test_mongos_starts_with_config_server(ops_test: OpsTest) -> None:
 async def test_mongos_external_connections(ops_test: OpsTest) -> None:
     """Tests that mongos is accessible externally."""
     assert_node_port_available(ops_test, node_port_name="mongos-k8s-nodeport")
-    exposed_node_port = get_port_from_node_port(ops_test, node_port_name="mongos-k8s-nodeport")
+    exposed_node_port = get_port_from_node_port(
+        ops_test, node_port_name="mongos-k8s-nodeport"
+    )
     public_k8s_ip = get_public_k8s_ip()
     username, password = await get_mongos_user_password(ops_test, MONGOS_APP_NAME)
     external_mongos_client = MongoClient(
@@ -123,7 +125,9 @@ async def test_user_with_extra_roles(ops_test: OpsTest) -> None:
     )
     mongos_client.close()
     mongos_host = await get_address_of_unit(ops_test, unit_id=0)
-    test_user_uri = f"mongodb://{TEST_USER_NAME}:{TEST_USER_PWD}@{mongos_host}:{MONGOS_PORT}"
+    test_user_uri = (
+        f"mongodb://{TEST_USER_NAME}:{TEST_USER_PWD}@{mongos_host}:{MONGOS_PORT}"
+    )
     mongos_running = await check_mongos(
         ops_test,
         unit_id=0,
