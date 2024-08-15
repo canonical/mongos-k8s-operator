@@ -4,17 +4,11 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 import json
-
 from exceptions import MissingSecretError
-
 from ops.pebble import PathError, ProtocolError
-
-
 from typing import Set, Optional, Dict
-
-
+from node_port import NodePortManager
 from charms.mongos.v0.set_status import MongosStatusHandler
-
 from charms.mongodb.v0.mongodb_secrets import SecretCache
 from charms.mongodb.v0.mongodb_secrets import generate_secret_label
 from charms.mongodb.v1.mongos import MongosConfiguration, MongosConnection
@@ -58,9 +52,7 @@ class MongosCharm(ops.CharmBase):
 
     def __init__(self, *args):
         super().__init__(*args)
-        self.framework.observe(
-            self.on.mongos_pebble_ready, self._on_mongos_pebble_ready
-        )
+        self.framework.observe(self.on.mongos_pebble_ready, self._on_mongos_pebble_ready)
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.update_status, self._on_update_status)
 
@@ -68,9 +60,16 @@ class MongosCharm(ops.CharmBase):
         self.secrets = SecretCache(self)
         self.status = MongosStatusHandler(self)
 
+        self.node_port_manager = NodePortManager(
+            self, pod_name=self.unit.name.replace("/", "-"), namespace=self.model.name
+        )
+
     # BEGIN: hook functions
     def _on_mongos_pebble_ready(self, event) -> None:
         """Configure MongoDB pebble layer specification."""
+        # any external services must be created before setting of properties
+        self.update_external_services()
+
         if not self.is_integrated_to_config_server():
             logger.info(
                 "mongos service not starting. Cannot start until application is integrated to a config-server."
@@ -106,9 +105,7 @@ class MongosCharm(ops.CharmBase):
         # start hooks are fired before relation hooks and `mongos` requires a config-server in
         # order to start. Wait to receive config-server info from the relation event before
         # starting `mongos` daemon
-        self.status.set_and_share_status(
-            BlockedStatus("Missing relation to config-server.")
-        )
+        self.status.set_and_share_status(BlockedStatus("Missing relation to config-server."))
 
     def _on_update_status(self, _):
         """Handle the update status event"""
@@ -119,9 +116,7 @@ class MongosCharm(ops.CharmBase):
             logger.info(
                 "Missing integration to config-server. mongos cannot run unless connected to config-server."
             )
-            self.status.set_and_share_status(
-                BlockedStatus("Missing relation to config-server.")
-            )
+            self.status.set_and_share_status(BlockedStatus("Missing relation to config-server."))
             return
 
         self.status.set_and_share_status(ActiveStatus())
@@ -129,9 +124,20 @@ class MongosCharm(ops.CharmBase):
     # END: hook functions
 
     # BEGIN: helper functions
+    def update_external_services(self) -> None:
+        """Attempts to update any external Kubernetes services."""
+        if not self.is_external_client:
+            return
+
+        # every unit attempts to create a bootstrap service
+        # if exists, will silently continue
+        self.node_port_manager.apply_service(
+            service=self.node_port_manager.build_node_port_services(port=Config.MONGOS_PORT)
+        )
+
     def is_integrated_to_config_server(self) -> bool:
         """Returns True if the mongos application is integrated to a config-server."""
-        return self.model.relations[Config.Relations.CLUSTER_RELATIONS_NAME] is not None
+        return len(self.model.relations[Config.Relations.CLUSTER_RELATIONS_NAME])
 
     def _get_mongos_config_for_user(
         self, user: MongoDBUser, hosts: Set[str]
@@ -187,9 +193,7 @@ class MongosCharm(ops.CharmBase):
         content = secret.get_content()
 
         if not content.get(key) or content[key] == Config.Secrets.SECRET_DELETED_LABEL:
-            logger.error(
-                f"Non-existing secret {scope}:{key} was attempted to be removed."
-            )
+            logger.error(f"Non-existing secret {scope}:{key} was attempted to be removed.")
             return
 
         content[key] = Config.Secrets.SECRET_DELETED_LABEL
@@ -214,9 +218,7 @@ class MongosCharm(ops.CharmBase):
             return
 
         # a mongos shard can only be related to one config server
-        config_server_rel = self.model.relations[
-            Config.Relations.CLUSTER_RELATIONS_NAME
-        ][0]
+        config_server_rel = self.model.relations[Config.Relations.CLUSTER_RELATIONS_NAME][0]
         self.cluster.database_requires.update_relation_data(
             config_server_rel.id, {DATABASE_TAG: database}
         )
@@ -321,9 +323,7 @@ class MongosCharm(ops.CharmBase):
 
         for license_name in licenses:
             try:
-                license_file = container.pull(
-                    path=Config.get_license_path(license_name)
-                )
+                license_file = container.pull(path=Config.get_license_path(license_name))
                 f = open(f"LICENSE_{license_name}", "x")
                 f.write(str(license_file.read()))
                 f.close()
@@ -340,14 +340,10 @@ class MongosCharm(ops.CharmBase):
         for path in [Config.DATA_DIR, Config.LOG_DIR, Config.LogRotate.LOG_STATUS_DIR]:
             paths = container.list_files(path, itself=True)
             if not len(paths) == 1:
-                raise ExtraDataDirError(
-                    "list_files doesn't return only the directory itself"
-                )
+                raise ExtraDataDirError("list_files doesn't return only the directory itself")
             logger.debug(f"Data directory ownership: {paths[0].user}:{paths[0].group}")
             if paths[0].user != Config.UNIX_USER or paths[0].group != Config.UNIX_GROUP:
-                container.exec(
-                    f"chown {Config.UNIX_USER}:{Config.UNIX_GROUP} -R {path}".split()
-                )
+                container.exec(f"chown {Config.UNIX_USER}:{Config.UNIX_GROUP} -R {path}".split())
 
     def push_file_to_unit(
         self,
