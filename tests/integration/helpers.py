@@ -5,7 +5,7 @@
 import json
 from typing import Any, Dict, List, Optional, Tuple
 import logging
-
+import subprocess
 from pathlib import Path
 import yaml
 from pymongo import MongoClient
@@ -19,7 +19,7 @@ from tenacity import (
 
 logger = logging.getLogger(__name__)
 
-
+PORT_MAPPING_INDEX = 4
 MONGOS_APP_NAME = "mongos-k8s"
 MONGODB_CHARM_NAME = "mongodb-k8s"
 CONFIG_SERVER_APP_NAME = "config-server"
@@ -154,9 +154,7 @@ async def wait_for_mongos_units_blocked(
     try:
         old_interval = (await ops_test.model.get_config())[hook_interval_key]
         await ops_test.model.set_config({hook_interval_key: "1m"})
-        for attempt in Retrying(
-            stop=stop_after_delay(timeout), wait=wait_fixed(1), reraise=True
-        ):
+        for attempt in Retrying(stop=stop_after_delay(timeout), wait=wait_fixed(1), reraise=True):
             with attempt:
                 await check_all_units_blocked_with_status(ops_test, db_app_name, status)
     finally:
@@ -166,9 +164,7 @@ async def wait_for_mongos_units_blocked(
 async def deploy_cluster_components(ops_test: OpsTest) -> None:
     """Deploys all cluster components and waits for idle."""
     mongos_charm = await ops_test.build_charm(".")
-    resources = {
-        "mongodb-image": METADATA["resources"]["mongodb-image"]["upstream-source"]
-    }
+    resources = {"mongodb-image": METADATA["resources"]["mongodb-image"]["upstream-source"]}
     await ops_test.model.deploy(
         mongos_charm,
         resources=resources,
@@ -265,9 +261,7 @@ async def get_application_relation_data(
         raise ValueError(f"no unit info could be grabbed for { unit.name}")
     data = yaml.safe_load(raw_data)
     # Filter the data based on the relation name.
-    relation_data = [
-        v for v in data[unit.name]["relation-info"] if v["endpoint"] == relation_name
-    ]
+    relation_data = [v for v in data[unit.name]["relation-info"] if v["endpoint"] == relation_name]
 
     if relation_id:
         # Filter the data based on the relation id.
@@ -289,9 +283,7 @@ async def get_application_relation_data(
     return relation_data[0]["application-data"].get(key)
 
 
-async def get_mongos_user_password(
-    ops_test: OpsTest, app_name=MONGOS_APP_NAME
-) -> Tuple[str, str]:
+async def get_mongos_user_password(ops_test: OpsTest, app_name=MONGOS_APP_NAME) -> Tuple[str, str]:
     secret_uri = await get_application_relation_data(
         ops_test, app_name, relation_name="cluster", key="secret-user"
     )
@@ -308,9 +300,7 @@ async def check_mongos(
     uri: str = None,
 ) -> bool:
     """Returns True if mongos is running on the provided unit."""
-    mongos_client = await get_direct_mongos_client(
-        ops_test, unit_id, auth, app_name, uri
-    )
+    mongos_client = await get_direct_mongos_client(ops_test, unit_id, auth, app_name, uri)
 
     try:
         # wait 10 seconds in case the daemon was just started
@@ -346,3 +336,43 @@ async def get_direct_mongos_client(
     mongos_uri = uri or await get_mongos_uri(ops_test, unit_id, auth, app_name)
 
     return MongoClient(mongos_uri, directConnection=True)
+
+
+def get_port_from_node_port(ops_test: OpsTest, node_port_name: str) -> None:
+    node_port_cmd = (
+        f"kubectl get svc  -n  {ops_test.model.name} |  grep NodePort | grep {node_port_name}"
+    )
+    result = subprocess.run(node_port_cmd, shell=True, capture_output=True, text=True)
+    if result.returncode:
+        logger.info("was not able to find nodeport")
+        assert False, f"Command: {node_port_cmd} to find node port failed."
+
+    assert (
+        len(result.stdout.splitlines()) > 0
+    ), "No port information available for expected service"
+
+    # port information is available at PORT_MAPPING_INDEX
+    port_mapping = result.stdout.split()[PORT_MAPPING_INDEX]
+
+    # port information is of the form 27018:30259/TCP
+    return port_mapping.split(":")[1].split("/")[0]
+
+
+def assert_node_port_available(ops_test: OpsTest, node_port_name: str) -> None:
+    assert get_port_from_node_port(
+        ops_test, node_port_name
+    ), "No port information for expected service"
+
+
+def get_public_k8s_ip() -> str:
+    result = subprocess.run("kubectl get nodes", shell=True, capture_output=True, text=True)
+
+    if result.returncode:
+        logger.info("failed to retrieve public facing k8s IP")
+        assert False, "failed to retrieve public facing k8s IP"
+
+    # port information is the first item of the last line
+    port_mapping = result.stdout.splitlines()[-1].split()[0]
+
+    # port mapping is of the form ip-172-31-18-133
+    return port_mapping.split("ip-")[1].replace("-", ".")

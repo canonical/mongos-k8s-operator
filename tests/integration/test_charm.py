@@ -7,9 +7,13 @@ import pytest
 from pytest_operator.plugin import OpsTest
 
 from .helpers import (
+    assert_node_port_available,
     check_mongos,
     get_direct_mongos_client,
+    get_public_k8s_ip,
+    get_mongos_user_password,
     get_address_of_unit,
+    get_port_from_node_port,
     wait_for_mongos_units_blocked,
     SHARD_APP_NAME,
     CONFIG_SERVER_APP_NAME,
@@ -19,6 +23,7 @@ from .helpers import (
     SHARD_REL_NAME,
     CONFIG_SERVER_REL_NAME,
     deploy_cluster_components,
+    MongoClient,
 )
 
 TEST_USER_NAME = "TestUserName1"
@@ -83,6 +88,21 @@ async def test_mongos_starts_with_config_server(ops_test: OpsTest) -> None:
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
+async def test_mongos_external_connections(ops_test: OpsTest) -> None:
+    """Tests that mongos is accessible externally."""
+    assert_node_port_available(ops_test, node_port_name="mongos-k8s-nodeport")
+    exposed_node_port = get_port_from_node_port(ops_test, node_port_name="mongos-k8s-nodeport")
+    public_k8s_ip = get_public_k8s_ip()
+    username, password = await get_mongos_user_password(ops_test, MONGOS_APP_NAME)
+    external_mongos_client = MongoClient(
+        f"mongodb://{username}:{password}@{public_k8s_ip}:{exposed_node_port}"
+    )
+    external_mongos_client.admin.command("usersInfo")
+    external_mongos_client.close()
+
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
 async def test_mongos_has_user(ops_test: OpsTest) -> None:
     mongos_running = await check_mongos(ops_test, unit_id=0, auth=True)
     assert mongos_running, "Mongos is not currently running."
@@ -103,9 +123,7 @@ async def test_user_with_extra_roles(ops_test: OpsTest) -> None:
     )
     mongos_client.close()
     mongos_host = await get_address_of_unit(ops_test, unit_id=0)
-    test_user_uri = (
-        f"mongodb://{TEST_USER_NAME}:{TEST_USER_PWD}@{mongos_host}:{MONGOS_PORT}"
-    )
+    test_user_uri = f"mongodb://{TEST_USER_NAME}:{TEST_USER_PWD}@{mongos_host}:{MONGOS_PORT}"
     mongos_running = await check_mongos(
         ops_test,
         unit_id=0,
