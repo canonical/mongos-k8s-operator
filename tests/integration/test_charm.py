@@ -33,6 +33,11 @@ async def test_build_and_deploy(ops_test: OpsTest):
         resources=resources,
         application_name=MONGOS_APP_NAME,
         series="jammy",
+        num_units=2,
+    )
+
+    await ops_test.model.wait_for_idle(
+        apps=[MONGOS_APP_NAME], timeout=1000, idle_period=30
     )
 
 
@@ -54,14 +59,17 @@ async def test_waits_for_config_server(ops_test: OpsTest) -> None:
 @pytest.mark.abort_on_fail
 async def test_mongos_external_connections(ops_test: OpsTest) -> None:
     """Tests that mongos is accessible externally."""
-    assert_node_port_available(ops_test, node_port_name="mongos-k8s-nodeport")
+    for unit_id in range(len(ops_test.model.applications[MONGOS_APP_NAME].units)):
+        assert_node_port_available(
+            ops_test, node_port_name=f"{MONGOS_APP_NAME}-{unit_id}-external"
+        )
 
-    # TODO add this in once DPE-5040 / PR #20 merges
-    # exposed_node_port = get_port_from_node_port(ops_test, node_port_name="mongos-k8s-nodeport")
-    # public_k8s_ip = get_public_k8s_ip()
-    # username, password = await get_mongos_user_password(ops_test, MONGOS_APP_NAME)
-    # external_mongos_client = MongoClient(
-    #     f"mongodb://{username}:{password}@{public_k8s_ip}:{exposed_node_port}"
-    # )
-    # external_mongos_client.admin.command("usersInfo")
-    # external_mongos_client.close()
+        # TODO add this in once DPE-5040 / PR #20 merges
+        # exposed_node_port = get_port_from_node_port(ops_test, node_port_name="mongos-k8s-nodeport")
+        # public_k8s_ip = get_public_k8s_ip()
+        # username, password = await get_mongos_user_password(ops_test, MONGOS_APP_NAME)
+        # external_mongos_client = MongoClient(
+        #     f"mongodb://{username}:{password}@{public_k8s_ip}:{exposed_node_port}"
+        # )
+        # external_mongos_client.admin.command("usersInfo")
+        # external_mongos_client.close()

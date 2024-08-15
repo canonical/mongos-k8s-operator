@@ -6,7 +6,6 @@
 
 import logging
 from functools import cached_property
-from typing import Literal, NamedTuple
 from ops.charm import CharmBase
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.core.client import Client
@@ -23,10 +22,6 @@ logging.getLogger("lightkube.core.client").disabled = True
 logging.getLogger("httpx").disabled = True
 logging.getLogger("httpcore").disabled = True
 
-AuthMechanism = Literal["SCRAM-SHA-512", "OAUTHBEARER", "SSL"]
-AuthProtocol = Literal["SASL_PLAINTEXT", "SASL_SSL", "SSL"]
-AuthMap = NamedTuple("AuthMap", protocol=AuthProtocol, mechanism=AuthMechanism)
-
 
 class NodePortManager:
     """Manager for handling mongos Kubernetes resources for a single mongos pod."""
@@ -42,11 +37,6 @@ class NodePortManager:
         self.app_name = "-".join(pod_name.split("-")[:-1])
         self.namespace = namespace
         self.nodeport_service_name = f"{self.app_name}-nodeport"
-        self.short_auth_mechanism_mapping: dict[AuthMechanism, str] = {
-            "SCRAM-SHA-512": "scram",
-            "OAUTHBEARER": "oauth",
-            "SSL": "ssl",
-        }
 
     @cached_property
     def client(self) -> Client:
@@ -68,68 +58,33 @@ class NodePortManager:
             name=self.pod_name,
         )
 
-    def get_service(self, service_name: str) -> Service | None:
-        """Gets the Service via the K8s API."""
-        return self.client.get(
-            res=Service,
-            name=service_name,
-        )
-
-    def get_node_port(
-        self,
-        service: Service,
-        auth_map: AuthMap,
-    ) -> int:
-        """Gets the NodePort number for the service via the K8s API."""
-        if not service.spec or not service.spec.ports:
-            raise Exception("Could not find Service spec or ports")
-
-        for port in service.spec.ports:
-            if (
-                auth_map.protocol.lower().replace("_", "-") in port.name
-                and self.short_auth_mechanism_mapping[auth_map.mechanism] in port.name
-            ):
-                return port.nodePort
-
-        raise Exception(
-            f"Unable to find NodePort using {auth_map.protocol} and {auth_map.mechanism} for the {service} service"
-        )
-
     def build_node_port_services(self, port: str) -> Service:
         """Builds a ClusterIP service for initial client connection."""
         pod = self.get_pod(pod_name=self.pod_name)
         if not pod.metadata:
             raise Exception(f"Could not find metadata for {pod}")
 
+        unit_id = self.charm.unit.name.split("/")[1]
         return Service(
             metadata=ObjectMeta(
-                name=self.nodeport_service_name,
+                name=f"{self.charm.app.name}-{unit_id}-external",
                 namespace=self.namespace,
                 # owned by the StatefulSet
                 ownerReferences=pod.metadata.ownerReferences,
             ),
             spec=ServiceSpec(
                 type="NodePort",
-                selector={"app.kubernetes.io/name": self.app_name},
+                selector={"app.kubernetes.io/name": self.pod_name},
                 ports=[
                     ServicePort(
                         protocol="TCP",
                         port=port,
                         targetPort=port,
-                        name=f"{self.charm.app.name}-nodeport",
+                        name=f"{self.charm.app.name}",
                     )
                 ],
             ),
         )
-
-    def build_listener_service_name(self, auth_map: AuthMap):
-        """Builds the Service name for a given auth.protocol and auth.mechanism.
-
-        Returns:
-            String of listener service name
-                e.g `mongos-0-sasl-plaintext-scram`, `mongos-12-sasl-ssl-oauth`
-        """
-        return f"{self.pod_name}-{auth_map.protocol.lower().replace('_','-')}-{self.short_auth_mechanism_mapping[auth_map.mechanism]}"
 
     def apply_service(self, service: Service) -> None:
         """Applies a given Service."""

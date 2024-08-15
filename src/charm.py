@@ -135,7 +135,7 @@ class MongosCharm(ops.CharmBase):
         if not self.is_external_client:
             return
 
-        # every unit attempts to create a bootstrap service
+        # every unit attempts to create a nodeport service
         # if exists, will silently continue
         self.node_port_manager.apply_service(
             service=self.node_port_manager.build_node_port_services(
@@ -418,14 +418,10 @@ class MongosCharm(ops.CharmBase):
     def is_external_client(self) -> Optional[str]:
         """Returns the connectivity mode which mongos should use.
 
-        This is determined by checking the modes requested by the client(s).
-
-        TODO: Future PR. This should be modified to work for many clients.
+        Note that for K8s routers this should always default to True. However we still include
+        this function so that we can have parity on properties with the K8s and VM routers.
         """
-        if EXTERNAL_CONNECTIVITY_TAG not in self.app_peer_data:
-            return False
-
-        return json.loads(self.app_peer_data.get(EXTERNAL_CONNECTIVITY_TAG))
+        return True
 
     @property
     def database(self) -> Optional[str]:
