@@ -64,6 +64,7 @@ async def test_mongos_starts_with_config_server(ops_test: OpsTest) -> None:
         apps=[CONFIG_SERVER_APP_NAME, SHARD_APP_NAME],
         idle_period=20,
         raise_on_blocked=False,
+        raise_on_error=False,  # https://github.com/canonical/mongodb-k8s-operator/issues/301
     )
 
     # connect sharded cluster to mongos
