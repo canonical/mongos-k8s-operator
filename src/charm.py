@@ -3,6 +3,7 @@
 
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
+from ops.main import main
 import json
 
 from exceptions import MissingSecretError
@@ -53,7 +54,7 @@ class MissingConfigServerError(Exception):
     """Raised when mongos expects to be connected to a config-server but is not."""
 
 
-class ExtraDataDirError:
+class ExtraDataDirError(Exception):
     """Raised when there is unexpected data in the data directory."""
 
 
@@ -551,4 +552,4 @@ class MongosCharm(ops.CharmBase):
 
 
 if __name__ == "__main__":
-    ops.main(MongosCharm)
+    main(MongosCharm)

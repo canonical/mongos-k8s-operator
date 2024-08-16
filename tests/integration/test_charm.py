@@ -55,6 +55,7 @@ async def test_mongos_starts_with_config_server(ops_test: OpsTest) -> None:
         apps=[CONFIG_SERVER_APP_NAME, SHARD_APP_NAME],
         idle_period=10,
         raise_on_blocked=False,
+        raise_on_error=False,  # Removed this once DPE-4996 is resolved.
     )
     await ops_test.model.integrate(
         f"{SHARD_APP_NAME}:{SHARD_REL_NAME}",
@@ -76,6 +77,7 @@ async def test_mongos_starts_with_config_server(ops_test: OpsTest) -> None:
         apps=[CONFIG_SERVER_APP_NAME, SHARD_APP_NAME, MONGOS_APP_NAME],
         idle_period=20,
         status="active",
+        raise_on_error=False,  # Removed this once DPE-4996 is resolved.
     )
 
     mongos_running = await check_mongos(ops_test, unit_id=0, auth=False)
