@@ -135,7 +135,7 @@ class MongosCharm(ops.CharmBase):
     # END: hook functions
 
     # BEGIN: helper functions
-    def get_keyfile_contents(self) -> str:
+    def get_keyfile_contents(self) -> str | None:
         """Retrieves the contents of the keyfile on host machine."""
         # wait for keyFile to be created by leader unit
         if not self.get_secret(APP_SCOPE, Config.Secrets.SECRET_KEYFILE_NAME):
@@ -147,7 +147,7 @@ class MongosCharm(ops.CharmBase):
             return key.read()
         except PathError:
             logger.info("no keyfile present")
-            return
+            return None
 
     def is_integrated_to_config_server(self) -> bool:
         """Returns True if the mongos application is integrated to a config-server."""
