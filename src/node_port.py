@@ -48,11 +48,9 @@ class NodePortManager:
     def get_pod(self, pod_name: str = "") -> Pod:
         """Gets the Pod via the K8s API."""
         # Allows us to get pods from other peer units
-        pod_name = pod_name or self.pod_name
-
         return self.client.get(
             res=Pod,
-            name=self.pod_name,
+            name=pod_name or self.pod_name,
         )
 
     def build_node_port_services(self, port: str) -> Service:
