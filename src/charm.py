@@ -143,7 +143,9 @@ class MongosCharm(ops.CharmBase):
 
     def is_integrated_to_config_server(self) -> bool:
         """Returns True if the mongos application is integrated to a config-server."""
-        return len(self.model.relations[Config.Relations.CLUSTER_RELATIONS_NAME])
+        return (
+            self.model.get_relation(Config.Relations.CLUSTER_RELATIONS_NAME) is not None
+        )
 
     def _get_mongos_config_for_user(
         self, user: MongoDBUser, hosts: Set[str]
