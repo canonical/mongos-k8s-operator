@@ -149,7 +149,7 @@ class MongosCharm(ops.CharmBase):
             logger.info("no keyfile present")
             return
 
-    def is_integrated_to_config_server(self) -> True:
+    def is_integrated_to_config_server(self) -> bool:
         """Returns True if the mongos application is integrated to a config-server."""
         return (
             self.model.get_relation(Config.Relations.CLUSTER_RELATIONS_NAME) is not None
