@@ -7,14 +7,14 @@ import json
 
 from exceptions import MissingSecretError
 
-from ops.pebble import PathError, ProtocolError
+from ops.pebble import PathError, ProtocolError, APIError, Layer
 
 from pymongo.errors import PyMongoError
 
 from typing import Set, Optional, Dict
 
 from charms.mongodb.v0.config_server_interface import ClusterRequirer
-
+from charms.mongodb.v0.mongo import MongoConfiguration
 from charms.mongos.v0.set_status import MongosStatusHandler
 from charms.mongodb.v1.mongodb_provider import MongoDBProvider
 
@@ -136,6 +136,8 @@ class MongosCharm(ops.CharmBase):
                 "Failed to create mongos client users, due to %r. Will defer and try again", e
             )
             event.defer()
+
+        self.db_initialised = True
 
     def _on_update_status(self, _):
         """Handle the update status event"""
@@ -418,6 +420,27 @@ class MongosCharm(ops.CharmBase):
 
     # BEGIN: properties
     @property
+    def db_initialised(self) -> bool:
+        """Check if mongos is initialised.
+
+        Named `db_initialised` rather than `router_initialised` due to need for parity across DB
+        charms.
+        """
+        if not "db_initialised" in self.app_peer_data:
+            return False
+        return json.loads(self.app_peer_data["db_initialised"])
+
+    @db_initialised.setter
+    def db_initialised(self, value):
+        """Set the db_initialised flag."""
+        if isinstance(value, bool):
+            self.app_peer_data["db_initialised"] = json.dumps(value)
+        else:
+            raise ValueError(
+                f"'db_initialised' must be a boolean value. Proivded: {value} is of type {type(value)}"
+            )
+
+    @property
     def _mongos_layer(self) -> Layer:
         """Returns a Pebble configuration layer for mongos."""
         if not (get_config_server_uri := self.cluster.get_config_server_uri()):
@@ -491,8 +514,13 @@ class MongosCharm(ops.CharmBase):
         return Config.USER_ROLE_CREATE_USERS
 
     @property
+    def mongo_config(self) -> MongoConfiguration:
+        """Returns a MongoConfiguration object for shared libs with agnoistic mongo commands."""
+        return self.mongos_config
+
+    @property
     def mongos_config(self) -> MongosConfiguration:
-        """Generates a MongoDBConfiguration object for mongos in the deployment of MongoDB."""
+        """Generates a MongosConfiguration object for mongos in the deployment of MongoDB."""
         hosts = [self.get_mongos_host()]
         external_ca, _ = self.tls.get_tls_files(internal=False)
         internal_ca, _ = self.tls.get_tls_files(internal=True)

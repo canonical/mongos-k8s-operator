@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import List, Optional, Set, Tuple
 from urllib.parse import quote_plus
 
-from charms.mongodb.v1.mongodb import NotReadyError
+from charms.mongodb.v0.mongo import MongoConfiguration, MongoConnection, NotReadyError
 from pymongo import MongoClient, collection
 from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
@@ -31,7 +31,7 @@ SHARD_AWARE_STATE = 1
 
 
 @dataclass
-class MongosConfiguration:
+class MongosConfiguration(MongoConfiguration):
     """Class for mongos configuration.
 
     — database: database name.
@@ -95,7 +95,7 @@ class BalancerNotEnabledError(Exception):
     """Raised when balancer process is not enabled."""
 
 
-class MongosConnection:
+class MongosConnection(MongoConnection):
     """In this class we create connection object to Mongos.
 
     Real connection is created on the first call to Mongos.
@@ -125,26 +125,8 @@ class MongosConnection:
             direct: force a direct connection to a specific host, avoiding
                     reading replica set configuration and reconnection.
         """
-        if uri is None:
-            uri = config.uri
 
-        self.client = MongoClient(
-            uri,
-            directConnection=direct,
-            connect=False,
-            serverSelectionTimeoutMS=1000,
-            connectTimeoutMS=2000,
-        )
-        return
-
-    def __enter__(self):
-        """Return a reference to the new connection."""
-        return self
-
-    def __exit__(self, object_type, value, traceback):
-        """Disconnect from MongoDB client."""
-        self.client.close()
-        self.client = None
+        MongoConnection.__init__(self, config, uri, direct)
 
     def get_shard_members(self) -> Set[str]:
         """Gets shard members.
