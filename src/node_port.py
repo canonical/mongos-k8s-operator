@@ -66,7 +66,7 @@ class NodePortManager:
             metadata=ObjectMeta(
                 name=f"{self.app_name}-{unit_id}-external",
                 namespace=self.namespace,
-                # When we scale-down K8s will keep the Services for the deleted 2 units around,
+                # When we scale-down K8s will keep the Services for the deleted units around,
                 # unless the Services' owner is also deleted.
                 ownerReferences=[
                     OwnerReference(
@@ -86,7 +86,7 @@ class NodePortManager:
                         protocol="TCP",
                         port=port,
                         targetPort=port,
-                        name=f"{self.app_name}",
+                        name=f"{self.pod_name}-port",
                     )
                 ],
             ),
