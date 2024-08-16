@@ -3,6 +3,7 @@
 
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
+from ops.main import main
 import json
 
 from exceptions import MissingSecretError
@@ -55,7 +56,7 @@ class MissingConfigServerError(Exception):
     """Raised when mongos expects to be connected to a config-server but is not."""
 
 
-class ExtraDataDirError:
+class ExtraDataDirError(Exception):
     """Raised when there is unexpected data in the data directory."""
 
 
@@ -156,7 +157,7 @@ class MongosCharm(ops.CharmBase):
     # END: hook functions
 
     # BEGIN: helper functions
-    def get_keyfile_contents(self) -> str:
+    def get_keyfile_contents(self) -> str | None:
         """Retrieves the contents of the keyfile on host machine."""
         # wait for keyFile to be created by leader unit
         if not self.get_secret(APP_SCOPE, Config.Secrets.SECRET_KEYFILE_NAME):
@@ -168,9 +169,9 @@ class MongosCharm(ops.CharmBase):
             return key.read()
         except PathError:
             logger.info("no keyfile present")
-            return
+            return None
 
-    def is_integrated_to_config_server(self) -> True:
+    def is_integrated_to_config_server(self) -> bool:
         """Returns True if the mongos application is integrated to a config-server."""
         return self.model.get_relation(Config.Relations.CLUSTER_RELATIONS_NAME) is not None
 
@@ -586,4 +587,4 @@ class MongosCharm(ops.CharmBase):
 
 
 if __name__ == "__main__":
-    ops.main(MongosCharm)
+    main(MongosCharm)
