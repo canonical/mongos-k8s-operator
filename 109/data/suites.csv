@@ -1,0 +1,6 @@
+"DESCRIPTION","DURATION IN MS","NAME","PARENT SUITE","START TIME","STATUS","STOP TIME","SUB SUITE","SUITE","TEST CLASS","TEST METHOD"
+"TODO: Build the charm-under-test and deploy it together with related charms.
+
+    Assert on the unit status before any relations/configurations take place.
+    ","3834","test_build_and_deploy","tests.integration","Sat Aug 17 01:29:45 UTC 2024","passed","Sat Aug 17 01:29:49 UTC 2024","","test_charm","",""
+"Verifies that the application and unit are active.","195","test_waits_for_config_server","tests.integration","Sat Aug 17 01:29:49 UTC 2024","passed","Sat Aug 17 01:29:49 UTC 2024","","test_charm","",""
