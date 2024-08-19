@@ -130,6 +130,8 @@ class MongosCharm(ops.CharmBase):
             event.defer()
             return
 
+        self.db_initialised = True
+
         try:
             self.client_relations.oversee_users(None, None)
         except PyMongoError as e:
@@ -137,8 +139,6 @@ class MongosCharm(ops.CharmBase):
                 "Failed to create mongos client users, due to %r. Will defer and try again", e
             )
             event.defer()
-
-        self.db_initialised = True
 
     def _on_update_status(self, _):
         """Handle the update status event"""

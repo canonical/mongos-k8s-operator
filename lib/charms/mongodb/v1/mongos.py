@@ -32,25 +32,7 @@ SHARD_AWARE_STATE = 1
 
 @dataclass
 class MongosConfiguration(MongoConfiguration):
-    """Class for mongos configuration.
-
-    — database: database name.
-    — username: username.
-    — password: password.
-    — hosts: full list of hosts to connect to, needed for the URI.
-    - port: integer for the port to connect to connect to mongodb.
-    - tls_external: indicator for use of internal TLS connection.
-    - tls_internal: indicator for use of external TLS connection.
-    """
-
-    database: Optional[str]
-    username: str
-    password: str
-    hosts: Set[str]
-    port: int
-    roles: Set[str]
-    tls_external: bool
-    tls_internal: bool
+    """Class for mongos configuration."""
 
     @property
     def uri(self):

@@ -44,26 +44,7 @@ class FailedToMovePrimaryError(Exception):
 
 @dataclass
 class MongoDBConfiguration(MongoConfiguration):
-    """Class for MongoDB configuration.
-
-    — replset: name of replica set, needed for connection URI.
-    — database: database name.
-    — username: username.
-    — password: password.
-    — hosts: full list of hosts to connect to, needed for the URI.
-    - tls_external: indicator for use of internal TLS connection.
-    - tls_internal: indicator for use of external TLS connection.
-    """
-
-    replset: str
-    database: Optional[str]
-    username: str
-    password: str
-    hosts: Set[str]
-    roles: Set[str]
-    tls_external: bool
-    tls_internal: bool
-    standalone: bool = False
+    """Class for MongoDB configuration."""
 
     @property
     def uri(self):

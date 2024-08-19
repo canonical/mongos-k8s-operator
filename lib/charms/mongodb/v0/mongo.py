@@ -39,7 +39,8 @@ logger = logging.getLogger(__name__)
 class MongoConfiguration:
     """Class for Mongo configurations useable my mongos and mongodb.
 
-    — replset: name of replica set, needed for connection URI.
+    — replset: name of replica set
+    - port: connection port
     — database: database name.
     — username: username.
     — password: password.
@@ -48,16 +49,16 @@ class MongoConfiguration:
     - tls_internal: indicator for use of external TLS connection.
     """
 
-    pass
-    # replset: str
-    # database: Optional[str]
-    # username: str
-    # password: str
-    # hosts: Set[str]
-    # roles: Set[str]
-    # tls_external: bool
-    # tls_internal: bool
-    # standalone: bool = False
+    replset: Optional[str]
+    port: Optional[str]
+    database: Optional[str]
+    username: str
+    password: str
+    hosts: Set[str]
+    roles: Set[str]
+    tls_external: bool
+    tls_internal: bool
+    standalone: bool = False
 
 
 class MongoConnection:

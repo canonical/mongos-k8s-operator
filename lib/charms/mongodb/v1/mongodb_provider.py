@@ -93,7 +93,9 @@ class MongoDBProvider(Object):
         if not self.charm.db_initialised:
             return False
 
-        if not self.charm.is_relation_feasible(self.relation_name):
+        if not self.charm.is_role(Config.Role.MONGOS) and not self.charm.is_relation_feasible(
+            self.relation_name
+        ):
             logger.info("Skipping code for relations.")
             return False
 
@@ -293,6 +295,7 @@ class MongoDBProvider(Object):
 
         database_name = self._get_database_from_relation(relation)
 
+        # TODO figure out how to handle these options here from mongos and mongodb
         return MongoConfiguration(
             replset=self.charm.app.name,
             database=database_name,
