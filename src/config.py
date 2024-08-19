@@ -13,6 +13,20 @@ class Config:
     MONGODB_PORT = 27017
     SUBSTRATE = "k8s"
     CONTAINER_NAME = "mongos"
+    USER_ROLE_CREATE_USERS = "admin"
+    SERVICE_NAME = "mongod"  # this must match the name of the service in the ROCK
+    MONGOD_CONF_DIR = "/etc/mongod"
+    UNIX_USER = "mongodb"
+    UNIX_GROUP = "mongodb"
+    LICENSE_PATH = "/licenses/LICENSE"
+    DATA_DIR = "/var/lib/mongodb"
+
+    class ExternalConnections:
+        """External Connections related config for MongoDB Charm."""
+
+        NONE = "none"
+        EXTERNAL_NODEPORT = "nodeport"
+        VALID_EXTERNAL_CONFIG = [NONE, EXTERNAL_NODEPORT]
 
     class Relations:
         """Relations related config for MongoDB Charm."""
@@ -61,6 +75,13 @@ class Config:
 
         # TODO Future PR add more status messages here as constants
         UNHEALTHY_UPGRADE = BlockedStatus("Unhealthy after upgrade.")
+        INVALID_EXTERNAL_CONFIG = BlockedStatus("Config option for expose-external not valid.")
+
+    class Substrate:
+        """Substrate related constants."""
+
+        VM = "vm"
+        K8S = "k8s"
 
     class Role:
         """Role config names for MongoDB Charm."""

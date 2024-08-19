@@ -151,13 +151,13 @@ typecheck = ["mypy"]
 
 [[package]]
 name = "cachetools"
-version = "5.4.0"
+version = "5.5.0"
 description = "Extensible memoizing collections and decorators"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "cachetools-5.4.0-py3-none-any.whl", hash = "sha256:3ae3b49a3d5e28a77a0be2b37dbcb89005058959cb2323858c2657c4a8cab474"},
-    {file = "cachetools-5.4.0.tar.gz", hash = "sha256:b8adc2e7c07f105ced7bc56dbb6dfbe7c4a00acce20e2227b3f355be89bc6827"},
+    {file = "cachetools-5.5.0-py3-none-any.whl", hash = "sha256:02134e8439cdc2ffb62023ce1debca2944c3f289d66bb17ead3ab3dede74b292"},
+    {file = "cachetools-5.5.0.tar.gz", hash = "sha256:2cc24fb4cbe39633fb7badd9db9ca6295d766d9c2995f245725a46715d050f2a"},
 ]
 
 [[package]]
@@ -610,13 +610,13 @@ tests = ["asttokens (>=2.1.0)", "coverage", "coverage-enable-subprocess", "ipyth
 
 [[package]]
 name = "google-auth"
-version = "2.33.0"
+version = "2.34.0"
 description = "Google Authentication Library"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "google_auth-2.33.0-py2.py3-none-any.whl", hash = "sha256:8eff47d0d4a34ab6265c50a106a3362de6a9975bb08998700e389f857e4d39df"},
-    {file = "google_auth-2.33.0.tar.gz", hash = "sha256:d6a52342160d7290e334b4d47ba390767e4438ad0d45b7630774533e82655b95"},
+    {file = "google_auth-2.34.0-py2.py3-none-any.whl", hash = "sha256:72fd4733b80b6d777dcde515628a9eb4a577339437012874ea286bca7261ee65"},
+    {file = "google_auth-2.34.0.tar.gz", hash = "sha256:8eb87396435c19b20d32abd2f984e31c191a15284af72eb922f10e5bde9c04cc"},
 ]
 
 [package.dependencies]
@@ -626,7 +626,7 @@ rsa = ">=3.1.4,<5"
 
 [package.extras]
 aiohttp = ["aiohttp (>=3.6.2,<4.0.0.dev0)", "requests (>=2.20.0,<3.0.0.dev0)"]
-enterprise-cert = ["cryptography (==36.0.2)", "pyopenssl (==22.0.0)"]
+enterprise-cert = ["cryptography", "pyopenssl"]
 pyopenssl = ["cryptography (>=38.0.3)", "pyopenssl (>=20.0.0)"]
 reauth = ["pyu2f (>=0.1.5)"]
 requests = ["requests (>=2.20.0,<3.0.0.dev0)"]
@@ -2139,4 +2139,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "c7cb79450373864dd99bf571c2f6489124755b12d1b8f04cd9a8241326fa7d49"
+content-hash = "40d08e01f1ad3128ac6f814a327a24feccf1a14232d68aa53fa689e5612799a9"

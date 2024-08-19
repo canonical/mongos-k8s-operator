@@ -1,0 +1,7 @@
+# Copyright 2023 Canonical Ltd.
+# See LICENSE file for licensing details.
+options:
+  expose-external:
+    description: "String to determine how to expose the mongos router externally from the Kubernetes cluster. Possible values: 'nodeport', 'none'"
+    type: string
+    default: "none"

@@ -45,6 +45,7 @@ pytest = "^8.1.1"
 parameterized = "^0.9.0"
 
 [tool.poetry.group.integration.dependencies]
+ops = "^2.15.0"
 allure-pytest = "^2.13.5"
 tenacity = "^8.2.3"
 pymongo = "^4.7.3"
