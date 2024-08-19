@@ -1,20 +1,19 @@
 """Code for interactions with MongoDB."""
-from dataclasses import dataclass
 
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
-
+import abc
 import logging
 import re
-from typing import List, Set, Optional
-from pymongo.errors import OperationFailure, PyMongoError
-from tenacity import (
-    RetryError,
-    Retrying,
-    stop_after_delay,
-    wait_fixed,
-)
+from dataclasses import dataclass
+from typing import List, Optional, Set
+
 from pymongo import MongoClient
+from pymongo.errors import OperationFailure, PyMongoError
+from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
+
+# Copyright 2024 Canonical Ltd.
+# See LICENSE file for licensing details.
 
 
 class NotReadyError(PyMongoError):
@@ -37,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class MongoConfiguration:
-    """Class for Mongo configurations useable my mongos and mongodb.
+    """Class for Mongo configurations usable my mongos and mongodb.
 
     — replset: name of replica set
     - port: connection port
@@ -49,8 +48,6 @@ class MongoConfiguration:
     - tls_internal: indicator for use of external TLS connection.
     """
 
-    replset: Optional[str]
-    port: Optional[str]
     database: Optional[str]
     username: str
     password: str
@@ -58,10 +55,36 @@ class MongoConfiguration:
     roles: Set[str]
     tls_external: bool
     tls_internal: bool
-    standalone: bool = False
+
+    @property
+    @abc.abstractmethod
+    def uri(self):
+        """Return URI concatenated from fields."""
 
 
 class MongoConnection:
+    """In this class we create connection object to Mongo[s/db].
+
+    This class is meant for agnositc functions in mongos and mongodb.
+
+    Real connection is created on the first call to Mongo[s/db].
+    Delayed connectivity allows to firstly check database readiness
+    and reuse the same connection for an actual query later in the code.
+
+    Connection is automatically closed when object destroyed.
+    Automatic close allows to have more clean code.
+
+    Note that connection when used may lead to the following pymongo errors: ConfigurationError,
+    ConfigurationError, OperationFailure. It is suggested that the following pattern be adopted
+    when using MongoDBConnection:
+
+    with MongoMongos(MongoConfig) as mongo:
+        try:
+            mongo.<some operation from this class>
+        except ConfigurationError, OperationFailure:
+            <error handling as needed>
+    """
+
     def __init__(self, config: MongoConfiguration, uri=None, direct=False):
         """A MongoDB client interface.
 

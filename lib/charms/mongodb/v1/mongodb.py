@@ -1,16 +1,15 @@
 """Code for interactions with MongoDB."""
 
-# Copyright 2023 Canonical Ltd.
+# Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 import logging
-import re
 from dataclasses import dataclass
 from typing import Dict, Optional, Set
 from urllib.parse import quote_plus
 
-from charms.mongodb.v0.mongo import MongoConfiguration, MongoConnection, NotReadyError
 from bson.json_util import dumps
+from charms.mongodb.v0.mongo import MongoConfiguration, MongoConnection, NotReadyError
 from pymongo.errors import OperationFailure
 from tenacity import (
     RetryError,
@@ -32,7 +31,7 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 1
+LIBPATCH = 3
 
 # path to store mongodb ketFile
 logger = logging.getLogger(__name__)
@@ -45,6 +44,9 @@ class FailedToMovePrimaryError(Exception):
 @dataclass
 class MongoDBConfiguration(MongoConfiguration):
     """Class for MongoDB configuration."""
+
+    replset: Optional[str]
+    standalone: bool = False
 
     @property
     def uri(self):
@@ -102,6 +104,7 @@ class MongoDBConnection(MongoConnection):
                     reading replica set configuration and reconnection.
         """
         MongoConnection.__init__(self, config, uri, direct)
+        self.mongodb_config = config
 
     @retry(
         stop=stop_after_attempt(3),

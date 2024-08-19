@@ -1,6 +1,6 @@
 """Code for interactions with MongoDB."""
 
-# Copyright 2023 Canonical Ltd.
+# Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 import logging
@@ -9,7 +9,7 @@ from typing import List, Optional, Set, Tuple
 from urllib.parse import quote_plus
 
 from charms.mongodb.v0.mongo import MongoConfiguration, MongoConnection, NotReadyError
-from pymongo import MongoClient, collection
+from pymongo import collection
 from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
 from config import Config
@@ -22,7 +22,7 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 5
+LIBPATCH = 7
 
 # path to store mongodb ketFile
 logger = logging.getLogger(__name__)
@@ -33,6 +33,8 @@ SHARD_AWARE_STATE = 1
 @dataclass
 class MongosConfiguration(MongoConfiguration):
     """Class for mongos configuration."""
+
+    port: Optional[str]
 
     @property
     def uri(self):
@@ -107,7 +109,6 @@ class MongosConnection(MongoConnection):
             direct: force a direct connection to a specific host, avoiding
                     reading replica set configuration and reconnection.
         """
-
         MongoConnection.__init__(self, config, uri, direct)
 
     def get_shard_members(self) -> Set[str]:

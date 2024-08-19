@@ -175,6 +175,12 @@ class MongoDBProvider(Object):
 
             for username in database_users - relation_users:
                 logger.info("Remove relation user: %s", username)
+                if (
+                    self.charm.is_role(Config.Role.MONGOS)
+                    and username == self.charm.mongo_config.username
+                ):
+                    continue
+
                 mongo.drop_user(username)
 
             for username in relation_users - database_users:
@@ -295,17 +301,19 @@ class MongoDBProvider(Object):
 
         database_name = self._get_database_from_relation(relation)
 
-        # TODO figure out how to handle these options here from mongos and mongodb
-        return MongoConfiguration(
-            replset=self.charm.app.name,
-            database=database_name,
-            username=username,
-            password=password,
-            hosts=self.charm.mongo_config.hosts,
-            roles=self._get_roles_from_relation(relation),
-            tls_external=False,
-            tls_internal=False,
-        )
+        mongo_args = {
+            "database": database_name,
+            "username": username,
+            "password": password,
+            "hosts": self.charm.mongo_config.hosts,
+            "roles": self._get_roles_from_relation(relation),
+            "tls_external": False,
+            "tls_internal": False,
+        }
+        if not self.charm.is_role(Config.Role.MONGOS):
+            mongo_args["replset"] = self.charm.app.name
+
+        return MongoConfiguration(**mongo_args)
 
     def _set_relation(self, config: MongoConfiguration):
         """Save all output fields into application relation."""
@@ -324,10 +332,11 @@ class MongoDBProvider(Object):
             relation.id,
             ",".join(config.hosts),
         )
-        self.database_provides.set_replset(
-            relation.id,
-            config.replset,
-        )
+        if not self.charm.is_role(Config.Role.MONGOS):
+            self.database_provides.set_replset(
+                relation.id,
+                config.replset,
+            )
         self.database_provides.set_uris(
             relation.id,
             config.uri,
