@@ -7,16 +7,18 @@ from ops.main import main
 import json
 
 from exceptions import MissingSecretError
-
-from ops.pebble import PathError, ProtocolError, Layer, APIError
-
-
+from ops.pebble import PathError, ProtocolError, Layer
 from typing import Set, Optional, Dict
-
 from charms.mongodb.v0.config_server_interface import ClusterRequirer
+from tenacity import (
+    Retrying,
+    retry,
+    stop_after_attempt,
+    wait_fixed,
+)
+
 
 from charms.mongos.v0.set_status import MongosStatusHandler
-
 from charms.mongodb.v0.mongodb_tls import MongoDBTLS
 from charms.mongodb.v0.mongodb_secrets import SecretCache
 from charms.mongodb.v0.mongodb_secrets import generate_secret_label
@@ -218,6 +220,11 @@ class MongosCharm(ops.CharmBase):
         content[key] = Config.Secrets.SECRET_DELETED_LABEL
         secret.set_content(content)
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_fixed(2),
+        reraise=True,
+    )
     def stop_mongos_service(self):
         """Stop mongos service."""
         container = self.unit.get_container(Config.CONTAINER_NAME)
@@ -226,14 +233,11 @@ class MongosCharm(ops.CharmBase):
     def restart_charm_services(self):
         """Restart mongos service."""
         container = self.unit.get_container(Config.CONTAINER_NAME)
-        try:
-            container.stop(Config.SERVICE_NAME)
-        except APIError:
-            # stopping a service that is not running results in an APIError which can be ignored.
-            pass
+        container.stop(Config.SERVICE_NAME)
 
-        container.add_layer(Config.CONTAINER_NAME, self._mongos_layer, combine=True)
-        container.replan()
+        for _ in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(2), reraise=True):
+            container.add_layer(Config.CONTAINER_NAME, self._mongos_layer, combine=True)
+            container.replan()
 
     def set_database(self, database: str) -> None:
         """Updates the database requested for the mongos user."""
@@ -307,6 +311,18 @@ class MongosCharm(ops.CharmBase):
         the client wishes to connect to mongos (inside Juju or outside).
         """
         return self.unit_host(self.unit)
+
+    def get_mongos_hosts(self) -> Set:
+        """Returns the host for mongos as a str.
+
+        The host for mongos can be either the Unix Domain Socket or an IP address depending on how
+        the client wishes to connect to mongos (inside Juju or outside).
+        """
+        hosts = {self.unit_host(self.unit)}
+        for unit in self.peers_units:
+            hosts.add(self.unit_host(unit))
+
+        return hosts
 
     @staticmethod
     def _generate_relation_departed_key(rel_id: int) -> str:
@@ -412,6 +428,14 @@ class MongosCharm(ops.CharmBase):
 
     # BEGIN: properties
     @property
+    def peers_units(self) -> list[Unit]:
+        """Get peers units in a safe way."""
+        if not self._peers:
+            return []
+        else:
+            return self._peers.units
+
+    @property
     def _mongos_layer(self) -> Layer:
         """Returns a Pebble configuration layer for mongos."""
         if not (get_config_server_uri := self.cluster.get_config_server_uri()):
@@ -487,7 +511,7 @@ class MongosCharm(ops.CharmBase):
     @property
     def mongos_config(self) -> MongosConfiguration:
         """Generates a MongoDBConfiguration object for mongos in the deployment of MongoDB."""
-        hosts = [self.get_mongos_host()]
+        hosts = self.get_mongos_hosts()
         external_ca, _ = self.tls.get_tls_files(internal=False)
         internal_ca, _ = self.tls.get_tls_files(internal=True)
 
