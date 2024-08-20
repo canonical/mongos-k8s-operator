@@ -3,24 +3,31 @@
 
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
+from ops.main import main
 import json
 
 from exceptions import MissingSecretError
-
-from ops.pebble import PathError, ProtocolError
-
-
+from ops.pebble import PathError, ProtocolError, Layer
 from typing import Set, Optional, Dict
+from charms.mongodb.v0.config_server_interface import ClusterRequirer
+from tenacity import (
+    Retrying,
+    retry,
+    stop_after_attempt,
+    wait_fixed,
+)
 
 
 from charms.mongos.v0.set_status import MongosStatusHandler
-
+from charms.mongodb.v0.mongodb_tls import MongoDBTLS
 from charms.mongodb.v0.mongodb_secrets import SecretCache
 from charms.mongodb.v0.mongodb_secrets import generate_secret_label
 from charms.mongodb.v1.mongos import MongosConfiguration, MongosConnection
 from charms.mongodb.v1.users import (
     MongoDBUser,
 )
+
+from charms.mongodb.v1.helpers import get_mongos_args
 
 from config import Config
 
@@ -49,7 +56,7 @@ class MissingConfigServerError(Exception):
     """Raised when mongos expects to be connected to a config-server but is not."""
 
 
-class ExtraDataDirError:
+class ExtraDataDirError(Exception):
     """Raised when there is unexpected data in the data directory."""
 
 
@@ -63,10 +70,12 @@ class MongosCharm(ops.CharmBase):
         )
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.update_status, self._on_update_status)
+        self.tls = MongoDBTLS(self, Config.Relations.PEERS, substrate=Config.SUBSTRATE)
 
         self.role = Config.Role.MONGOS
         self.secrets = SecretCache(self)
         self.status = MongosStatusHandler(self)
+        self.cluster = ClusterRequirer(self, substrate=Config.SUBSTRATE)
 
     # BEGIN: hook functions
     def _on_mongos_pebble_ready(self, event) -> None:
@@ -85,7 +94,7 @@ class MongosCharm(ops.CharmBase):
             return
 
         try:
-            # mongod needs keyFile and TLS certificates on filesystem
+            # mongos needs keyFile and TLS certificates on filesystem
             self._push_keyfile_to_workload(container)
             self._pull_licenses(container)
             self._set_data_dir_permissions(container)
@@ -129,9 +138,25 @@ class MongosCharm(ops.CharmBase):
     # END: hook functions
 
     # BEGIN: helper functions
+    def get_keyfile_contents(self) -> str | None:
+        """Retrieves the contents of the keyfile on host machine."""
+        # wait for keyFile to be created by leader unit
+        if not self.get_secret(APP_SCOPE, Config.Secrets.SECRET_KEYFILE_NAME):
+            logger.debug("waiting to receive keyfile contents from config-server.")
+
+        try:
+            container = self.unit.get_container(Config.CONTAINER_NAME)
+            key = container.pull(f"{Config.MONGOD_CONF_DIR}/{Config.TLS.KEY_FILE_NAME}")
+            return key.read()
+        except PathError:
+            logger.info("no keyfile present")
+            return None
+
     def is_integrated_to_config_server(self) -> bool:
         """Returns True if the mongos application is integrated to a config-server."""
-        return self.model.relations[Config.Relations.CLUSTER_RELATIONS_NAME] is not None
+        return (
+            self.model.get_relation(Config.Relations.CLUSTER_RELATIONS_NAME) is not None
+        )
 
     def _get_mongos_config_for_user(
         self, user: MongoDBUser, hosts: Set[str]
@@ -195,16 +220,24 @@ class MongosCharm(ops.CharmBase):
         content[key] = Config.Secrets.SECRET_DELETED_LABEL
         secret.set_content(content)
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_fixed(2),
+        reraise=True,
+    )
+    def stop_mongos_service(self):
+        """Stop mongos service."""
+        container = self.unit.get_container(Config.CONTAINER_NAME)
+        container.stop(Config.SERVICE_NAME)
+
     def restart_charm_services(self):
         """Restart mongos service."""
         container = self.unit.get_container(Config.CONTAINER_NAME)
         container.stop(Config.SERVICE_NAME)
 
-        container.add_layer(Config.CONTAINER_NAME, self._mongod_layer, combine=True)
-        container.replan()
-
-        self._connect_mongodb_exporter()
-        self._connect_pbm_agent()
+        for _ in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(2), reraise=True):
+            container.add_layer(Config.CONTAINER_NAME, self._mongos_layer, combine=True)
+            container.replan()
 
     def set_database(self, database: str) -> None:
         """Updates the database requested for the mongos user."""
@@ -277,7 +310,19 @@ class MongosCharm(ops.CharmBase):
         The host for mongos can be either the Unix Domain Socket or an IP address depending on how
         the client wishes to connect to mongos (inside Juju or outside).
         """
-        return self.unit_host
+        return self.unit_host(self.unit)
+
+    def get_mongos_hosts(self) -> Set:
+        """Returns the host for mongos as a str.
+
+        The host for mongos can be either the Unix Domain Socket or an IP address depending on how
+        the client wishes to connect to mongos (inside Juju or outside).
+        """
+        hosts = {self.unit_host(self.unit)}
+        for unit in self.peers_units:
+            hosts.add(self.unit_host(unit))
+
+        return hosts
 
     @staticmethod
     def _generate_relation_departed_key(rel_id: int) -> str:
@@ -337,7 +382,7 @@ class MongosCharm(ops.CharmBase):
         Until the ability to set fsGroup and fsGroupChangePolicy via Pod securityContext
         is available, we fix permissions incorrectly with chown.
         """
-        for path in [Config.DATA_DIR, Config.LOG_DIR, Config.LogRotate.LOG_STATUS_DIR]:
+        for path in [Config.DATA_DIR]:
             paths = container.list_files(path, itself=True)
             if not len(paths) == 1:
                 raise ExtraDataDirError(
@@ -383,6 +428,42 @@ class MongosCharm(ops.CharmBase):
 
     # BEGIN: properties
     @property
+    def peers_units(self) -> list[Unit]:
+        """Get peers units in a safe way."""
+        if not self._peers:
+            return []
+        else:
+            return self._peers.units
+
+    @property
+    def _mongos_layer(self) -> Layer:
+        """Returns a Pebble configuration layer for mongos."""
+        if not (get_config_server_uri := self.cluster.get_config_server_uri()):
+            logger.error("cannot start mongos without a config_server_db")
+            raise MissingConfigServerError()
+
+        layer_config = {
+            "summary": "mongos layer",
+            "description": "Pebble config layer for mongos router",
+            "services": {
+                "mongos": {
+                    "override": "replace",
+                    "summary": "mongos",
+                    "command": "mongos "
+                    + get_mongos_args(
+                        self.mongos_config,
+                        snap_install=False,
+                        config_server_db=get_config_server_uri,
+                    ),
+                    "startup": "enabled",
+                    "user": Config.UNIX_USER,
+                    "group": Config.UNIX_GROUP,
+                }
+            },
+        }
+        return Layer(layer_config)  # type: ignore
+
+    @property
     def mongos_initialised(self) -> bool:
         """Check if mongos is initialised."""
         return "mongos_initialised" in self.app_peer_data
@@ -404,47 +485,33 @@ class MongosCharm(ops.CharmBase):
     def is_external_client(self) -> Optional[str]:
         """Returns the connectivity mode which mongos should use.
 
-        This is determined by checking the modes requested by the client(s).
-
-        TODO: Future PR. This should be modified to work for many clients.
+        Note that for K8s routers this should always default to True. However we still include
+        this function so that we can have parity on properties with the K8s and VM routers.
         """
-        if EXTERNAL_CONNECTIVITY_TAG not in self.app_peer_data:
-            return False
-
-        return json.loads(self.app_peer_data.get(EXTERNAL_CONNECTIVITY_TAG))
+        return True
 
     @property
     def database(self) -> Optional[str]:
-        """Returns a mapping of databases requested by integrated clients.
+        """Returns a database to be used by mongos admin user.
 
-        TODO: Future PR. This should be modified to work for many clients.
+        TODO: Future PR. There should be a separate function with a mapping of databases for the
+        associated clients.
         """
-        if not self._peers:
-            logger.info("Peer relation not joined yet.")
-            # TODO future PR implement relation interface between host application mongos and use
-            # host application name in generation of db name.
-            return "mongos-database"
-
-        return self.app_peer_data.get(DATABASE_TAG, "mongos-database")
+        return f"{self.app.name}_{self.model.name}"
 
     @property
     def extra_user_roles(self) -> Set[str]:
-        """Returns a mapping of user roles requested by integrated clients.
+        """Returns the user roles of the mongos charm.
 
-        TODO: Future PR. This should be modified to work for many clients.
+        TODO: Future PR. There should be a separate function with a mapping of roles for the
+        associated clients.
         """
-        if not self._peers:
-            logger.info("Peer relation not joined yet.")
-            return None
-
-        return self.app_peer_data.get(USER_ROLES_TAG, "default")
+        return Config.USER_ROLE_CREATE_USERS
 
     @property
     def mongos_config(self) -> MongosConfiguration:
         """Generates a MongoDBConfiguration object for mongos in the deployment of MongoDB."""
-        hosts = [self.get_mongos_host()]
-        # TODO: Future PR. Ensure that this works for external connections with NodePort
-        port = Config.MONGOS_PORT if self.is_external_client else None
+        hosts = self.get_mongos_hosts()
         external_ca, _ = self.tls.get_tls_files(internal=False)
         internal_ca, _ = self.tls.get_tls_files(internal=True)
 
@@ -453,7 +520,8 @@ class MongosCharm(ops.CharmBase):
             username=self.get_secret(APP_SCOPE, Config.Secrets.USERNAME),
             password=self.get_secret(APP_SCOPE, Config.Secrets.PASSWORD),
             hosts=hosts,
-            port=port,
+            # unlike the vm mongos charm, the K8s charm does not communicate with the unix socket
+            port=Config.MONGOS_PORT,
             roles=self.extra_user_roles,
             tls_external=external_ca is not None,
             tls_internal=internal_ca is not None,
@@ -492,8 +560,20 @@ class MongosCharm(ops.CharmBase):
         """
         return False
 
+    @property
+    def config_server_db(self) -> str:
+        """Fetch current the config server database that this unit is connected to."""
+        if not (
+            config_server_relation := self.model.get_relation(
+                Config.Relations.CLUSTER_RELATIONS_NAME
+            )
+        ):
+            return ""
+
+        return config_server_relation.app.name
+
     # END: properties
 
 
 if __name__ == "__main__":
-    ops.main(MongosCharm)
+    main(MongosCharm)
