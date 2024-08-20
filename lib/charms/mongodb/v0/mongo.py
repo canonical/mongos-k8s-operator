@@ -2,11 +2,14 @@
 
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
-import abc
 import logging
 import re
 from dataclasses import dataclass
+from itertools import chain
 from typing import List, Optional, Set
+from config import Config
+from urllib.parse import quote_plus
+
 
 from pymongo import MongoClient
 from pymongo.errors import OperationFailure, PyMongoError
@@ -30,8 +33,34 @@ LIBAPI = 0
 # to 0 if you are raising the major API version
 LIBPATCH = 1
 
+ADMIN_AUTH_SOURCE = "authSource=admin"
+SYSTEM_DBS = ("admin", "local", "config")
+REGULAR_ROLES = {
+    "admin": [
+        {"role": "userAdminAnyDatabase", "db": "admin"},
+        {"role": "readWriteAnyDatabase", "db": "admin"},
+        {"role": "userAdmin", "db": "admin"},
+    ],
+    "monitor": [
+        {"role": "explainRole", "db": "admin"},
+        {"role": "clusterMonitor", "db": "admin"},
+        {"role": "read", "db": "local"},
+    ],
+    "backup": [
+        {"db": "admin", "role": "readWrite", "collection": ""},
+        {"db": "admin", "role": "backup"},
+        {"db": "admin", "role": "clusterMonitor"},
+        {"db": "admin", "role": "restore"},
+        {"db": "admin", "role": "pbmAnyAction"},
+    ],
+}
+
 # path to store mongodb ketFile
 logger = logging.getLogger(__name__)
+
+
+class AmbigiousConfigError(Exception):
+    """Raised when the config could correspond to a mongod config or mongos config."""
 
 
 @dataclass
@@ -39,13 +68,12 @@ class MongoConfiguration:
     """Class for Mongo configurations usable my mongos and mongodb.
 
     — replset: name of replica set
-    - port: connection port
     — database: database name.
     — username: username.
     — password: password.
     — hosts: full list of hosts to connect to, needed for the URI.
-    - tls_external: indicator for use of internal TLS connection.
-    - tls_internal: indicator for use of external TLS connection.
+    — tls_external: indicator for use of internal TLS connection.
+    — tls_internal: indicator for use of external TLS connection.
     """
 
     database: Optional[str]
@@ -55,11 +83,51 @@ class MongoConfiguration:
     roles: Set[str]
     tls_external: bool
     tls_internal: bool
+    port: Optional[str] = Config.MONGODB_PORT
+    replset: Optional[str] = None
+    standalone: bool = False
 
     @property
-    @abc.abstractmethod
     def uri(self):
         """Return URI concatenated from fields."""
+        if self.port == Config.MONGOS_PORT and self.replset:
+            raise AmbigiousConfigError("Mongos cannot support replica set")
+
+        if self.standalone:
+            return (
+                f"mongodb://{quote_plus(self.username)}:"
+                f"{quote_plus(self.password)}@"
+                f"localhost:{self.port}/?authSource=admin"
+            )
+
+        self.complete_hosts = self.hosts
+
+        # mongos using Unix Domain Socket to communicate do not use port
+        if self.port:
+            self.complete_hosts = [f"{host}:{self.port}" for host in self.hosts]
+
+        complete_hosts = ",".join(self.complete_hosts)
+
+        replset_str = f"replicaSet={quote_plus(self.replset)}" if self.replset else ""
+
+        # Auth DB should be specified while user connects to application DB.
+        auth_source = ""
+        if self.database != "admin":
+            # "&"" is needed to concatinate multiple values in URI
+            auth_source = f"&{ADMIN_AUTH_SOURCE}" if self.replset else ADMIN_AUTH_SOURCE
+
+        return (
+            f"mongodb://{quote_plus(self.username)}:"
+            f"{quote_plus(self.password)}@"
+            f"{complete_hosts}/{quote_plus(self.database)}?"
+            f"{replset_str}"
+            f"{auth_source}"
+        )
+
+
+def supported_roles(config: MongoConfiguration):
+    """Return the supported roles for the given configuration."""
+    return REGULAR_ROLES | {"default": [{"db": config.database, "role": "readWrite"}]}
 
 
 class MongoConnection:
@@ -94,6 +162,8 @@ class MongoConnection:
             direct: force a direct connection to a specific host, avoiding
                     reading replica set configuration and reconnection.
         """
+        self.config = config
+
         if uri is None:
             uri = config.uri
 
@@ -184,30 +254,8 @@ class MongoConnection:
 
     @staticmethod
     def _get_roles(config: MongoConfiguration) -> List[dict]:
-        """Generate roles List."""
-        supported_roles = {
-            "admin": [
-                {"role": "userAdminAnyDatabase", "db": "admin"},
-                {"role": "readWriteAnyDatabase", "db": "admin"},
-                {"role": "userAdmin", "db": "admin"},
-            ],
-            "monitor": [
-                {"role": "explainRole", "db": "admin"},
-                {"role": "clusterMonitor", "db": "admin"},
-                {"role": "read", "db": "local"},
-            ],
-            "backup": [
-                {"db": "admin", "role": "readWrite", "collection": ""},
-                {"db": "admin", "role": "backup"},
-                {"db": "admin", "role": "clusterMonitor"},
-                {"db": "admin", "role": "restore"},
-                {"db": "admin", "role": "pbmAnyAction"},
-            ],
-            "default": [
-                {"role": "readWrite", "db": config.database},
-            ],
-        }
-        return [role_dict for role in config.roles for role_dict in supported_roles[role]]
+        all_roles = supported_roles(config)
+        return list(chain.from_iterable(all_roles[role] for role in config.roles))
 
     def drop_user(self, username: str):
         """Drop user."""
@@ -226,13 +274,11 @@ class MongoConnection:
 
     def get_databases(self) -> Set[str]:
         """Return list of all non-default databases."""
-        system_dbs = ("admin", "local", "config")
         databases = self.client.list_database_names()
-        return set([db for db in databases if db not in system_dbs])
+        return set([db for db in databases if db not in SYSTEM_DBS])
 
     def drop_database(self, database: str):
         """Drop a non-default database."""
-        system_dbs = ("admin", "local", "config")
-        if database in system_dbs:
+        if database in SYSTEM_DBS:
             return
         self.client.drop_database(database)

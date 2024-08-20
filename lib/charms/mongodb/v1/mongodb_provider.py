@@ -310,7 +310,9 @@ class MongoDBProvider(Object):
             "tls_external": False,
             "tls_internal": False,
         }
-        if not self.charm.is_role(Config.Role.MONGOS):
+        if self.charm.is_role(Config.Role.MONGOS):
+            mongo_args["port"] = Config.MONGOS_PORT
+        else:
             mongo_args["replset"] = self.charm.app.name
 
         return MongoConfiguration(**mongo_args)

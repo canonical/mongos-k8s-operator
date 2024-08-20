@@ -41,38 +41,6 @@ class FailedToMovePrimaryError(Exception):
     """Raised when attempt to move a primary fails."""
 
 
-@dataclass
-class MongoDBConfiguration(MongoConfiguration):
-    """Class for MongoDB configuration."""
-
-    replset: Optional[str]
-    standalone: bool = False
-
-    @property
-    def uri(self):
-        """Return URI concatenated from fields."""
-        hosts = ",".join(self.hosts)
-        # Auth DB should be specified while user connects to application DB.
-        auth_source = ""
-        if self.database != "admin":
-            auth_source = "&authSource=admin"
-
-        if self.standalone:
-            return (
-                f"mongodb://{quote_plus(self.username)}:"
-                f"{quote_plus(self.password)}@"
-                f"localhost:{Config.MONGODB_PORT}/?authSource=admin"
-            )
-
-        return (
-            f"mongodb://{quote_plus(self.username)}:"
-            f"{quote_plus(self.password)}@"
-            f"{hosts}/{quote_plus(self.database)}?"
-            f"replicaSet={quote_plus(self.replset)}"
-            f"{auth_source}"
-        )
-
-
 class MongoDBConnection(MongoConnection):
     """In this class we create connection object to MongoDB.
 
@@ -94,7 +62,7 @@ class MongoDBConnection(MongoConnection):
             <error handling as needed>
     """
 
-    def __init__(self, config: MongoDBConfiguration, uri=None, direct=False):
+    def __init__(self, config: MongoConfiguration, uri=None, direct=False):
         """A MongoDB client interface.
 
         Args:
@@ -103,8 +71,7 @@ class MongoDBConnection(MongoConnection):
             direct: force a direct connection to a specific host, avoiding
                     reading replica set configuration and reconnection.
         """
-        MongoConnection.__init__(self, config, uri, direct)
-        self.mongodb_config = config
+        super().__init__(config, uri, direct)
 
     @retry(
         stop=stop_after_attempt(3),
@@ -119,8 +86,8 @@ class MongoDBConnection(MongoConnection):
             ConfigurationError, ConfigurationError, OperationFailure
         """
         config = {
-            "_id": self.mongodb_config.replset,
-            "members": [{"_id": i, "host": h} for i, h in enumerate(self.mongodb_config.hosts)],
+            "_id": self.config.replset,
+            "members": [{"_id": i, "host": h} for i, h in enumerate(self.config.hosts)],
         }
         try:
             self.client.admin.command("replSetInitiate", config)
