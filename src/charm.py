@@ -11,12 +11,6 @@ from exceptions import MissingSecretError
 from ops.pebble import PathError, ProtocolError, Layer
 
 from pymongo.errors import PyMongoError
-from tenacity import (
-    Retrying,
-    retry,
-    stop_after_attempt,
-    wait_fixed,
-)
 from typing import Set, Optional, Dict
 
 from charms.mongodb.v0.config_server_interface import ClusterRequirer
@@ -251,11 +245,6 @@ class MongosCharm(ops.CharmBase):
         content[key] = Config.Secrets.SECRET_DELETED_LABEL
         secret.set_content(content)
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_fixed(2),
-        reraise=True,
-    )
     def stop_mongos_service(self):
         """Stop mongos service."""
         container = self.unit.get_container(Config.CONTAINER_NAME)
@@ -266,9 +255,8 @@ class MongosCharm(ops.CharmBase):
         container = self.unit.get_container(Config.CONTAINER_NAME)
         container.stop(Config.SERVICE_NAME)
 
-        for _ in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(2), reraise=True):
-            container.add_layer(Config.CONTAINER_NAME, self._mongos_layer, combine=True)
-            container.replan()
+        container.add_layer(Config.CONTAINER_NAME, self._mongos_layer, combine=True)
+        container.replan()
 
     def set_database(self, database: str) -> None:
         """Updates the database requested for the mongos user."""
@@ -479,6 +467,7 @@ class MongosCharm(ops.CharmBase):
                 f"'db_initialised' must be a boolean value. Proivded: {value} is of type {type(value)}"
             )
 
+    @property
     def peers_units(self) -> list[Unit]:
         """Get peers units in a safe way."""
         if not self._peers:

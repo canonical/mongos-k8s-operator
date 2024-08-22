@@ -16,7 +16,7 @@ from ..helpers import (
     get_mongos_user_password,
     MONGOS_PORT,
 )
-from .helpers import is_relation_joined, get_connection_string
+from .helpers import is_relation_joined, get_client_connection_string
 
 CLIENT_RELATION_NAME = "mongos"
 MONGOS_RELATION_NAME = "mongos_proxy"
@@ -63,7 +63,7 @@ async def test_integrate_with_internal_client(ops_test: OpsTest) -> None:
         timeout=600,
     )
 
-    connection_string = await get_connection_string(
+    connection_string = await get_client_connection_string(
         ops_test, APPLICATION_APP_NAME, CLIENT_RELATION_NAME
     )
     assert connection_string, "Connection string  not provided to client."
@@ -115,7 +115,7 @@ async def test_user_with_extra_roles(ops_test: OpsTest) -> None:
     test_user_uri = (
         f"mongodb://{TEST_USER_NAME}:{TEST_USER_PWD}@{mongos_host}:{MONGOS_PORT}"
     )
-    test_user_accessible = await check_mongos(uri=test_user_uri)
+    test_user_accessible = await check_mongos(ops_test, uri=test_user_uri)
     assert test_user_accessible, "User created is not accessible."
 
 

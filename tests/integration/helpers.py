@@ -343,16 +343,12 @@ async def check_mongos(
     mongos_client = await get_direct_mongos_client(
         ops_test, unit_id, auth, app_name, uri
     )
-    print(mongos_client)
     try:
         # wait 10 seconds in case the daemon was just started
         for attempt in Retrying(stop=stop_after_delay(10)):
             with attempt:
-                try:
-                    mongos_client.admin.command("ping")
-                except Exception as e:
-                    print(e)
-                    raise
+                mongos_client.admin.command("ping")
+
     except RetryError:
         return False
     finally:
@@ -382,6 +378,4 @@ async def get_direct_mongos_client(
 ) -> MongoClient:
     """Returns a direct mongodb client potentially passing over some of the units."""
     mongos_uri = uri or await get_mongos_uri(ops_test, unit_id, auth, app_name)
-
-    print("get direct client will use this uri:", uri)
     return MongoClient(mongos_uri, directConnection=True)
