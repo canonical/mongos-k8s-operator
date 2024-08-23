@@ -154,9 +154,7 @@ async def wait_for_mongos_units_blocked(
     try:
         old_interval = (await ops_test.model.get_config())[hook_interval_key]
         await ops_test.model.set_config({hook_interval_key: "1m"})
-        for attempt in Retrying(
-            stop=stop_after_delay(timeout), wait=wait_fixed(1), reraise=True
-        ):
+        for attempt in Retrying(stop=stop_after_delay(timeout), wait=wait_fixed(1), reraise=True):
             with attempt:
                 await check_all_units_blocked_with_status(ops_test, db_app_name, status)
     finally:
@@ -166,9 +164,7 @@ async def wait_for_mongos_units_blocked(
 async def deploy_cluster_components(ops_test: OpsTest) -> None:
     """Deploys all cluster components and waits for idle."""
     mongos_charm = await ops_test.build_charm(".")
-    resources = {
-        "mongodb-image": METADATA["resources"]["mongodb-image"]["upstream-source"]
-    }
+    resources = {"mongodb-image": METADATA["resources"]["mongodb-image"]["upstream-source"]}
     await ops_test.model.deploy(
         mongos_charm,
         resources=resources,
@@ -193,6 +189,39 @@ async def deploy_cluster_components(ops_test: OpsTest) -> None:
         apps=[MONGOS_APP_NAME, SHARD_APP_NAME, CONFIG_SERVER_APP_NAME],
         idle_period=10,
         raise_on_blocked=False,
+        raise_on_error=False,  # Removed this once DPE-4996 is resolved.
+    )
+
+
+async def build_cluster(ops_test: OpsTest) -> None:
+    """Builds the cluster by integrating the components."""
+    # prepare sharded cluster
+    await ops_test.model.wait_for_idle(
+        apps=[CONFIG_SERVER_APP_NAME, SHARD_APP_NAME],
+        idle_period=10,
+        raise_on_blocked=False,
+        raise_on_error=False,  # Removed this once DPE-4996 is resolved.
+    )
+    await ops_test.model.integrate(
+        f"{SHARD_APP_NAME}:{SHARD_REL_NAME}",
+        f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
+    )
+    await ops_test.model.wait_for_idle(
+        apps=[CONFIG_SERVER_APP_NAME, SHARD_APP_NAME],
+        idle_period=20,
+        raise_on_blocked=False,
+        raise_on_error=False,  # https://github.com/canonical/mongodb-k8s-operator/issues/301
+    )
+
+    # connect sharded cluster to mongos
+    await ops_test.model.integrate(
+        f"{MONGOS_APP_NAME}:{CLUSTER_REL_NAME}",
+        f"{CONFIG_SERVER_APP_NAME}:{CLUSTER_REL_NAME}",
+    )
+    await ops_test.model.wait_for_idle(
+        apps=[CONFIG_SERVER_APP_NAME, SHARD_APP_NAME, MONGOS_APP_NAME],
+        idle_period=20,
+        status="active",
         raise_on_error=False,  # Removed this once DPE-4996 is resolved.
     )
 
@@ -264,9 +293,7 @@ async def get_application_relation_data(
         raise ValueError(f"no unit info could be grabbed for { unit.name}")
     data = yaml.safe_load(raw_data)
     # Filter the data based on the relation name.
-    relation_data = [
-        v for v in data[unit.name]["relation-info"] if v["endpoint"] == relation_name
-    ]
+    relation_data = [v for v in data[unit.name]["relation-info"] if v["endpoint"] == relation_name]
 
     if relation_id:
         # Filter the data based on the relation id.
@@ -288,9 +315,7 @@ async def get_application_relation_data(
     return relation_data[0]["application-data"].get(key)
 
 
-async def get_mongos_user_password(
-    ops_test: OpsTest, app_name=MONGOS_APP_NAME
-) -> Tuple[str, str]:
+async def get_mongos_user_password(ops_test: OpsTest, app_name=MONGOS_APP_NAME) -> Tuple[str, str]:
     secret_uri = await get_application_relation_data(
         ops_test, app_name, relation_name="cluster", key="secret-user"
     )
@@ -307,9 +332,7 @@ async def check_mongos(
     uri: str = None,
 ) -> bool:
     """Returns True if mongos is running on the provided unit."""
-    mongos_client = await get_direct_mongos_client(
-        ops_test, unit_id, auth, app_name, uri
-    )
+    mongos_client = await get_direct_mongos_client(ops_test, unit_id, auth, app_name, uri)
 
     try:
         # wait 10 seconds in case the daemon was just started

@@ -32,7 +32,7 @@ from charms.mongodb.v1.helpers import get_mongos_args
 from config import Config
 
 import ops
-from ops.model import BlockedStatus, Container, Relation, ActiveStatus, Unit
+from ops.model import BlockedStatus, WaitingStatus, Container, Relation, ActiveStatus, Unit
 from ops.charm import StartEvent, RelationDepartedEvent
 
 import logging
@@ -65,9 +65,7 @@ class MongosCharm(ops.CharmBase):
 
     def __init__(self, *args):
         super().__init__(*args)
-        self.framework.observe(
-            self.on.mongos_pebble_ready, self._on_mongos_pebble_ready
-        )
+        self.framework.observe(self.on.mongos_pebble_ready, self._on_mongos_pebble_ready)
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.update_status, self._on_update_status)
         self.tls = MongoDBTLS(self, Config.Relations.PEERS, substrate=Config.SUBSTRATE)
@@ -115,9 +113,7 @@ class MongosCharm(ops.CharmBase):
         # start hooks are fired before relation hooks and `mongos` requires a config-server in
         # order to start. Wait to receive config-server info from the relation event before
         # starting `mongos` daemon
-        self.status.set_and_share_status(
-            BlockedStatus("Missing relation to config-server.")
-        )
+        self.status.set_and_share_status(BlockedStatus("Missing relation to config-server."))
 
     def _on_update_status(self, _):
         """Handle the update status event"""
@@ -128,9 +124,17 @@ class MongosCharm(ops.CharmBase):
             logger.info(
                 "Missing integration to config-server. mongos cannot run unless connected to config-server."
             )
-            self.status.set_and_share_status(
-                BlockedStatus("Missing relation to config-server.")
-            )
+            self.status.set_and_share_status(BlockedStatus("Missing relation to config-server."))
+            return
+
+        if self.cluster.get_tls_statuses():
+            self.status.set_and_share_status(self.cluster.get_tls_statuses())
+            return
+
+        # restart on high loaded databases can be very slow (e.g. up to 10-20 minutes).
+        if not self.cluster.is_mongos_running():
+            logger.info("mongos has not started yet")
+            self.status.set_and_share_status(WaitingStatus("Waiting for mongos to start."))
             return
 
         self.status.set_and_share_status(ActiveStatus())
@@ -154,9 +158,7 @@ class MongosCharm(ops.CharmBase):
 
     def is_integrated_to_config_server(self) -> bool:
         """Returns True if the mongos application is integrated to a config-server."""
-        return (
-            self.model.get_relation(Config.Relations.CLUSTER_RELATIONS_NAME) is not None
-        )
+        return self.model.get_relation(Config.Relations.CLUSTER_RELATIONS_NAME) is not None
 
     def _get_mongos_config_for_user(
         self, user: MongoDBUser, hosts: Set[str]
@@ -212,19 +214,12 @@ class MongosCharm(ops.CharmBase):
         content = secret.get_content()
 
         if not content.get(key) or content[key] == Config.Secrets.SECRET_DELETED_LABEL:
-            logger.error(
-                f"Non-existing secret {scope}:{key} was attempted to be removed."
-            )
+            logger.error(f"Non-existing secret {scope}:{key} was attempted to be removed.")
             return
 
         content[key] = Config.Secrets.SECRET_DELETED_LABEL
         secret.set_content(content)
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_fixed(2),
-        reraise=True,
-    )
     def stop_mongos_service(self):
         """Stop mongos service."""
         container = self.unit.get_container(Config.CONTAINER_NAME)
@@ -235,9 +230,8 @@ class MongosCharm(ops.CharmBase):
         container = self.unit.get_container(Config.CONTAINER_NAME)
         container.stop(Config.SERVICE_NAME)
 
-        for _ in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(2), reraise=True):
-            container.add_layer(Config.CONTAINER_NAME, self._mongos_layer, combine=True)
-            container.replan()
+        container.add_layer(Config.CONTAINER_NAME, self._mongos_layer, combine=True)
+        container.replan()
 
     def set_database(self, database: str) -> None:
         """Updates the database requested for the mongos user."""
@@ -247,9 +241,7 @@ class MongosCharm(ops.CharmBase):
             return
 
         # a mongos shard can only be related to one config server
-        config_server_rel = self.model.relations[
-            Config.Relations.CLUSTER_RELATIONS_NAME
-        ][0]
+        config_server_rel = self.model.relations[Config.Relations.CLUSTER_RELATIONS_NAME][0]
         self.cluster.database_requires.update_relation_data(
             config_server_rel.id, {DATABASE_TAG: database}
         )
@@ -355,6 +347,50 @@ class MongosCharm(ops.CharmBase):
                 file_contents=keyfile,
             )
 
+    def push_tls_certificate_to_workload(self) -> None:
+        """Uploads certificate to the workload container."""
+        container = self.unit.get_container(Config.CONTAINER_NAME)
+
+        # Handling of external CA and PEM files
+        external_ca, external_pem = self.tls.get_tls_files(internal=False)
+
+        if external_ca is not None:
+            logger.debug("Uploading external ca to workload container")
+            self.push_file_to_unit(
+                container=container,
+                parent_dir=Config.MONGOD_CONF_DIR,
+                file_name=Config.TLS.EXT_CA_FILE,
+                file_contents=external_ca,
+            )
+        if external_pem is not None:
+            logger.debug("Uploading external pem to workload container")
+            self.push_file_to_unit(
+                container=container,
+                parent_dir=Config.MONGOD_CONF_DIR,
+                file_name=Config.TLS.EXT_PEM_FILE,
+                file_contents=external_pem,
+            )
+
+        # Handling of external CA and PEM files
+        internal_ca, internal_pem = self.tls.get_tls_files(internal=True)
+
+        if internal_ca is not None:
+            logger.debug("Uploading internal ca to workload container")
+            self.push_file_to_unit(
+                container=container,
+                parent_dir=Config.MONGOD_CONF_DIR,
+                file_name=Config.TLS.INT_CA_FILE,
+                file_contents=internal_ca,
+            )
+        if internal_pem is not None:
+            logger.debug("Uploading internal pem to workload container")
+            self.push_file_to_unit(
+                container=container,
+                parent_dir=Config.MONGOD_CONF_DIR,
+                file_name=Config.TLS.INT_PEM_FILE,
+                file_contents=internal_pem,
+            )
+
     @staticmethod
     def _pull_licenses(container: Container) -> None:
         """Pull licences from workload."""
@@ -366,9 +402,7 @@ class MongosCharm(ops.CharmBase):
 
         for license_name in licenses:
             try:
-                license_file = container.pull(
-                    path=Config.get_license_path(license_name)
-                )
+                license_file = container.pull(path=Config.get_license_path(license_name))
                 f = open(f"LICENSE_{license_name}", "x")
                 f.write(str(license_file.read()))
                 f.close()
@@ -385,14 +419,10 @@ class MongosCharm(ops.CharmBase):
         for path in [Config.DATA_DIR]:
             paths = container.list_files(path, itself=True)
             if not len(paths) == 1:
-                raise ExtraDataDirError(
-                    "list_files doesn't return only the directory itself"
-                )
+                raise ExtraDataDirError("list_files doesn't return only the directory itself")
             logger.debug(f"Data directory ownership: {paths[0].user}:{paths[0].group}")
             if paths[0].user != Config.UNIX_USER or paths[0].group != Config.UNIX_GROUP:
-                container.exec(
-                    f"chown {Config.UNIX_USER}:{Config.UNIX_GROUP} -R {path}".split()
-                )
+                container.exec(f"chown {Config.UNIX_USER}:{Config.UNIX_GROUP} -R {path}".split())
 
     def push_file_to_unit(
         self,
@@ -412,6 +442,21 @@ class MongosCharm(ops.CharmBase):
             group=Config.UNIX_GROUP,
         )
 
+    def delete_tls_certificate_from_workload(self) -> None:
+        """Deletes certificate from the workload container."""
+        logger.info("Deleting TLS certificate from workload container")
+        container = self.unit.get_container(Config.CONTAINER_NAME)
+        for file in [
+            Config.TLS.EXT_CA_FILE,
+            Config.TLS.EXT_PEM_FILE,
+            Config.TLS.INT_CA_FILE,
+            Config.TLS.INT_PEM_FILE,
+        ]:
+            try:
+                container.remove_path(f"{Config.MONGOD_CONF_DIR}/{file}")
+            except PathError as err:
+                logger.debug("Path unavailable: %s (%s)", file, str(err))
+
     def unit_host(self, unit: Unit) -> str:
         """Create a DNS name for a MongoDB unit.
 
@@ -423,6 +468,14 @@ class MongosCharm(ops.CharmBase):
         """
         unit_id = unit.name.split("/")[1]
         return f"{self.app.name}-{unit_id}.{self.app.name}-endpoints"
+
+    def get_config_server_name(self) -> Optional[str]:
+        """Returns the name of the Juju Application that mongos is using as a config server."""
+        return self.cluster.get_config_server_name()
+
+    def has_config_server(self) -> bool:
+        """Returns True is the mongos router is integrated to a config-server."""
+        return self.cluster.get_config_server_name() is not None
 
     # END: helper functions
 
