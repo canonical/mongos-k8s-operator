@@ -3,7 +3,11 @@
 # See LICENSE file for licensing details.
 import pytest
 from pytest_operator.plugin import OpsTest
-from ..helpers import deploy_cluster_components, build_cluster, wait_for_mongos_units_blocked
+from ..helpers import (
+    deploy_cluster_components,
+    build_cluster,
+    wait_for_mongos_units_blocked,
+)
 from .helpers import (
     check_mongos_tls_enabled,
     check_mongos_tls_disabled,
@@ -107,7 +111,9 @@ async def test_mongos_tls_ca_mismatch(ops_test: OpsTest) -> None:
         timeout=TIMEOUT,
     )
 
-    await toggle_tls_mongos(ops_test, enable=True, certs_app_name=DIFFERENT_CERTS_APP_NAME)
+    await toggle_tls_mongos(
+        ops_test, enable=True, certs_app_name=DIFFERENT_CERTS_APP_NAME
+    )
     await wait_for_mongos_units_blocked(
         ops_test,
         MONGOS_APP_NAME,
