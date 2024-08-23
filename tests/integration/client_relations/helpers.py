@@ -2,22 +2,11 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import json
 import subprocess
 import logging
 
-from typing import Any, Dict, List, Optional, Tuple
 
-from pathlib import Path
-import yaml
-from pymongo import MongoClient
-
-from dateutil.parser import parse
 from pytest_operator.plugin import OpsTest
-from tenacity import Retrying, stop_after_delay, wait_fixed
-from tenacity import (
-    RetryError,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -25,9 +14,7 @@ PORT_MAPPING_INDEX = 4
 
 
 def get_port_from_node_port(ops_test: OpsTest, node_port_name: str) -> None:
-    node_port_cmd = (
-        f"kubectl get svc  -n  {ops_test.model.name} |  grep NodePort | grep {node_port_name}"
-    )
+    node_port_cmd = f"kubectl get svc  -n  {ops_test.model.name} |  grep NodePort | grep {node_port_name}"
     result = subprocess.run(node_port_cmd, shell=True, capture_output=True, text=True)
     if result.returncode:
         logger.info("was not able to find nodeport")
@@ -51,7 +38,9 @@ def assert_node_port_available(ops_test: OpsTest, node_port_name: str) -> None:
 
 
 def get_public_k8s_ip() -> str:
-    result = subprocess.run("kubectl get nodes", shell=True, capture_output=True, text=True)
+    result = subprocess.run(
+        "kubectl get nodes", shell=True, capture_output=True, text=True
+    )
 
     if result.returncode:
         logger.info("failed to retrieve public facing k8s IP")

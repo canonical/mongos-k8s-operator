@@ -8,7 +8,6 @@ from pytest_operator.plugin import OpsTest
 
 from ..helpers import (
     MONGOS_APP_NAME,
-    MongoClient,
     build_cluster,
     deploy_cluster_components,
     get_mongos_user_password,
@@ -41,13 +40,17 @@ async def test_mongos_external_connections(ops_test: OpsTest) -> None:
     configuration_parameters = {"expose-external": "nodeport"}
 
     # apply new configuration options
-    await ops_test.model.applications[MONGOS_APP_NAME].set_config(configuration_parameters)
+    await ops_test.model.applications[MONGOS_APP_NAME].set_config(
+        configuration_parameters
+    )
     for unit_id in range(len(ops_test.model.applications[MONGOS_APP_NAME].units)):
         assert_node_port_available(
             ops_test, node_port_name=f"{MONGOS_APP_NAME}-{unit_id}-external"
         )
 
-        exposed_node_port = get_port_from_node_port(ops_test, node_port_name="mongos-k8s-nodeport")
+        exposed_node_port = get_port_from_node_port(
+            ops_test, node_port_name="mongos-k8s-nodeport"
+        )
         public_k8s_ip = get_public_k8s_ip()
         username, password = await get_mongos_user_password(ops_test, MONGOS_APP_NAME)
         external_mongos_client = MongoClient(
