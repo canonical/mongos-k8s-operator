@@ -9,14 +9,15 @@ from datetime import datetime
 from typing import Optional, Dict
 import json
 import ops
+import logging
 
 
-MONGODB_SNAP_DATA_DIR = "/var/snap/charmed-mongodb/current"
-MONGOD_CONF_DIR = f"{MONGODB_SNAP_DATA_DIR}/etc/mongod"
-MONGO_COMMON_DIR = "/var/snap/charmed-mongodb/common"
-EXTERNAL_PEM_PATH = f"{MONGOD_CONF_DIR}/external-cert.pem"
-EXTERNAL_CERT_PATH = f"{MONGOD_CONF_DIR}/external-ca.crt"
-INTERNAL_CERT_PATH = f"{MONGOD_CONF_DIR}/internal-ca.crt"
+logger = logging.getLogger(__name__)
+
+
+EXTERNAL_PEM_PATH = "/etc/mongod/external-cert.pem"
+EXTERNAL_CERT_PATH = "/etc/mongod/external-ca.crt"
+INTERNAL_CERT_PATH = "/etc/mongod/internal-ca.crt"
 MONGO_SHELL = "charmed-mongodb.mongosh"
 MONGOS_APP_NAME = "mongos-k8s"
 CERT_REL_NAME = "certificates"
@@ -208,14 +209,17 @@ async def check_tls(ops_test, unit, enabled) -> None:
 
 async def time_file_created(ops_test: OpsTest, unit_name: str, path: str) -> int:
     """Returns the unix timestamp of when a file was created on a specified unit."""
-    time_cmd = f"exec --unit {unit_name} --  ls -l --time-style=full-iso {path} "
-    return_code, ls_output, _ = await ops_test.juju(*time_cmd.split())
+    time_cmd = f"ls -l --time-style=full-iso {path} "
+    complete_command = f"ssh --container mongos {unit_name} {time_cmd}"
+    return_code, ls_output, stderr = await ops_test.juju(*complete_command.split())
 
     if return_code != 0:
+        logger.error(stderr)
         raise ProcessError(
-            "Expected time command %s to succeed instead it failed: %s",
+            "Expected time command %s to succeed instead it failed: %s; %s",
             time_cmd,
             return_code,
+            stderr,
         )
 
     return process_ls_time(ls_output)
@@ -244,7 +248,7 @@ async def run_command_on_unit(ops_test: OpsTest, unit_name: str, command: str) -
     Returns:
         the command output if it succeeds, otherwise raises an exception.
     """
-    complete_command = f"ssh --container mongod {unit_name} {command}"
+    complete_command = f"ssh --container mongos {unit_name} {command}"
     return_code, stdout, _ = await ops_test.juju(*complete_command.split())
     if return_code != 0:
         raise Exception(
@@ -299,11 +303,30 @@ async def check_certs_correctly_distributed(
         ), f"Relation Content for {cert_type}-cert:\n{relation_cert}\nFile Content:\n{cert_file_content}\nMismatch."
 
 
-async def get_file_content(ops_test: OpsTest, unit_name: str, filepath: str) -> str:
-    """Returns the contents of the provided filepath."""
-    cat_cmd = f"exec --unit {unit_name} -- sudo cat {filepath}"
-    _, stdout, _ = await ops_test.juju(*cat_cmd.split(), check=True)
-    return stdout.strip()
+async def scp_file_preserve_ctime(ops_test: OpsTest, unit_name: str, path: str) -> int:
+    """Returns the unix timestamp of when a file was created on a specified unit."""
+    # Retrieving the file
+    filename = path.split("/")[-1]
+    complete_command = f"scp --container mongos {unit_name}:{path} {filename}"
+    return_code, _, stderr = await ops_test.juju(*complete_command.split())
+
+    if return_code != 0:
+        logger.error(stderr)
+        raise ProcessError(
+            "Expected command %s to succeed instead it failed: %s; %s",
+            complete_command,
+            return_code,
+            stderr,
+        )
+
+    return f"{filename}"
+
+
+async def get_file_content(ops_test: OpsTest, unit_name: str, path: str) -> str:
+    filename = await scp_file_preserve_ctime(ops_test, unit_name, path)
+
+    with open(filename, mode="r") as fd:
+        return fd.read()
 
 
 def process_ls_time(ls_output):
@@ -422,22 +445,5 @@ async def rotate_and_verify_certs(ops_test: OpsTest, app: str) -> None:
         ), f"mongos service for {unit.name} was not restarted."
 
     # Verify that TLS is functioning on all units.
-    await check_cluster_tls_enabled(ops_test)
-
-
-async def check_cluster_tls_enabled(ops_test: OpsTest) -> None:
-
-    # check each replica set is running with TLS enabled
-    for cluster_component in CLUSTER_COMPONENTS:
-        for unit in ops_test.model.applications[cluster_component].units:
-            assert await check_tls(
-                ops_test, unit, enabled=True, app_name=cluster_component, mongos=False
-            ), f"MongoDB TLS not enabled in unit {unit.name}"
-
-    # check mongos is running with TLS enabled
-    components_with_mongos = [CONFIG_SERVER_APP_NAME, MONGOS_APP_NAME]
-    for mongos_component in components_with_mongos:
-        for unit in ops_test.model.applications[mongos_component].units:
-            assert await check_tls(
-                ops_test, unit, enabled=True, app_name=mongos_component, mongos=True
-            ), f"Mongos TLS not enabled in unit {unit.name}"
+    for unit in ops_test.model.applications[MONGOS_APP_NAME].units:
+        await check_mongos_tls_enabled(ops_test)
