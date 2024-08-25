@@ -1,0 +1,61 @@
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  mongos-k8s/1 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:834 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.4.4    unsupported  01:35:43Z
+
+App            Version  Status  Scale  Charm        Channel  Rev  Address         Exposed  Message
+config-server           active      1  mongodb-k8s  6/edge    51  10.152.183.166  no       
+mongos-k8s              active      2  mongos-k8s              0  10.152.183.133  no       
+shard0                  active      1  mongodb-k8s  6/edge    51  10.152.183.64   no       Primary
+
+Unit              Workload  Agent  Address       Ports  Message
+config-server/0*  active    idle   10.1.170.141         
+mongos-k8s/0*     active    idle   10.1.170.136         
+mongos-k8s/1      active    idle   10.1.170.143         
+shard0/0*         active    idle   10.1.170.142         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:840 Juju error logs:
+
+unit-shard0-0: 01:30:06 ERROR unit.shard0/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard0-0/charm/./src/charm.py", line 1554, in <module>
+    main(MongoDBCharm)
+  File "/var/lib/juju/agents/unit-shard0-0/charm/venv/ops/main.py", line 551, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-shard0-0/charm/venv/ops/main.py", line 530, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-shard0-0/charm/venv/ops/main.py", line 519, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-shard0-0/charm/venv/ops/main.py", line 147, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-shard0-0/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-shard0-0/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-shard0-0/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-shard0-0/charm/./src/charm.py", line 550, in _on_mongod_pebble_ready
+    container.replan()
+  File "/var/lib/juju/agents/unit-shard0-0/charm/venv/ops/model.py", line 2259, in replan
+    self._pebble.replan_services()
+  File "/var/lib/juju/agents/unit-shard0-0/charm/venv/ops/pebble.py", line 2129, in replan_services
+    return self._services_action('replan', [], timeout, delay)
+  File "/var/lib/juju/agents/unit-shard0-0/charm/venv/ops/pebble.py", line 2226, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (cannot start service: exited quickly with code 1)
+----- Logs from task 1 -----
+2024-08-25T01:30:06Z INFO Most recent service output:
+    {"t":{"$date":"2024-08-25T01:30:06.943Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2024-08-25T01:30:06.944Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongodb.log"}}}
+2024-08-25T01:30:06Z ERROR cannot start service: exited quickly with code 1
+-----
+unit-shard0-0: 01:30:07 ERROR juju.worker.uniter.operation hook "mongod-pebble-ready" (via hook dispatching script: dispatch) failed: exit status 1
+unit-shard0-0: 01:30:07 ERROR juju.worker.uniter pebble poll failed for container "mongod": failed to send pebble-ready event: hook failed
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:904 Forgetting main...
