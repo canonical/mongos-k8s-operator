@@ -454,8 +454,6 @@ class MongosCharm(ops.CharmBase):
         Named `db_initialised` rather than `router_initialised` due to need for parity across DB
         charms.
         """
-        if not self.unit.is_leader():
-            return
         if "db_initialised" not in self.app_peer_data:
             return False
         return json.loads(self.app_peer_data["db_initialised"])
@@ -463,6 +461,9 @@ class MongosCharm(ops.CharmBase):
     @db_initialised.setter
     def db_initialised(self, value):
         """Set the db_initialised flag."""
+        if not self.unit.is_leader():
+            return
+
         if isinstance(value, bool):
             self.app_peer_data["db_initialised"] = json.dumps(value)
         else:
