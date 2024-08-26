@@ -1,0 +1,7 @@
+"DESCRIPTION","DURATION IN MS","NAME","PARENT SUITE","START TIME","STATUS","STOP TIME","SUB SUITE","SUITE","TEST CLASS","TEST METHOD"
+"Tests that mongos powers down when no config server is accessible.","42803","test_mongos_can_scale","tests.integration","Mon Aug 26 01:36:53 UTC 2024","passed","Mon Aug 26 01:37:36 UTC 2024","","test_charm","",""
+"Build and deploy a sharded cluster.","60348","test_build_and_deploy","tests.integration","Mon Aug 26 01:29:31 UTC 2024","passed","Mon Aug 26 01:30:32 UTC 2024","","test_charm","",""
+"","429","test_user_with_extra_roles","tests.integration","Mon Aug 26 01:36:52 UTC 2024","passed","Mon Aug 26 01:36:53 UTC 2024","","test_charm","",""
+"","378","test_mongos_has_user","tests.integration","Mon Aug 26 01:36:52 UTC 2024","passed","Mon Aug 26 01:36:52 UTC 2024","","test_charm","",""
+"Verifies that the application and unit are active.","542","test_waits_for_config_server","tests.integration","Mon Aug 26 01:30:32 UTC 2024","passed","Mon Aug 26 01:30:32 UTC 2024","","test_charm","",""
+"","379696","test_mongos_starts_with_config_server","tests.integration","Mon Aug 26 01:30:32 UTC 2024","passed","Mon Aug 26 01:36:52 UTC 2024","","test_charm","",""
