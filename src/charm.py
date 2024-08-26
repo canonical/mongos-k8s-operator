@@ -554,7 +554,7 @@ class MongosCharm(ops.CharmBase):
 
     @property
     def mongo_config(self) -> MongoConfiguration:
-        """Returns a MongoConfiguration object for shared libs with agnoistic mongo commands."""
+        """Returns a MongoConfiguration object for shared libs with agnostic mongo commands."""
         return self.mongos_config
 
     @property
