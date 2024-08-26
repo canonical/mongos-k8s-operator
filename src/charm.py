@@ -9,6 +9,8 @@ import json
 from exceptions import MissingSecretError
 
 from ops.pebble import PathError, ProtocolError, Layer
+from charms.mongodb.v0.config_server_interface import ClusterRequirer
+
 
 from pymongo.errors import PyMongoError
 from typing import Set, Optional, Dict
