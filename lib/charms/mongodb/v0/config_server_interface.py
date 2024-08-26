@@ -42,7 +42,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 9
+LIBPATCH = 11
 
 
 class ClusterProvider(Object):
@@ -328,6 +328,8 @@ class ClusterRequirer(Object):
         # K8s charm have a 1:Many client scheme and share connection info in a different manner.
         if self.substrate == Config.Substrate.VM:
             self.charm.remove_connection_info()
+        else:
+            self.db_initialised = False
 
     # BEGIN: helper functions
     def pass_hook_checks(self, event):
@@ -371,7 +373,7 @@ class ClusterRequirer(Object):
         connection_uri = f"mongodb://{self.charm.get_mongos_host()}"
 
         # use the mongos port for k8s charms and external connections on VM
-        if self.charm.is_external_client or self.substrate == Config.K8S_SUBSTRATE:
+        if self.substrate == Config.Substrate.K8S or self.charm.is_external_client:
             connection_uri = connection_uri + f":{Config.MONGOS_PORT}"
 
         with MongosConnection(None, connection_uri) as mongo:
