@@ -31,7 +31,9 @@ APPLICATION_APP_NAME = "application"
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy a sharded cluster."""
-    application_charm = await ops_test.build_charm("tests/integration/application")
+    application_charm = await ops_test.build_charm(
+        "tests/integration/client_relations/application"
+    )
     await ops_test.model.deploy(application_charm)
 
     await deploy_cluster_components(ops_test)
