@@ -134,8 +134,8 @@ class MongosCharm(ops.CharmBase):
             )
             return
 
-        if self.cluster.get_tls_statuses():
-            self.status.set_and_share_status(self.cluster.get_tls_statuses())
+        if tls_statuses := self.cluster.get_tls_statuses():
+            self.status.set_and_share_status(tls_statuses)
             return
 
         # restart on high loaded databases can be very slow (e.g. up to 10-20 minutes).
