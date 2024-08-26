@@ -123,6 +123,7 @@ async def test_user_with_extra_roles(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.group(1)
+@pytest.mark.abort_on_fail
 async def test_removed_relation_no_longer_has_access(ops_test: OpsTest):
     """Verify removed applications no longer have access to the database."""
     # before removing relation we need its authorisation via connection string
