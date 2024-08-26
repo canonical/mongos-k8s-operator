@@ -13,10 +13,13 @@ from ..helpers import (
     get_address_of_unit,
     check_mongos,
     get_direct_mongos_client,
-    get_mongos_user_password,
     MONGOS_PORT,
 )
-from .helpers import is_relation_joined, get_client_connection_string
+from .helpers import (
+    is_relation_joined,
+    get_client_connection_string,
+    get_mongos_user_password,
+)
 
 CLIENT_RELATION_NAME = "mongos"
 MONGOS_RELATION_NAME = "mongos_proxy"
@@ -50,7 +53,7 @@ async def test_integrate_with_internal_client(ops_test: OpsTest) -> None:
     """Tests that when a client is integrated with mongos a user it receives connection info."""
     await ops_test.model.integrate(APPLICATION_APP_NAME, MONGOS_APP_NAME)
     await ops_test.model.wait_for_idle(
-        apps=[APPLICATION_APP_NAME, MONGOS_APP_NAME], status="active"
+        apps=[APPLICATION_APP_NAME, MONGOS_APP_NAME], status="active", idle_period=20
     )
 
     await ops_test.model.block_until(

@@ -26,6 +26,18 @@ CLUSTER_REL_NAME = "cluster"
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 
 
+async def get_mongos_user_password(
+    ops_test: OpsTest, app_name=MONGOS_APP_NAME, relation_name="cluster"
+) -> Tuple[str, str]:
+    # TODO once DPE:5215 is fixed retrieve via secret
+    secret_uri = await get_application_relation_data(
+        ops_test, app_name, relation_name=relation_name, key="secret-user"
+    )
+
+    secret_data = await get_secret_data(ops_test, secret_uri)
+    return secret_data.get("username"), secret_data.get("password")
+
+
 async def get_client_connection_string(
     ops_test: OpsTest, app_name=MONGOS_APP_NAME, relation_name="cluster"
 ) -> Tuple[str, str]:
