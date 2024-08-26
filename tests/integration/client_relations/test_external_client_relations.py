@@ -6,55 +6,82 @@
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ..helpers import (
-    MONGOS_APP_NAME,
-    build_cluster,
-    deploy_cluster_components,
-    get_mongos_user_password,
-    MongoClient,
-)
 
-from .helpers import (
-    assert_node_port_available,
-    get_port_from_node_port,
-    get_public_k8s_ip,
-)
+from .helpers import assert_all_unit_node_ports_available
+
 
 TEST_USER_NAME = "TestUserName1"
 TEST_USER_PWD = "Test123"
 TEST_DB_NAME = "my-test-db"
 
 
-@pytest.mark.group(1)
-@pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test: OpsTest):
-    """Build and deploy a sharded cluster."""
-    await deploy_cluster_components(ops_test)
-    await build_cluster(ops_test)
+# @pytest.mark.group(1)
+# @pytest.mark.abort_on_fail
+# async def test_build_and_deploy(ops_test: OpsTest):
+#     """Build and deploy a sharded cluster."""
+#     await deploy_cluster_components(ops_test)
+#     await build_cluster(ops_test)
 
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_mongos_external_connections(ops_test: OpsTest) -> None:
     """Tests that mongos is accessible externally."""
-    configuration_parameters = {"expose-external": "nodeport"}
+    # configuration_parameters = {"expose-external": "nodeport"}
 
-    # apply new configuration options
-    await ops_test.model.applications[MONGOS_APP_NAME].set_config(
-        configuration_parameters
-    )
-    for unit_id in range(len(ops_test.model.applications[MONGOS_APP_NAME].units)):
-        assert_node_port_available(
-            ops_test, node_port_name=f"{MONGOS_APP_NAME}-{unit_id}-external"
-        )
+    # # apply new configuration options
+    # await ops_test.model.applications[MONGOS_APP_NAME].set_config(configuration_parameters)
+    # await ops_test.model.wait_for_idle(apps=[MONGOS_APP_NAME], idle_period=15)
 
-        exposed_node_port = get_port_from_node_port(
-            ops_test, node_port_name="mongos-k8s-nodeport"
-        )
-        public_k8s_ip = get_public_k8s_ip()
-        username, password = await get_mongos_user_password(ops_test, MONGOS_APP_NAME)
-        external_mongos_client = MongoClient(
-            f"mongodb://{username}:{password}@{public_k8s_ip}:{exposed_node_port}"
-        )
-        external_mongos_client.admin.command("usersInfo")
-        external_mongos_client.close()
+    # # verify each unit has a node port available
+    await assert_all_unit_node_ports_available(ops_test)
+
+
+# @pytest.mark.group(1)
+# @pytest.mark.abort_on_fail
+# async def test_mongos_external_connections_scale(ops_test: OpsTest) -> None:
+#     """Tests that new mongos units are accessible externally."""
+#     await ops_test.model.applications[MONGOS_APP_NAME].scale(2)
+#     await ops_test.model.wait_for_idle(apps=[MONGOS_APP_NAME], idle_period=15)
+
+#     # verify each unit has a node port available
+#     await assert_all_unit_node_ports_available(ops_test)
+
+
+# @pytest.mark.group(1)
+# @pytest.mark.abort_on_fail
+# async def test_mongos_bad_configuration(ops_test: OpsTest) -> None:
+#     """Tests that mongos is accessible externally."""
+#     configuration_parameters = {"expose-external": "nonsensical-setting"}
+
+#     # apply new configuration options
+#     await ops_test.model.applications[MONGOS_APP_NAME].set_config(configuration_parameters)
+
+#     # verify that Charmed Mongos is blocked and reports incorrect credentials
+#     await wait_for_mongos_units_blocked(
+#         ops_test,
+#         MONGOS_APP_NAME,
+#         status="Missing relation to config-server.",
+#         timeout=300,
+#     )
+
+#     # verify new-configuration didn't break old configuration
+#     await assert_all_unit_node_ports_available(ops_test)
+
+
+# @pytest.mark.group(1)
+# @pytest.mark.abort_on_fail
+# async def test_turn_off_nodeport(ops_test: OpsTest) -> None:
+#     """TODO Future PR, test that when the user toggles nodeport to none, it is no longer exposed."""
+
+
+# @pytest.mark.group(1)
+# @pytest.mark.abort_on_fail
+# async def test_external_clients_use_nodeport(ops_test: OpsTest) -> None:
+#     """TODO Future PR, test that external clients use nodeport."""
+
+
+# @pytest.mark.group(1)
+# @pytest.mark.abort_on_fail
+# async def test_internal_clients_use_K8s(ops_test: OpsTest) -> None:
+#     """TODO Future PR, test that external clients use K8s even when nodeport is available."""

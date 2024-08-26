@@ -60,35 +60,41 @@ class MongosCharm(ops.CharmBase):
 
     def __init__(self, *args):
         super().__init__(*args)
+        self.role = Config.Role.MONGOS
+        self.secrets = SecretCache(self)
+        self.status = MongosStatusHandler(self)
+        self.node_port_manager = NodePortManager(self)
+
+        # lifecycle events
+        self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(
             self.on.mongos_pebble_ready, self._on_mongos_pebble_ready
         )
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.update_status, self._on_update_status)
+
+        # relations
         self.tls = MongoDBTLS(self, Config.Relations.PEERS, substrate=Config.SUBSTRATE)
-
-        self.role = Config.Role.MONGOS
-        self.secrets = SecretCache(self)
-        self.status = MongosStatusHandler(self)
         self.cluster = ClusterRequirer(self, substrate=Config.SUBSTRATE)
-
-        self.node_port_manager = NodePortManager(self)
 
     # BEGIN: hook functions
     def _on_config_changed(self, event: ConfigChangedEvent) -> None:
         """Listen to changes in the application configuration."""
-        if self.expose_external not in Config.ExternalConnections.VALID_EXTERNAL_CONFIG:
+        external_config = self.model.config["expose-external"]
+        self.expose_external = external_config
+        if external_config not in Config.ExternalConnections.VALID_EXTERNAL_CONFIG:
             logger.error(
                 "External configuration: %s for expose-external is not valid, should be one of: %s",
-                self.expose_external,
+                external_config,
                 Config.ExternalConnections.VALID_EXTERNAL_CONFIG,
             )
-            self.unit.status = Config.Status.INVALID_EXTERNAL_CONFIG
+            self.status.set_and_share_status(Config.Status.INVALID_EXTERNAL_CONFIG)
+            return
 
-        if self.expose_external == Config.ExternalConnections.EXTERNAL_NODEPORT:
+        if external_config == Config.ExternalConnections.EXTERNAL_NODEPORT:
             self.update_external_services()
 
-        if self.expose_external == Config.ExternalConnections.NONE:
+        if external_config == Config.ExternalConnections.NONE:
             # TODO future PR - support revoking external access
             pass
 
@@ -460,11 +466,21 @@ class MongosCharm(ops.CharmBase):
     @property
     def expose_external(self) -> Optional[str]:
         """Returns mode of exposure for external connections."""
-
-        if self.app_peer_data.get("expose-external") == "none":
+        if self.app_peer_data["expose-external"] == "none":
             return
 
-        return self.app_peer_data.get("expose-external")
+        return self.app_peer_data["expose-external"]
+
+    @expose_external.setter
+    def expose_external(self, expose_external):
+        """Set the db_initialised flag."""
+        if not self.unit.is_leader:
+            return
+
+        if expose_external not in Config.ExternalConnections.VALID_EXTERNAL_CONFIG:
+            return
+
+        self.app_peer_data["expose-external"] = expose_external
 
     @property
     def peers_units(self) -> list[Unit]:
@@ -527,7 +543,7 @@ class MongosCharm(ops.CharmBase):
         Note that for K8s routers this should always default to True. However we still include
         this function so that we can have parity on properties with the K8s and VM routers.
         """
-        return self.expose_external == Config.Ex
+        return self.expose_external == Config.ExternalConnections.EXTERNAL_NODEPORT
 
     @property
     def database(self) -> Optional[str]:

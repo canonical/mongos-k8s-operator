@@ -5,6 +5,11 @@
 import subprocess
 import logging
 
+from ..helpers import (
+    MONGOS_APP_NAME,
+    get_mongos_user_password,
+    MongoClient,
+)
 
 from pytest_operator.plugin import OpsTest
 
@@ -24,6 +29,7 @@ def get_port_from_node_port(ops_test: OpsTest, node_port_name: str) -> None:
         len(result.stdout.splitlines()) > 0
     ), "No port information available for expected service"
 
+    print(result.stdout)
     # port information is available at PORT_MAPPING_INDEX
     port_mapping = result.stdout.split()[PORT_MAPPING_INDEX]
 
@@ -35,6 +41,26 @@ def assert_node_port_available(ops_test: OpsTest, node_port_name: str) -> None:
     assert get_port_from_node_port(
         ops_test, node_port_name
     ), "No port information for expected service"
+
+
+async def assert_all_unit_node_ports_available(ops_test: OpsTest):
+    """Assert all ports available in mongos deployment."""
+    for unit_id in range(len(ops_test.model.applications[MONGOS_APP_NAME].units)):
+        assert_node_port_available(
+            ops_test, node_port_name=f"{MONGOS_APP_NAME}-{unit_id}-external"
+        )
+
+        exposed_node_port = get_port_from_node_port(
+            ops_test, node_port_name=f"{MONGOS_APP_NAME}-{unit_id}-external"
+        )
+        public_k8s_ip = get_public_k8s_ip()
+        username, password = await get_mongos_user_password(ops_test, MONGOS_APP_NAME)
+        external_mongos_client = MongoClient(
+            f"mongodb://{username}:{password}@{public_k8s_ip}:{exposed_node_port}"
+        )
+        print(f"mongodb://{username}:{password}@{public_k8s_ip}:{exposed_node_port}")
+        external_mongos_client.admin.command("usersInfo")
+        external_mongos_client.close()
 
 
 def get_public_k8s_ip() -> str:
