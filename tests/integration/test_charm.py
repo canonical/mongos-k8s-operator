@@ -77,7 +77,7 @@ async def test_user_with_extra_roles(ops_test: OpsTest) -> None:
     test_user_uri = (
         f"mongodb://{TEST_USER_NAME}:{TEST_USER_PWD}@{mongos_host}:{MONGOS_PORT}"
     )
-    mongos_running = await check_mongos(uri=test_user_uri)
+    mongos_running = await check_mongos(ops_test, uri=test_user_uri)
     assert mongos_running, "User created is not accessible."
 
 
