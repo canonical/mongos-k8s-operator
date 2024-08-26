@@ -20,9 +20,10 @@ from charms.mongodb.v1.mongodb_provider import MongoDBProvider
 from charms.mongodb.v0.mongodb_tls import MongoDBTLS
 from charms.mongodb.v0.mongodb_secrets import SecretCache
 from charms.mongodb.v0.mongodb_secrets import generate_secret_label
-from charms.mongodb.v1.mongos import MongosConnection
-from charms.mongodb.v1.users import MongoDBUser
-
+from charms.mongodb.v1.mongos import MongoConfiguration, MongoConnection
+from charms.mongodb.v1.users import (
+    MongoDBUser,
+)
 
 from charms.mongodb.v1.helpers import get_mongos_args
 
@@ -62,9 +63,7 @@ class MongosCharm(ops.CharmBase):
 
     def __init__(self, *args):
         super().__init__(*args)
-        self.framework.observe(
-            self.on.mongos_pebble_ready, self._on_mongos_pebble_ready
-        )
+        self.framework.observe(self.on.mongos_pebble_ready, self._on_mongos_pebble_ready)
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.update_status, self._on_update_status)
         self.tls = MongoDBTLS(self, Config.Relations.PEERS, substrate=Config.SUBSTRATE)
@@ -122,9 +121,7 @@ class MongosCharm(ops.CharmBase):
             logger.info(
                 "Missing integration to config-server. mongos cannot run start sequence unless connected to config-server."
             )
-            self.status.set_and_share_status(
-                BlockedStatus("Missing relation to config-server.")
-            )
+            self.status.set_and_share_status(BlockedStatus("Missing relation to config-server."))
             event.defer()
             return
 
@@ -153,9 +150,7 @@ class MongosCharm(ops.CharmBase):
             logger.info(
                 "Missing integration to config-server. mongos cannot run unless connected to config-server."
             )
-            self.status.set_and_share_status(
-                BlockedStatus("Missing relation to config-server.")
-            )
+            self.status.set_and_share_status(BlockedStatus("Missing relation to config-server."))
             return
 
         self.status.set_and_share_status(ActiveStatus())
@@ -179,9 +174,7 @@ class MongosCharm(ops.CharmBase):
 
     def is_integrated_to_config_server(self) -> bool:
         """Returns True if the mongos application is integrated to a config-server."""
-        return (
-            self.model.get_relation(Config.Relations.CLUSTER_RELATIONS_NAME) is not None
-        )
+        return self.model.get_relation(Config.Relations.CLUSTER_RELATIONS_NAME) is not None
 
     def _get_mongos_config_for_user(
         self, user: MongoDBUser, hosts: Set[str]
@@ -237,9 +230,7 @@ class MongosCharm(ops.CharmBase):
         content = secret.get_content()
 
         if not content.get(key) or content[key] == Config.Secrets.SECRET_DELETED_LABEL:
-            logger.error(
-                f"Non-existing secret {scope}:{key} was attempted to be removed."
-            )
+            logger.error(f"Non-existing secret {scope}:{key} was attempted to be removed.")
             return
 
         content[key] = Config.Secrets.SECRET_DELETED_LABEL
@@ -266,9 +257,7 @@ class MongosCharm(ops.CharmBase):
             return
 
         # a mongos shard can only be related to one config server
-        config_server_rel = self.model.relations[
-            Config.Relations.CLUSTER_RELATIONS_NAME
-        ][0]
+        config_server_rel = self.model.relations[Config.Relations.CLUSTER_RELATIONS_NAME][0]
         self.cluster.database_requires.update_relation_data(
             config_server_rel.id, {DATABASE_TAG: database}
         )
@@ -358,7 +347,7 @@ class MongosCharm(ops.CharmBase):
 
     def is_db_service_ready(self) -> bool:
         """Returns True if the underlying database service is ready."""
-        with MongosConnection(self.mongos_config) as mongos:
+        with MongoConnection(self.mongos_config) as mongos:
             return mongos.is_ready
 
     def _push_keyfile_to_workload(self, container: Container) -> None:
@@ -385,9 +374,7 @@ class MongosCharm(ops.CharmBase):
 
         for license_name in licenses:
             try:
-                license_file = container.pull(
-                    path=Config.get_license_path(license_name)
-                )
+                license_file = container.pull(path=Config.get_license_path(license_name))
                 f = open(f"LICENSE_{license_name}", "x")
                 f.write(str(license_file.read()))
                 f.close()
@@ -404,14 +391,10 @@ class MongosCharm(ops.CharmBase):
         for path in [Config.DATA_DIR]:
             paths = container.list_files(path, itself=True)
             if not len(paths) == 1:
-                raise ExtraDataDirError(
-                    "list_files doesn't return only the directory itself"
-                )
+                raise ExtraDataDirError("list_files doesn't return only the directory itself")
             logger.debug(f"Data directory ownership: {paths[0].user}:{paths[0].group}")
             if paths[0].user != Config.UNIX_USER or paths[0].group != Config.UNIX_GROUP:
-                container.exec(
-                    f"chown {Config.UNIX_USER}:{Config.UNIX_GROUP} -R {path}".split()
-                )
+                container.exec(f"chown {Config.UNIX_USER}:{Config.UNIX_GROUP} -R {path}".split())
 
     def push_file_to_unit(
         self,

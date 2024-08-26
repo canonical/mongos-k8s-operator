@@ -6,14 +6,14 @@ import logging
 import re
 from dataclasses import dataclass
 from itertools import chain
-from typing import List, Optional, Set
-from config import Config
+from typing import List, Set
 from urllib.parse import quote_plus
-
 
 from pymongo import MongoClient
 from pymongo.errors import OperationFailure, PyMongoError
 from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
+
+from config import Config
 
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
@@ -59,7 +59,7 @@ REGULAR_ROLES = {
 logger = logging.getLogger(__name__)
 
 
-class AmbigiousConfigError(Exception):
+class AmbiguousConfigError(Exception):
     """Raised when the config could correspond to a mongod config or mongos config."""
 
 
@@ -76,22 +76,22 @@ class MongoConfiguration:
     — tls_internal: indicator for use of external TLS connection.
     """
 
-    database: Optional[str]
+    database: str | None
     username: str
     password: str
     hosts: Set[str]
     roles: Set[str]
     tls_external: bool
     tls_internal: bool
-    port: Optional[str] = Config.MONGODB_PORT
-    replset: Optional[str] = None
+    port: int = Config.MONGODB_PORT
+    replset: str | None = None
     standalone: bool = False
 
     @property
     def uri(self):
         """Return URI concatenated from fields."""
         if self.port == Config.MONGOS_PORT and self.replset:
-            raise AmbigiousConfigError("Mongos cannot support replica set")
+            raise AmbiguousConfigError("Mongos cannot support replica set")
 
         if self.standalone:
             return (
@@ -113,7 +113,7 @@ class MongoConfiguration:
         # Auth DB should be specified while user connects to application DB.
         auth_source = ""
         if self.database != "admin":
-            # "&"" is needed to concatinate multiple values in URI
+            # "&"" is needed to concatenate multiple values in URI
             auth_source = f"&{ADMIN_AUTH_SOURCE}" if self.replset else ADMIN_AUTH_SOURCE
 
         return (
@@ -193,8 +193,6 @@ class MongoConnection:
             True if services is ready False otherwise. Retries over a period of 60 seconds times to
             allow server time to start up.
 
-        Raises:
-            ConfigurationError, ConfigurationError, OperationFailure
         """
         try:
             for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
@@ -275,7 +273,7 @@ class MongoConnection:
     def get_databases(self) -> Set[str]:
         """Return list of all non-default databases."""
         databases = self.client.list_database_names()
-        return set([db for db in databases if db not in SYSTEM_DBS])
+        return {db for db in databases if db not in SYSTEM_DBS}
 
     def drop_database(self, database: str):
         """Drop a non-default database."""
