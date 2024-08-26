@@ -325,7 +325,6 @@ class ClusterRequirer(Object):
         self.charm.remove_secret(Config.Relations.APP_SCOPE, Config.Secrets.USERNAME)
         self.charm.remove_secret(Config.Relations.APP_SCOPE, Config.Secrets.PASSWORD)
 
-        # TODO DPE-5091 implement removal of client connection info on K8s
         # K8s charm have a 1:Many client scheme and share connection info in a different manner.
         if self.substrate == Config.Substrate.VM:
             self.charm.remove_connection_info()
