@@ -93,7 +93,12 @@ class MongosCharm(ops.CharmBase):
 
         self.expose_external = external_config
         if external_config == Config.ExternalConnections.EXTERNAL_NODEPORT:
-            self.update_external_services()
+            # every unit attempts to create a nodeport service - if exists, will silently continue
+            self.node_port_manager.apply_service(
+                service=self.node_port_manager.build_node_port_services(
+                    port=Config.MONGOS_PORT
+                )
+            )
 
         if (
             external_config == Config.ExternalConnections.NONE
@@ -107,7 +112,6 @@ class MongosCharm(ops.CharmBase):
 
     def _on_mongos_pebble_ready(self, event) -> None:
         """Configure MongoDB pebble layer specification."""
-        # any external services must be created before setting of properties
         if not self.is_integrated_to_config_server():
             logger.info(
                 "mongos service not starting. Cannot start until application is integrated to a config-server."
@@ -149,7 +153,10 @@ class MongosCharm(ops.CharmBase):
 
     def _on_update_status(self, _):
         """Handle the update status event"""
-        if self.expose_external not in Config.ExternalConnections.VALID_EXTERNAL_CONFIG:
+        if (
+            self.model.config["expose-external"]
+            not in Config.ExternalConnections.VALID_EXTERNAL_CONFIG
+        ):
             logger.error(
                 "External configuration: %s for expose-external is not valid, should be one of: %s",
                 self.expose_external,
@@ -174,15 +181,6 @@ class MongosCharm(ops.CharmBase):
     # END: hook functions
 
     # BEGIN: helper functions
-    def update_external_services(self) -> None:
-        """Attempts to update any external Kubernetes services."""
-        # every unit attempts to create a nodeport service - if exists, will silently continue
-        self.node_port_manager.apply_service(
-            service=self.node_port_manager.build_node_port_services(
-                port=Config.MONGOS_PORT
-            )
-        )
-
     def get_keyfile_contents(self) -> str | None:
         """Retrieves the contents of the keyfile on host machine."""
         # wait for keyFile to be created by leader unit
