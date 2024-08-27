@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
+from pathlib import Path
 import pytest
 from pytest_operator.plugin import OpsTest
 from ..helpers import (
@@ -62,8 +63,8 @@ async def test_mongos_tls_enabled(ops_test: OpsTest) -> None:
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_mongos_rotate_certs(ops_test: OpsTest) -> None:
-    await rotate_and_verify_certs(ops_test, MONGOS_APP_NAME)
+async def test_mongos_rotate_certs(ops_test: OpsTest, tmp_path: Path) -> None:
+    await rotate_and_verify_certs(ops_test, MONGOS_APP_NAME, tmpdir=tmp_path)
 
 
 @pytest.mark.group(1)

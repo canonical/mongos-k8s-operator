@@ -2,6 +2,7 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+from pathlib import Path
 from pytest_operator.plugin import OpsTest
 from ..helpers import get_application_relation_data, get_secret_data
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_exponential
@@ -193,7 +194,10 @@ def process_pebble_time(changes_output):
 
 
 async def check_certs_correctly_distributed(
-    ops_test: OpsTest, unit: ops.Unit, app_name=None
+    ops_test: OpsTest,
+    unit: ops.Unit,
+    tmpdir: Path,
+    app_name: str | None = None,
 ) -> None:
     """Comparing expected vs distributed certificates.
 
@@ -222,7 +226,9 @@ async def check_certs_correctly_distributed(
         ][0]
 
         # Read the content of the cert file stored in the unit
-        cert_file_content = await get_file_content(ops_test, unit.name, cert_path)
+        cert_file_content = await get_file_content(
+            ops_test, unit.name, cert_path, tmpdir
+        )
 
         # Get the external cert value from the relation
         relation_cert = "\n".join(tls_item["chain"]).strip()
@@ -233,10 +239,12 @@ async def check_certs_correctly_distributed(
         ), f"Relation Content for {cert_type}-cert:\n{relation_cert}\nFile Content:\n{cert_file_content}\nMismatch."
 
 
-async def scp_file_preserve_ctime(ops_test: OpsTest, unit_name: str, path: str) -> int:
+async def scp_file_preserve_ctime(
+    ops_test: OpsTest, unit_name: str, path: str, tmpdir: Path
+) -> int:
     """Returns the unix timestamp of when a file was created on a specified unit."""
     # Retrieving the file
-    filename = path.split("/")[-1]
+    filename = tmpdir / Path(path.split("/")[-1])
     complete_command = f"scp --container mongos {unit_name}:{path} {filename}"
     return_code, _, stderr = await ops_test.juju(*complete_command.split())
 
@@ -252,8 +260,10 @@ async def scp_file_preserve_ctime(ops_test: OpsTest, unit_name: str, path: str) 
     return f"{filename}"
 
 
-async def get_file_content(ops_test: OpsTest, unit_name: str, path: str) -> str:
-    filename = await scp_file_preserve_ctime(ops_test, unit_name, path)
+async def get_file_content(
+    ops_test: OpsTest, unit_name: str, path: str, tmpdir: Path
+) -> str:
+    filename = await scp_file_preserve_ctime(ops_test, unit_name, path, tmpdir)
 
     with open(filename, mode="r") as fd:
         return fd.read()
@@ -311,16 +321,16 @@ async def get_file_contents(ops_test: OpsTest, unit: str, filepath: str) -> str:
     return stdout
 
 
-async def rotate_and_verify_certs(ops_test: OpsTest, app: str) -> None:
+async def rotate_and_verify_certs(ops_test: OpsTest, app: str, tmpdir: Path) -> None:
     """Verify provided app can rotate its TLS certs."""
     original_tls_info = {}
     for unit in ops_test.model.applications[app].units:
         original_tls_info[unit.name] = {}
         original_tls_info[unit.name]["external_cert_contents"] = await get_file_content(
-            ops_test, unit.name, EXTERNAL_CERT_PATH
+            ops_test, unit.name, EXTERNAL_CERT_PATH, tmpdir
         )
         original_tls_info[unit.name]["internal_cert_contents"] = await get_file_content(
-            ops_test, unit.name, INTERNAL_CERT_PATH
+            ops_test, unit.name, INTERNAL_CERT_PATH, tmpdir
         )
         original_tls_info[unit.name]["external_cert"] = await time_file_created(
             ops_test, unit.name, EXTERNAL_CERT_PATH
@@ -331,7 +341,9 @@ async def rotate_and_verify_certs(ops_test: OpsTest, app: str) -> None:
         original_tls_info[unit.name]["mongos_service"] = await time_process_started(
             ops_test, unit.name, MONGOS_SERVICE
         )
-        await check_certs_correctly_distributed(ops_test, unit, app_name=app)
+        await check_certs_correctly_distributed(
+            ops_test, unit, app_name=app, tmpdir=tmpdir
+        )
 
     # set external and internal key using auto-generated key for each unit
     for unit in ops_test.model.applications[app].units:
@@ -349,10 +361,10 @@ async def rotate_and_verify_certs(ops_test: OpsTest, app: str) -> None:
     # made; then the certificates should be available and updated.
     for unit in ops_test.model.applications[app].units:
         new_external_cert = await get_file_content(
-            ops_test, unit.name, EXTERNAL_CERT_PATH
+            ops_test, unit.name, EXTERNAL_CERT_PATH, tmpdir
         )
         new_internal_cert = await get_file_content(
-            ops_test, unit.name, INTERNAL_CERT_PATH
+            ops_test, unit.name, INTERNAL_CERT_PATH, tmpdir
         )
         new_external_cert_time = await time_file_created(
             ops_test, unit.name, EXTERNAL_CERT_PATH
@@ -364,7 +376,9 @@ async def rotate_and_verify_certs(ops_test: OpsTest, app: str) -> None:
             ops_test, unit.name, MONGOS_SERVICE
         )
 
-        await check_certs_correctly_distributed(ops_test, unit, app_name=app)
+        await check_certs_correctly_distributed(
+            ops_test, unit, app_name=app, tmpdir=tmpdir
+        )
         assert (
             new_external_cert != original_tls_info[unit.name]["external_cert_contents"]
         ), "external cert not rotated"

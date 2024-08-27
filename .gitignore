@@ -1,7 +1,6 @@
 venv/
 build/
 *.charm
-*.crt
 
 coverage*
 __pycache__/
