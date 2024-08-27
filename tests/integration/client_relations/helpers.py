@@ -29,7 +29,6 @@ def get_port_from_node_port(ops_test: OpsTest, node_port_name: str) -> None:
         len(result.stdout.splitlines()) > 0
     ), "No port information available for expected service"
 
-    print(result.stdout)
     # port information is available at PORT_MAPPING_INDEX
     port_mapping = result.stdout.split()[PORT_MAPPING_INDEX]
 
@@ -58,7 +57,6 @@ async def assert_all_unit_node_ports_available(ops_test: OpsTest):
         external_mongos_client = MongoClient(
             f"mongodb://{username}:{password}@{public_k8s_ip}:{exposed_node_port}"
         )
-        print(f"mongodb://{username}:{password}@{public_k8s_ip}:{exposed_node_port}")
         external_mongos_client.admin.command("usersInfo")
         external_mongos_client.close()
 

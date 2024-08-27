@@ -80,8 +80,8 @@ class MongosCharm(ops.CharmBase):
     # BEGIN: hook functions
     def _on_config_changed(self, event: ConfigChangedEvent) -> None:
         """Listen to changes in the application configuration."""
+        previous_config = self.expose_external
         external_config = self.model.config["expose-external"]
-        self.expose_external = external_config
         if external_config not in Config.ExternalConnections.VALID_EXTERNAL_CONFIG:
             logger.error(
                 "External configuration: %s for expose-external is not valid, should be one of: %s",
@@ -91,15 +91,19 @@ class MongosCharm(ops.CharmBase):
             self.status.set_and_share_status(Config.Status.INVALID_EXTERNAL_CONFIG)
             return
 
+        self.expose_external = external_config
         if external_config == Config.ExternalConnections.EXTERNAL_NODEPORT:
             self.update_external_services()
-            self.restart_charm_services()
 
-        if external_config == Config.ExternalConnections.NONE:
-            # TODO future PR - support revoking external access
+        if (
+            external_config == Config.ExternalConnections.NONE
+            and previous_config == Config.ExternalConnections.EXTERNAL_NODEPORT
+        ):
+            # TODO DPE-5268 - support revoking external access
             pass
 
         # TODO DPE-5235 support updating data-integrator clients to have/not have public IP
+        # depending on the result of the configuration
 
     def _on_mongos_pebble_ready(self, event) -> None:
         """Configure MongoDB pebble layer specification."""
@@ -465,7 +469,10 @@ class MongosCharm(ops.CharmBase):
     @property
     def expose_external(self) -> Optional[str]:
         """Returns mode of exposure for external connections."""
-        if self.app_peer_data["expose-external"] == "none":
+        if (
+            self.app_peer_data.get("expose-external", Config.ExternalConnections.NONE)
+            == Config.ExternalConnections.NONE
+        ):
             return
 
         return self.app_peer_data["expose-external"]

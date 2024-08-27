@@ -80,7 +80,6 @@ class NodePortManager:
                 externalTrafficPolicy="Local",
                 type="NodePort",
                 selector={
-                    "app.kubernetes.io/name": self.app_name,
                     "statefulset.kubernetes.io/pod-name": self.pod_name,
                 },
                 ports=[
