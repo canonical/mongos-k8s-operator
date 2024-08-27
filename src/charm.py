@@ -93,6 +93,7 @@ class MongosCharm(ops.CharmBase):
 
         if external_config == Config.ExternalConnections.EXTERNAL_NODEPORT:
             self.update_external_services()
+            self.restart_charm_services()
 
         if external_config == Config.ExternalConnections.NONE:
             # TODO future PR - support revoking external access
@@ -103,7 +104,6 @@ class MongosCharm(ops.CharmBase):
     def _on_mongos_pebble_ready(self, event) -> None:
         """Configure MongoDB pebble layer specification."""
         # any external services must be created before setting of properties
-
         if not self.is_integrated_to_config_server():
             logger.info(
                 "mongos service not starting. Cannot start until application is integrated to a config-server."
@@ -172,8 +172,7 @@ class MongosCharm(ops.CharmBase):
     # BEGIN: helper functions
     def update_external_services(self) -> None:
         """Attempts to update any external Kubernetes services."""
-        # every unit attempts to create a nodeport service
-        # if exists, will silently continue
+        # every unit attempts to create a nodeport service - if exists, will silently continue
         self.node_port_manager.apply_service(
             service=self.node_port_manager.build_node_port_services(
                 port=Config.MONGOS_PORT
@@ -474,7 +473,7 @@ class MongosCharm(ops.CharmBase):
     @expose_external.setter
     def expose_external(self, expose_external):
         """Set the db_initialised flag."""
-        if not self.unit.is_leader:
+        if not self.unit.is_leader():
             return
 
         if expose_external not in Config.ExternalConnections.VALID_EXTERNAL_CONFIG:

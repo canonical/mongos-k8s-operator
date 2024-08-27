@@ -36,7 +36,9 @@ async def test_mongos_external_connections(ops_test: OpsTest) -> None:
     configuration_parameters = {"expose-external": "nodeport"}
 
     # apply new configuration options
-    await ops_test.model.applications[MONGOS_APP_NAME].set_config(configuration_parameters)
+    await ops_test.model.applications[MONGOS_APP_NAME].set_config(
+        configuration_parameters
+    )
     await ops_test.model.wait_for_idle(apps=[MONGOS_APP_NAME], idle_period=15)
 
     # # verify each unit has a node port available
@@ -61,13 +63,15 @@ async def test_mongos_bad_configuration(ops_test: OpsTest) -> None:
     configuration_parameters = {"expose-external": "nonsensical-setting"}
 
     # apply new configuration options
-    await ops_test.model.applications[MONGOS_APP_NAME].set_config(configuration_parameters)
+    await ops_test.model.applications[MONGOS_APP_NAME].set_config(
+        configuration_parameters
+    )
 
     # verify that Charmed Mongos is blocked and reports incorrect credentials
     await wait_for_mongos_units_blocked(
         ops_test,
         MONGOS_APP_NAME,
-        status="Missing relation to config-server.",
+        status="Config option for expose-external not valid.",
         timeout=300,
     )
 

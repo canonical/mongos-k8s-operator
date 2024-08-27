@@ -77,8 +77,12 @@ class NodePortManager:
                 ],
             ),
             spec=ServiceSpec(
+                externalTrafficPolicy="Local",
                 type="NodePort",
-                selector={"app.kubernetes.io/name": self.pod_name},
+                selector={
+                    "app.kubernetes.io/name": self.app_name,
+                    "statefulset.kubernetes.io/pod-name": self.pod_name,
+                },
                 ports=[
                     ServicePort(
                         protocol="TCP",
