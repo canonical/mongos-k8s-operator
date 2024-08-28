@@ -471,7 +471,7 @@ class MongosCharm(ops.CharmBase):
             self.app_peer_data.get("expose-external", Config.ExternalConnections.NONE)
             == Config.ExternalConnections.NONE
         ):
-            return
+            return None
 
         return self.app_peer_data["expose-external"]
 
