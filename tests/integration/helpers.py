@@ -322,19 +322,28 @@ async def get_application_relation_data(
 
 
 async def get_mongos_user_password(
-    ops_test: OpsTest, app_name=MONGOS_APP_NAME
+    ops_test: OpsTest, app_name=MONGOS_APP_NAME, relation_name="cluster"
 ) -> Tuple[str, str]:
-    secret_uri = await get_application_relation_data(
-        ops_test, app_name, relation_name="cluster", key="secret-user"
-    )
+    # TODO once DPE:5215 is fixed retrieve via secret
+    # secret_uri = await get_application_relation_data(
+    #     ops_test, app_name, relation_name=relation_name, key="secret-user"
+    # )
 
-    secret_data = await get_secret_data(ops_test, secret_uri)
-    return secret_data.get("username"), secret_data.get("password")
+    # secret_data = await get_secret_data(ops_test, secret_uri)
+    # return secret_data.get("username"), secret_data.get("password")
+
+    username = await get_application_relation_data(
+        ops_test, app_name, relation_name=relation_name, key="username"
+    )
+    password = await get_application_relation_data(
+        ops_test, app_name, relation_name=relation_name, key="password"
+    )
+    return username, password
 
 
 async def check_mongos(
     ops_test: OpsTest,
-    unit_id: int,
+    unit_id: int = 0,
     auth: bool = True,
     app_name=MONGOS_APP_NAME,
     uri: str = None,
@@ -343,14 +352,16 @@ async def check_mongos(
     mongos_client = await get_direct_mongos_client(
         ops_test, unit_id, auth, app_name, uri
     )
-
     try:
         # wait 10 seconds in case the daemon was just started
         for attempt in Retrying(stop=stop_after_delay(10)):
             with attempt:
                 mongos_client.admin.command("ping")
+
     except RetryError:
         return False
+    finally:
+        mongos_client.close()
 
     return True
 
@@ -369,12 +380,11 @@ async def get_mongos_uri(
 
 async def get_direct_mongos_client(
     ops_test: OpsTest,
-    unit_id: int,
+    unit_id: int = 0,
     auth: bool = True,
     app_name: str = MONGOS_APP_NAME,
     uri: str = None,
 ) -> MongoClient:
     """Returns a direct mongodb client potentially passing over some of the units."""
     mongos_uri = uri or await get_mongos_uri(ops_test, unit_id, auth, app_name)
-
     return MongoClient(mongos_uri, directConnection=True)

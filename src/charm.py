@@ -7,18 +7,20 @@ from ops.main import main
 import json
 
 from exceptions import MissingSecretError
+
 from ops.pebble import PathError, ProtocolError, Layer
-from typing import Set, Optional, Dict
 from charms.mongodb.v0.config_server_interface import ClusterRequirer
 
 
+from pymongo.errors import PyMongoError
+from typing import Set, Optional, Dict
+
+from charms.mongodb.v0.mongo import MongoConfiguration, MongoConnection
 from charms.mongos.v0.set_status import MongosStatusHandler
+from charms.mongodb.v1.mongodb_provider import MongoDBProvider
 from charms.mongodb.v0.mongodb_tls import MongoDBTLS
 from charms.mongodb.v0.mongodb_secrets import SecretCache
 from charms.mongodb.v0.mongodb_secrets import generate_secret_label
-from charms.mongodb.v1.mongos import MongoConfiguration, MongoConnection
-
-
 from charms.mongodb.v1.helpers import get_mongos_args
 
 from config import Config
@@ -76,6 +78,12 @@ class MongosCharm(ops.CharmBase):
         self.status = MongosStatusHandler(self)
         self.cluster = ClusterRequirer(self, substrate=Config.SUBSTRATE)
 
+        self.client_relations = MongoDBProvider(
+            self,
+            substrate=Config.SUBSTRATE,
+            relation_name=Config.Relations.CLIENT_RELATIONS_NAME,
+        )
+
     # BEGIN: hook functions
     def _on_mongos_pebble_ready(self, event) -> None:
         """Configure MongoDB pebble layer specification."""
@@ -114,9 +122,31 @@ class MongosCharm(ops.CharmBase):
         # start hooks are fired before relation hooks and `mongos` requires a config-server in
         # order to start. Wait to receive config-server info from the relation event before
         # starting `mongos` daemon
-        self.status.set_and_share_status(
-            BlockedStatus("Missing relation to config-server.")
-        )
+        if not self.is_integrated_to_config_server():
+            logger.info(
+                "Missing integration to config-server. mongos cannot run start sequence unless connected to config-server."
+            )
+            self.status.set_and_share_status(
+                BlockedStatus("Missing relation to config-server.")
+            )
+            event.defer()
+            return
+
+        if not self.cluster.is_mongos_running():
+            logger.debug("mongos service is not ready yet.")
+            event.defer()
+            return
+
+        self.db_initialised = True
+
+        try:
+            self.client_relations.oversee_users(None, None)
+        except PyMongoError as e:
+            logger.error(
+                "Failed to create mongos client users, due to %r. Will defer and try again",
+                e,
+            )
+            event.defer()
 
     def _on_update_status(self, _):
         """Handle the update status event"""
@@ -486,6 +516,28 @@ class MongosCharm(ops.CharmBase):
 
     # BEGIN: properties
     @property
+    def db_initialised(self) -> bool:
+        """Check if mongos is initialised.
+
+        Named `db_initialised` rather than `router_initialised` due to need for parity across DB
+        charms.
+        """
+        return json.loads(self.app_peer_data.get("db_initialised", "false"))
+
+    @db_initialised.setter
+    def db_initialised(self, value):
+        """Set the db_initialised flag."""
+        if not self.unit.is_leader():
+            return
+
+        if isinstance(value, bool):
+            self.app_peer_data["db_initialised"] = json.dumps(value)
+        else:
+            raise ValueError(
+                f"'db_initialised' must be a boolean value. Proivded: {value} is of type {type(value)}"
+            )
+
+    @property
     def peers_units(self) -> list[Unit]:
         """Get peers units in a safe way."""
         if not self._peers:
@@ -565,6 +617,11 @@ class MongosCharm(ops.CharmBase):
         associated clients.
         """
         return Config.USER_ROLE_CREATE_USERS
+
+    @property
+    def mongo_config(self) -> MongoConfiguration:
+        """Returns a MongoConfiguration object for shared libs with agnostic mongo commands."""
+        return self.mongos_config
 
     @property
     def mongos_config(self) -> MongoConfiguration:
