@@ -16,7 +16,8 @@ from charms.mongos.v0.set_status import MongosStatusHandler
 from charms.mongodb.v0.mongodb_tls import MongoDBTLS
 from charms.mongodb.v0.mongodb_secrets import SecretCache
 from charms.mongodb.v0.mongodb_secrets import generate_secret_label
-from charms.mongodb.v1.mongos import MongosConfiguration, MongosConnection
+from charms.mongodb.v1.mongos import MongoConfiguration, MongoConnection
+
 
 from charms.mongodb.v1.helpers import get_mongos_args
 
@@ -329,7 +330,7 @@ class MongosCharm(ops.CharmBase):
 
     def is_db_service_ready(self) -> bool:
         """Returns True if the underlying database service is ready."""
-        with MongosConnection(self.mongos_config) as mongos:
+        with MongoConnection(self.mongos_config) as mongos:
             return mongos.is_ready
 
     def _push_keyfile_to_workload(self, container: Container) -> None:
@@ -566,13 +567,13 @@ class MongosCharm(ops.CharmBase):
         return Config.USER_ROLE_CREATE_USERS
 
     @property
-    def mongos_config(self) -> MongosConfiguration:
+    def mongos_config(self) -> MongoConfiguration:
         """Generates a MongoDBConfiguration object for mongos in the deployment of MongoDB."""
         hosts = self.get_mongos_hosts()
         external_ca, _ = self.tls.get_tls_files(internal=False)
         internal_ca, _ = self.tls.get_tls_files(internal=True)
 
-        return MongosConfiguration(
+        return MongoConfiguration(
             database=self.database,
             username=self.get_secret(APP_SCOPE, Config.Secrets.USERNAME),
             password=self.get_secret(APP_SCOPE, Config.Secrets.PASSWORD),
