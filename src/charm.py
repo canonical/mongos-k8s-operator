@@ -80,7 +80,6 @@ class MongosCharm(ops.CharmBase):
     # BEGIN: hook functions
     def _on_config_changed(self, event: ConfigChangedEvent) -> None:
         """Listen to changes in the application configuration."""
-        previous_config = self.expose_external
         external_config = self.model.config["expose-external"]
         if external_config not in Config.ExternalConnections.VALID_EXTERNAL_CONFIG:
             logger.error(
@@ -91,21 +90,7 @@ class MongosCharm(ops.CharmBase):
             self.status.set_and_share_status(Config.Status.INVALID_EXTERNAL_CONFIG)
             return
 
-        self.expose_external = external_config
-        if external_config == Config.ExternalConnections.EXTERNAL_NODEPORT:
-            # every unit attempts to create a nodeport service - if exists, will silently continue
-            self.node_port_manager.apply_service(
-                service=self.node_port_manager.build_node_port_services(
-                    port=Config.MONGOS_PORT
-                )
-            )
-
-        if (
-            external_config == Config.ExternalConnections.NONE
-            and previous_config == Config.ExternalConnections.EXTERNAL_NODEPORT
-        ):
-            # TODO DPE-5268 - support revoking external access
-            pass
+        self.update_external_services(external_config)
 
         # TODO DPE-5235 support updating data-integrator clients to have/not have public IP
         # depending on the result of the configuration
@@ -159,7 +144,7 @@ class MongosCharm(ops.CharmBase):
         ):
             logger.error(
                 "External configuration: %s for expose-external is not valid, should be one of: %s",
-                self.expose_external,
+                self.model.config["expose-external"],
                 Config.ExternalConnections.VALID_EXTERNAL_CONFIG,
             )
             self.unit.status = Config.Status.INVALID_EXTERNAL_CONFIG
@@ -181,6 +166,26 @@ class MongosCharm(ops.CharmBase):
     # END: hook functions
 
     # BEGIN: helper functions
+
+    def update_external_services(self, external_config: str) -> None:
+        """Update external services based on provided configuration."""
+        previous_config = self.expose_external
+        if external_config == Config.ExternalConnections.EXTERNAL_NODEPORT:
+            # every unit attempts to create a nodeport service - if exists, will silently continue
+            self.external_service = self.node_port_manager.apply_service(
+                service=self.node_port_manager.build_node_port_services(
+                    port=Config.MONGOS_PORT
+                )
+            )
+
+        if (
+            external_config == Config.ExternalConnections.NONE
+            and previous_config == Config.ExternalConnections.EXTERNAL_NODEPORT
+        ):
+            self.node_port_manager.delete_unit_service()
+
+        self.external_service = external_config
+
     def get_keyfile_contents(self) -> str | None:
         """Retrieves the contents of the keyfile on host machine."""
         # wait for keyFile to be created by leader unit
