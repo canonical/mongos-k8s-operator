@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 PORT_MAPPING_INDEX = 4
 
 
-def get_port_from_node_port(ops_test: OpsTest, node_port_name: str) -> None:
+def get_port_from_node_port(ops_test: OpsTest, node_port_name: str) -> str:
     node_port_cmd = f"kubectl get svc  -n  {ops_test.model.name} |  grep NodePort | grep {node_port_name}"
     result = subprocess.run(node_port_cmd, shell=True, capture_output=True, text=True)
     if result.returncode:
