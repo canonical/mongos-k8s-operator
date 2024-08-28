@@ -18,16 +18,21 @@ from charms.mongodb.v0.mongodb_tls import MongoDBTLS
 from charms.mongodb.v0.mongodb_secrets import SecretCache
 from charms.mongodb.v0.mongodb_secrets import generate_secret_label
 from charms.mongodb.v1.mongos import MongoConfiguration, MongoConnection
-from charms.mongodb.v1.users import (
-    MongoDBUser,
-)
+
 
 from charms.mongodb.v1.helpers import get_mongos_args
 
 from config import Config
 
 import ops
-from ops.model import BlockedStatus, Container, Relation, ActiveStatus, Unit
+from ops.model import (
+    BlockedStatus,
+    WaitingStatus,
+    Container,
+    Relation,
+    ActiveStatus,
+    Unit,
+)
 from ops.charm import StartEvent, RelationDepartedEvent, ConfigChangedEvent
 
 import logging
@@ -176,6 +181,18 @@ class MongosCharm(ops.CharmBase):
             )
             return
 
+        if tls_statuses := self.cluster.get_tls_statuses():
+            self.status.set_and_share_status(tls_statuses)
+            return
+
+        # restart on high loaded databases can be very slow (e.g. up to 10-20 minutes).
+        if not self.cluster.is_mongos_running():
+            logger.info("mongos has not started yet")
+            self.status.set_and_share_status(
+                WaitingStatus("Waiting for mongos to start.")
+            )
+            return
+
         self.status.set_and_share_status(ActiveStatus())
 
     # END: hook functions
@@ -199,20 +216,6 @@ class MongosCharm(ops.CharmBase):
         """Returns True if the mongos application is integrated to a config-server."""
         return (
             self.model.get_relation(Config.Relations.CLUSTER_RELATIONS_NAME) is not None
-        )
-
-    def _get_mongos_config_for_user(
-        self, user: MongoDBUser, hosts: Set[str]
-    ) -> MongoConfiguration:
-        return MongoConfiguration(
-            database=user.get_database_name(),
-            username=user.get_username(),
-            password=self.get_secret(APP_SCOPE, user.get_password_key_name()),
-            hosts=hosts,
-            port=Config.MONGOS_PORT,
-            roles=user.get_roles(),
-            tls_external=None,  # Future PR will support TLS
-            tls_internal=None,  # Future PR will support TLS
         )
 
     def get_secret(self, scope: str, key: str) -> Optional[str]:
@@ -392,6 +395,50 @@ class MongosCharm(ops.CharmBase):
                 file_contents=keyfile,
             )
 
+    def push_tls_certificate_to_workload(self) -> None:
+        """Uploads certificate to the workload container."""
+        container = self.unit.get_container(Config.CONTAINER_NAME)
+
+        # Handling of external CA and PEM files
+        external_ca, external_pem = self.tls.get_tls_files(internal=False)
+
+        if external_ca is not None:
+            logger.debug("Uploading external ca to workload container")
+            self.push_file_to_unit(
+                container=container,
+                parent_dir=Config.MONGOD_CONF_DIR,
+                file_name=Config.TLS.EXT_CA_FILE,
+                file_contents=external_ca,
+            )
+        if external_pem is not None:
+            logger.debug("Uploading external pem to workload container")
+            self.push_file_to_unit(
+                container=container,
+                parent_dir=Config.MONGOD_CONF_DIR,
+                file_name=Config.TLS.EXT_PEM_FILE,
+                file_contents=external_pem,
+            )
+
+        # Handling of external CA and PEM files
+        internal_ca, internal_pem = self.tls.get_tls_files(internal=True)
+
+        if internal_ca is not None:
+            logger.debug("Uploading internal ca to workload container")
+            self.push_file_to_unit(
+                container=container,
+                parent_dir=Config.MONGOD_CONF_DIR,
+                file_name=Config.TLS.INT_CA_FILE,
+                file_contents=internal_ca,
+            )
+        if internal_pem is not None:
+            logger.debug("Uploading internal pem to workload container")
+            self.push_file_to_unit(
+                container=container,
+                parent_dir=Config.MONGOD_CONF_DIR,
+                file_name=Config.TLS.INT_PEM_FILE,
+                file_contents=internal_pem,
+            )
+
     @staticmethod
     def _pull_licenses(container: Container) -> None:
         """Pull licences from workload."""
@@ -449,6 +496,21 @@ class MongosCharm(ops.CharmBase):
             group=Config.UNIX_GROUP,
         )
 
+    def delete_tls_certificate_from_workload(self) -> None:
+        """Deletes certificate from the workload container."""
+        logger.info("Deleting TLS certificate from workload container")
+        container = self.unit.get_container(Config.CONTAINER_NAME)
+        for file in [
+            Config.TLS.EXT_CA_FILE,
+            Config.TLS.EXT_PEM_FILE,
+            Config.TLS.INT_CA_FILE,
+            Config.TLS.INT_PEM_FILE,
+        ]:
+            try:
+                container.remove_path(f"{Config.MONGOD_CONF_DIR}/{file}")
+            except PathError as err:
+                logger.debug("Path unavailable: %s (%s)", file, str(err))
+
     def unit_host(self, unit: Unit) -> str:
         """Create a DNS name for a MongoDB unit.
 
@@ -460,6 +522,14 @@ class MongosCharm(ops.CharmBase):
         """
         unit_id = unit.name.split("/")[1]
         return f"{self.app.name}-{unit_id}.{self.app.name}-endpoints"
+
+    def get_config_server_name(self) -> Optional[str]:
+        """Returns the name of the Juju Application that mongos is using as a config server."""
+        return self.cluster.get_config_server_name()
+
+    def has_config_server(self) -> bool:
+        """Returns True is the mongos router is integrated to a config-server."""
+        return self.cluster.get_config_server_name() is not None
 
     # END: helper functions
 
