@@ -29,6 +29,10 @@ requires:
     interface: config-server
     limit: 1
 
+provides:
+  mongos_proxy:
+    interface: mongos_client
+
 containers:
   mongos:
     resource: mongodb-image
