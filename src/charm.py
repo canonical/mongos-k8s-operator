@@ -476,7 +476,7 @@ class MongosCharm(ops.CharmBase):
         return self.app_peer_data["expose-external"]
 
     @expose_external.setter
-    def expose_external(self, expose_external):
+    def expose_external(self, expose_external: str) -> None:
         """Set the db_initialised flag."""
         if not self.unit.is_leader():
             return
