@@ -197,6 +197,39 @@ async def deploy_cluster_components(ops_test: OpsTest) -> None:
     )
 
 
+async def build_cluster(ops_test: OpsTest) -> None:
+    """Builds the cluster by integrating the components."""
+    # prepare sharded cluster
+    await ops_test.model.wait_for_idle(
+        apps=[CONFIG_SERVER_APP_NAME, SHARD_APP_NAME],
+        idle_period=10,
+        raise_on_blocked=False,
+        raise_on_error=False,  # Removed this once DPE-4996 is resolved.
+    )
+    await ops_test.model.integrate(
+        f"{SHARD_APP_NAME}:{SHARD_REL_NAME}",
+        f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
+    )
+    await ops_test.model.wait_for_idle(
+        apps=[CONFIG_SERVER_APP_NAME, SHARD_APP_NAME],
+        idle_period=20,
+        raise_on_blocked=False,
+        raise_on_error=False,  # https://github.com/canonical/mongodb-k8s-operator/issues/301
+    )
+
+    # connect sharded cluster to mongos
+    await ops_test.model.integrate(
+        f"{MONGOS_APP_NAME}:{CLUSTER_REL_NAME}",
+        f"{CONFIG_SERVER_APP_NAME}:{CLUSTER_REL_NAME}",
+    )
+    await ops_test.model.wait_for_idle(
+        apps=[CONFIG_SERVER_APP_NAME, SHARD_APP_NAME, MONGOS_APP_NAME],
+        idle_period=20,
+        status="active",
+        raise_on_error=False,  # Removed this once DPE-4996 is resolved.
+    )
+
+
 async def get_application_name(ops_test: OpsTest, application_name: str) -> str:
     """Returns the Application in the juju model that matches the provided application name.
 
