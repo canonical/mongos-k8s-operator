@@ -17,9 +17,6 @@ from charms.mongodb.v0.mongodb_tls import MongoDBTLS
 from charms.mongodb.v0.mongodb_secrets import SecretCache
 from charms.mongodb.v0.mongodb_secrets import generate_secret_label
 from charms.mongodb.v1.mongos import MongosConfiguration, MongosConnection
-from charms.mongodb.v1.users import (
-    MongoDBUser,
-)
 
 from charms.mongodb.v1.helpers import get_mongos_args
 
@@ -169,20 +166,6 @@ class MongosCharm(ops.CharmBase):
         """Returns True if the mongos application is integrated to a config-server."""
         return (
             self.model.get_relation(Config.Relations.CLUSTER_RELATIONS_NAME) is not None
-        )
-
-    def _get_mongos_config_for_user(
-        self, user: MongoDBUser, hosts: Set[str]
-    ) -> MongosConfiguration:
-        return MongosConfiguration(
-            database=user.get_database_name(),
-            username=user.get_username(),
-            password=self.get_secret(APP_SCOPE, user.get_password_key_name()),
-            hosts=hosts,
-            port=Config.MONGOS_PORT,
-            roles=user.get_roles(),
-            tls_external=None,  # Future PR will support TLS
-            tls_internal=None,  # Future PR will support TLS
         )
 
     def get_secret(self, scope: str, key: str) -> Optional[str]:
