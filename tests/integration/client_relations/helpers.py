@@ -19,6 +19,7 @@ from ..helpers import (
     MongoClient,
     get_application_relation_data,
     get_secret_data,
+    get_mongos_user_password,
 )
 
 from pytest_operator.plugin import OpsTest
@@ -39,20 +40,6 @@ CONFIG_SERVER_REL_NAME = "config-server"
 CLUSTER_REL_NAME = "cluster"
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
-
-
-@retry(stop=stop_after_attempt(10), wait=wait_fixed(15), reraise=True)
-async def get_mongos_user_password(
-    ops_test: OpsTest, app_name=MONGOS_APP_NAME, relation_name="cluster"
-) -> Tuple[str, str]:
-    secret_uri = await get_application_relation_data(
-        ops_test, app_name, relation_name=relation_name, key="secret-user"
-    )
-    assert secret_uri, "No secret URI found"
-
-    secret_data = await get_secret_data(ops_test, secret_uri)
-
-    return secret_data.get("username"), secret_data.get("password")
 
 
 @retry(stop=stop_after_attempt(10), wait=wait_fixed(15), reraise=True)
