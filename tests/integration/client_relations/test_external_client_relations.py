@@ -14,10 +14,14 @@ from ..helpers import (
 )
 
 from .helpers import (
+    deploy_client_app,
+    integrate_client_app,
     assert_all_unit_node_ports_available,
     assert_all_unit_node_ports_are_unavailable,
     get_port_from_node_port,
     is_external_mongos_client_reachble,
+    DATA_INTEGRATOR_APP_NAME,
+    APPLICATION_APP_NAME,
 )
 
 
@@ -33,6 +37,15 @@ async def test_build_and_deploy(ops_test: OpsTest):
     await deploy_cluster_components(ops_test)
     await build_cluster(ops_test)
 
+    await deploy_client_app(ops_test, external=False)
+    await integrate_client_app(ops_test, client_app_name=APPLICATION_APP_NAME)
+
+    await deploy_client_app(ops_test, external=True)
+    await ops_test.model.applications[DATA_INTEGRATOR_APP_NAME].set_config(
+        {"database-name": "test-database"}
+    )
+    await integrate_client_app(ops_test, client_app_name=DATA_INTEGRATOR_APP_NAME)
+
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
@@ -41,9 +54,7 @@ async def test_mongos_external_connections(ops_test: OpsTest) -> None:
     configuration_parameters = {"expose-external": "nodeport"}
 
     # apply new configuration options
-    await ops_test.model.applications[MONGOS_APP_NAME].set_config(
-        configuration_parameters
-    )
+    await ops_test.model.applications[MONGOS_APP_NAME].set_config(configuration_parameters)
     await ops_test.model.wait_for_idle(apps=[MONGOS_APP_NAME], idle_period=15)
 
     # verify each unit has a node port available
@@ -68,9 +79,7 @@ async def test_mongos_bad_configuration(ops_test: OpsTest) -> None:
     configuration_parameters = {"expose-external": "nonsensical-setting"}
 
     # apply new configuration options
-    await ops_test.model.applications[MONGOS_APP_NAME].set_config(
-        configuration_parameters
-    )
+    await ops_test.model.applications[MONGOS_APP_NAME].set_config(configuration_parameters)
 
     # verify that Charmed Mongos is blocked and reports incorrect credentials
     await wait_for_mongos_units_blocked(
@@ -96,9 +105,7 @@ async def test_mongos_disable_external_connections(ops_test: OpsTest) -> None:
     configuration_parameters = {"expose-external": "none"}
 
     # apply new configuration options
-    await ops_test.model.applications[MONGOS_APP_NAME].set_config(
-        configuration_parameters
-    )
+    await ops_test.model.applications[MONGOS_APP_NAME].set_config(configuration_parameters)
     await ops_test.model.wait_for_idle(apps=[MONGOS_APP_NAME], idle_period=15)
 
     # verify each unit has a node port available

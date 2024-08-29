@@ -3,7 +3,7 @@
 # See LICENSE file for licensing details.
 
 """Manager for handling mongos Kubernetes resources for a single mongos pod."""
-
+from typing import Optional
 import logging
 from functools import cached_property
 from ops.charm import CharmBase
@@ -11,8 +11,8 @@ from lightkube.models.meta_v1 import ObjectMeta, OwnerReference
 from lightkube.core.client import Client
 from lightkube.core.exceptions import ApiError
 from lightkube.resources.core_v1 import Pod, Service
-from lightkube.models.core_v1 import ServicePort, ServiceSpec
-
+from lightkube.models.core_v1 import ServicePort, ServiceSpec, Node
+from ops.model import BlockedStatus
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +71,11 @@ class NodePortManager:
     # END: getters
 
     # BEGIN: helpers
+    def on_deployed_without_trust(self) -> None:
+        """Blocks the application and returns a specific error message for deployments made without --trust."""
+        self.charm.unit.status = BlockedStatus(
+            f"Insufficient permissions, try: `juju trust {self.app.name} --scope=cluster`"
+        )
 
     def build_node_port_services(self, port: str) -> Service:
         """Builds a ClusterIP service for initial client connection."""
@@ -131,7 +136,7 @@ class NodePortManager:
             service = self.get_unit_service()
         except ApiError as e:
             if e.status.code == 404:
-                logger.debug(f"Could not find {service.name} to delete.")
+                logger.debug(f"Could not find {self.get_unit_service_name()} to delete.")
                 return
 
         if not service.metadata:
@@ -141,9 +146,36 @@ class NodePortManager:
             self.client.delete(Service, service.metadata.name)
         except ApiError as e:
             if e.status.code == 403:
+                self.on_deployed_without_trust()
                 logger.error("Could not delete service, application needs `juju trust`")
                 return
             else:
                 raise
+
+    @property
+    def get_node_ip(self) -> Optional[str]:
+        """Return node IP."""
+        try:
+            node = self.client.get(
+                Node,
+                name=self.get_unit_service_name(),
+                namespace=self.namespace,
+            )
+        except ApiError as e:
+            if e.status.code == 403:
+                logger.error("Could not delete service, application needs `juju trust`")
+                self.on_deployed_without_trust()
+                return
+        # [
+        #    NodeAddress(address='192.168.0.228', type='InternalIP'),
+        #    NodeAddress(address='example.com', type='Hostname')
+        # ]
+        # Remember that OpenStack, for example, will return an internal hostname, which is not
+        # accessible from the outside. Give preference to ExternalIP, then InternalIP first
+        # Separated, as we want to give preference to ExternalIP, InternalIP and then Hostname
+        for typ in ["ExternalIP", "InternalIP", "Hostname"]:
+            for a in node.status.addresses:
+                if a.type == typ:
+                    return a.address
 
     # END: helpers

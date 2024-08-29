@@ -74,11 +74,18 @@ class MongosCharm(ops.CharmBase):
 
         # lifecycle events
         self.framework.observe(self.on.config_changed, self._on_config_changed)
-        self.framework.observe(
-            self.on.mongos_pebble_ready, self._on_mongos_pebble_ready
-        )
+        self.framework.observe(self.on.mongos_pebble_ready, self._on_mongos_pebble_ready)
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.update_status, self._on_update_status)
+
+        # when number of units change update hosts
+        self.framework.observe(self.on.leader_elected, self._update_client_related_hosts)
+        self.framework.observe(
+            self.on[Config.Relations.PEERS].relation_joined, self._update_client_related_hosts
+        )
+        self.framework.observe(
+            self.on[Config.Relations.PEERS].relation_departed, self._update_client_related_hosts
+        )
 
         # relations
         self.tls = MongoDBTLS(self, Config.Relations.PEERS, substrate=Config.SUBSTRATE)
@@ -98,6 +105,9 @@ class MongosCharm(ops.CharmBase):
             return
 
         self.update_external_services()
+
+        # toggling of external connectivity means we have to update integrated hosts
+        self._update_client_related_hosts(event)
 
         # TODO DPE-5235 support updating data-integrator clients to have/not have public IP
         # depending on the result of the configuration
@@ -143,9 +153,7 @@ class MongosCharm(ops.CharmBase):
             logger.info(
                 "Missing integration to config-server. mongos cannot run start sequence unless connected to config-server."
             )
-            self.status.set_and_share_status(
-                BlockedStatus("Missing relation to config-server.")
-            )
+            self.status.set_and_share_status(BlockedStatus("Missing relation to config-server."))
             event.defer()
             return
 
@@ -178,9 +186,7 @@ class MongosCharm(ops.CharmBase):
             logger.info(
                 "Missing integration to config-server. mongos cannot run unless connected to config-server."
             )
-            self.status.set_and_share_status(
-                BlockedStatus("Missing relation to config-server.")
-            )
+            self.status.set_and_share_status(BlockedStatus("Missing relation to config-server."))
             return
 
         if tls_statuses := self.cluster.get_tls_statuses():
@@ -190,9 +196,7 @@ class MongosCharm(ops.CharmBase):
         # restart on high loaded databases can be very slow (e.g. up to 10-20 minutes).
         if not self.cluster.is_mongos_running():
             logger.info("mongos has not started yet")
-            self.status.set_and_share_status(
-                WaitingStatus("Waiting for mongos to start.")
-            )
+            self.status.set_and_share_status(WaitingStatus("Waiting for mongos to start."))
             return
 
         self.status.set_and_share_status(ActiveStatus())
@@ -218,15 +222,10 @@ class MongosCharm(ops.CharmBase):
 
     def update_external_services(self) -> None:
         """Update external services based on provided configuration."""
-        if (
-            self.model.config["expose-external"]
-            == Config.ExternalConnections.EXTERNAL_NODEPORT
-        ):
+        if self.model.config["expose-external"] == Config.ExternalConnections.EXTERNAL_NODEPORT:
             # every unit attempts to create a nodeport service - if exists, will silently continue
             self.external_service = self.node_port_manager.apply_service(
-                service=self.node_port_manager.build_node_port_services(
-                    port=Config.MONGOS_PORT
-                )
+                service=self.node_port_manager.build_node_port_services(port=Config.MONGOS_PORT)
             )
         else:
             self.node_port_manager.delete_unit_service()
@@ -249,9 +248,7 @@ class MongosCharm(ops.CharmBase):
 
     def is_integrated_to_config_server(self) -> bool:
         """Returns True if the mongos application is integrated to a config-server."""
-        return (
-            self.model.get_relation(Config.Relations.CLUSTER_RELATIONS_NAME) is not None
-        )
+        return self.model.get_relation(Config.Relations.CLUSTER_RELATIONS_NAME) is not None
 
     def get_secret(self, scope: str, key: str) -> Optional[str]:
         """Get secret from the secret storage."""
@@ -293,9 +290,7 @@ class MongosCharm(ops.CharmBase):
         content = secret.get_content()
 
         if not content.get(key) or content[key] == Config.Secrets.SECRET_DELETED_LABEL:
-            logger.error(
-                f"Non-existing secret {scope}:{key} was attempted to be removed."
-            )
+            logger.error(f"Non-existing secret {scope}:{key} was attempted to be removed.")
             return
 
         content[key] = Config.Secrets.SECRET_DELETED_LABEL
@@ -322,9 +317,7 @@ class MongosCharm(ops.CharmBase):
             return
 
         # a mongos shard can only be related to one config server
-        config_server_rel = self.model.relations[
-            Config.Relations.CLUSTER_RELATIONS_NAME
-        ][0]
+        config_server_rel = self.model.relations[Config.Relations.CLUSTER_RELATIONS_NAME][0]
         self.cluster.database_requires.update_relation_data(
             config_server_rel.id, {DATABASE_TAG: database}
         )
@@ -387,12 +380,15 @@ class MongosCharm(ops.CharmBase):
         """
         return self.unit_host(self.unit)
 
-    def get_mongos_hosts(self) -> Set:
+    def get_mongos_hosts(self, external: bool = False) -> Set:
         """Returns the host for mongos as a str.
 
         The host for mongos can be either the Unix Domain Socket or an IP address depending on how
         the client wishes to connect to mongos (inside Juju or outside).
         """
+        if external and self.is_external_client:
+            return {self.node_port_manager.get_node_ip()}
+
         hosts = {self.unit_host(self.unit)}
         for unit in self.peers_units:
             hosts.add(self.unit_host(unit))
@@ -485,9 +481,7 @@ class MongosCharm(ops.CharmBase):
 
         for license_name in licenses:
             try:
-                license_file = container.pull(
-                    path=Config.get_license_path(license_name)
-                )
+                license_file = container.pull(path=Config.get_license_path(license_name))
                 f = open(f"LICENSE_{license_name}", "x")
                 f.write(str(license_file.read()))
                 f.close()
@@ -504,14 +498,10 @@ class MongosCharm(ops.CharmBase):
         for path in [Config.DATA_DIR]:
             paths = container.list_files(path, itself=True)
             if not len(paths) == 1:
-                raise ExtraDataDirError(
-                    "list_files doesn't return only the directory itself"
-                )
+                raise ExtraDataDirError("list_files doesn't return only the directory itself")
             logger.debug(f"Data directory ownership: {paths[0].user}:{paths[0].group}")
             if paths[0].user != Config.UNIX_USER or paths[0].group != Config.UNIX_GROUP:
-                container.exec(
-                    f"chown {Config.UNIX_USER}:{Config.UNIX_GROUP} -R {path}".split()
-                )
+                container.exec(f"chown {Config.UNIX_USER}:{Config.UNIX_GROUP} -R {path}".split())
 
     def push_file_to_unit(
         self,
@@ -565,6 +555,21 @@ class MongosCharm(ops.CharmBase):
     def has_config_server(self) -> bool:
         """Returns True is the mongos router is integrated to a config-server."""
         return self.cluster.get_config_server_name() is not None
+
+    def _update_client_related_hosts(self, event) -> None:
+        """Update hosts of client relations."""
+        if not self.db_initialised:
+            return
+
+        if not self.unit.is_leader():
+            return
+
+        try:
+            self.client_relations.update_app_relation_data()
+        except PyMongoError as e:
+            logger.error("Deferring on updating app relation data since: error: %r", e)
+            event.defer()
+            return
 
     # END: helper functions
 
@@ -750,6 +755,18 @@ class MongosCharm(ops.CharmBase):
         TODO implement this function once upgrades are supported.
         """
         return False
+
+    @property
+    def config_server_db(self) -> str:
+        """Fetch current the config server database that this unit is connected to."""
+        if not (
+            config_server_relation := self.model.get_relation(
+                Config.Relations.CLUSTER_RELATIONS_NAME
+            )
+        ):
+            return ""
+
+        return config_server_relation.app.name
 
     @property
     def config_server_db(self) -> str:

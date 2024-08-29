@@ -16,9 +16,12 @@ from ..helpers import (
     MONGOS_PORT,
 )
 from .helpers import (
+    deploy_client_app,
+    integrate_client_app,
     is_relation_joined,
     get_client_connection_string,
     get_mongos_user_password,
+    APPLICATION_APP_NAME,
 )
 
 CLIENT_RELATION_NAME = "mongos"
@@ -27,34 +30,23 @@ MONGOS_RELATION_NAME = "mongos_proxy"
 TEST_USER_NAME = "TestUserName1"
 TEST_USER_PWD = "Test123"
 TEST_DB_NAME = "my-test-db"
-APPLICATION_APP_NAME = "application"
 
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy a sharded cluster."""
-    application_charm = await ops_test.build_charm("tests/integration/application/")
-    await ops_test.model.deploy(application_charm)
 
-    await deploy_cluster_components(ops_test)
+    await deploy_client_app(ops_test, external=False)
     await build_cluster(ops_test)
-
-    await ops_test.model.wait_for_idle(
-        apps=[APPLICATION_APP_NAME],
-        idle_period=10,
-        raise_on_blocked=False,
-    )
+    await deploy_cluster_components(ops_test)
 
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_integrate_with_internal_client(ops_test: OpsTest) -> None:
     """Tests that when a client is integrated with mongos a user it receives connection info."""
-    await ops_test.model.integrate(APPLICATION_APP_NAME, MONGOS_APP_NAME)
-    await ops_test.model.wait_for_idle(
-        apps=[APPLICATION_APP_NAME, MONGOS_APP_NAME], status="active", idle_period=20
-    )
+    await integrate_client_app(ops_test, client_app_name=APPLICATION_APP_NAME)
 
     await ops_test.model.block_until(
         lambda: is_relation_joined(
@@ -115,9 +107,7 @@ async def test_user_with_extra_roles(ops_test: OpsTest) -> None:
     mongos_client.close()
 
     mongos_host = await get_address_of_unit(ops_test, unit_id=0)
-    test_user_uri = (
-        f"mongodb://{TEST_USER_NAME}:{TEST_USER_PWD}@{mongos_host}:{MONGOS_PORT}"
-    )
+    test_user_uri = f"mongodb://{TEST_USER_NAME}:{TEST_USER_PWD}@{mongos_host}:{MONGOS_PORT}"
     test_user_accessible = await check_mongos(ops_test, uri=test_user_uri)
     assert test_user_accessible, "User created is not accessible."
 
@@ -136,12 +126,8 @@ async def test_removed_relation_no_longer_has_access(ops_test: OpsTest):
     await ops_test.model.applications[MONGOS_APP_NAME].remove_relation(
         f"{APPLICATION_APP_NAME}:{CLIENT_RELATION_NAME}", f"{MONGOS_APP_NAME}"
     )
-    await ops_test.model.wait_for_idle(
-        apps=[MONGOS_APP_NAME], status="active", idle_period=20
-    )
+    await ops_test.model.wait_for_idle(apps=[MONGOS_APP_NAME], status="active", idle_period=20)
 
     mongos_can_connect_with_auth = await check_mongos(ops_test, uri=client_user_uri)
 
-    assert (
-        not mongos_can_connect_with_auth
-    ), "Client can still connect after relation broken."
+    assert not mongos_can_connect_with_auth, "Client can still connect after relation broken."

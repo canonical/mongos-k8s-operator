@@ -18,7 +18,9 @@ from ..helpers import (
     MongoClient,
     get_application_relation_data,
     get_secret_data,
+    get_mongos_user_password,
 )
+
 
 from pytest_operator.plugin import OpsTest
 from pymongo.errors import ServerSelectionTimeoutError
@@ -28,6 +30,7 @@ PORT_MAPPING_INDEX = 4
 
 logger = logging.getLogger(__name__)
 
+APPLICATION_APP_NAME = "application"
 
 MONGODB_CHARM_NAME = "mongodb-k8s"
 CONFIG_SERVER_APP_NAME = "config-server"
@@ -36,22 +39,8 @@ MONGOS_PORT = 27018
 SHARD_REL_NAME = "sharding"
 CONFIG_SERVER_REL_NAME = "config-server"
 CLUSTER_REL_NAME = "cluster"
-
+DATA_INTEGRATOR_APP_NAME = "data-integrator"
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
-
-
-@retry(stop=stop_after_attempt(10), wait=wait_fixed(15), reraise=True)
-async def get_mongos_user_password(
-    ops_test: OpsTest, app_name=MONGOS_APP_NAME, relation_name="cluster"
-) -> Tuple[str, str]:
-    secret_uri = await get_application_relation_data(
-        ops_test, app_name, relation_name=relation_name, key="secret-user"
-    )
-    assert secret_uri, "No secret URI found"
-
-    secret_data = await get_secret_data(ops_test, secret_uri)
-
-    return secret_data.get("username"), secret_data.get("password")
 
 
 @retry(stop=stop_after_attempt(10), wait=wait_fixed(15), reraise=True)
@@ -83,7 +72,9 @@ def is_relation_joined(ops_test: OpsTest, endpoint_one: str, endpoint_two: str) 
 
 
 def get_node_port_info(ops_test: OpsTest, node_port_name: str) -> str:
-    node_port_cmd = f"kubectl get svc  -n  {ops_test.model.name} |  grep NodePort | grep {node_port_name}"
+    node_port_cmd = (
+        f"kubectl get svc  -n  {ops_test.model.name} |  grep NodePort | grep {node_port_name}"
+    )
     return subprocess.run(node_port_cmd, shell=True, capture_output=True, text=True)
 
 
@@ -131,9 +122,7 @@ async def assert_all_unit_node_ports_available(ops_test: OpsTest):
         ), "client is not reachable"
 
 
-async def is_external_mongos_client_reachble(
-    ops_test: OpsTest, exposed_node_port: str
-) -> bool:
+async def is_external_mongos_client_reachble(ops_test: OpsTest, exposed_node_port: str) -> bool:
     """Returns True if the mongos client is reachable on the provided node port via the k8s ip."""
     public_k8s_ip = get_public_k8s_ip()
     username, password = await get_mongos_user_password(ops_test, MONGOS_APP_NAME)
@@ -161,9 +150,7 @@ async def assert_all_unit_node_ports_are_unavailable(ops_test: OpsTest):
 
 
 def get_public_k8s_ip() -> str:
-    result = subprocess.run(
-        "kubectl get nodes", shell=True, capture_output=True, text=True
-    )
+    result = subprocess.run("kubectl get nodes", shell=True, capture_output=True, text=True)
 
     if result.returncode:
         logger.info("failed to retrieve public facing k8s IP error: %s", result.stderr)
@@ -178,3 +165,23 @@ def get_public_k8s_ip() -> str:
 
     # port mapping is of the form ip-172-31-18-133
     return port_mapping.split("ip-")[1].replace("-", ".")
+
+
+async def deploy_client_app(ops_test: OpsTest, external: bool):
+    if not external:
+        application_charm = await ops_test.build_charm("tests/integration/application/")
+    else:
+        application_charm = DATA_INTEGRATOR_APP_NAME
+    await ops_test.model.deploy(application_charm)
+    await ops_test.model.wait_for_idle(
+        apps=[APPLICATION_APP_NAME],
+        idle_period=10,
+        raise_on_blocked=False,
+    )
+
+
+async def integrate_client_app(ops_test: OpsTest, client_app_name: str):
+    await ops_test.model.integrate(client_app_name, MONGOS_APP_NAME)
+    await ops_test.model.wait_for_idle(
+        apps=[client_app_name, MONGOS_APP_NAME], status="active", idle_period=20
+    )
