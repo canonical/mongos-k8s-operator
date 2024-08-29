@@ -128,7 +128,7 @@ class NodePortManager:
     def delete_unit_service(self) -> None:
         """Deletes a unit Service, if it exists."""
         try:
-            service = self.node_port_manager.get_unit_service()
+            service = self.get_unit_service()
         except ApiError as e:
             if e.status.code == 404:
                 logger.debug(f"Could not find {service.name} to delete.")

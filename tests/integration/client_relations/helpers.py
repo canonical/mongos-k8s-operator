@@ -12,6 +12,7 @@ from ..helpers import (
 )
 
 from pytest_operator.plugin import OpsTest
+from pymongo.errors import ServerSelectionTimeoutError
 
 logger = logging.getLogger(__name__)
 
@@ -20,13 +21,7 @@ PORT_MAPPING_INDEX = 4
 
 def get_node_port_info(ops_test, node_port_name: str):
     node_port_cmd = f"kubectl get svc  -n  {ops_test.model.name} |  grep NodePort | grep {node_port_name}"
-    result = subprocess.run(node_port_cmd, shell=True, capture_output=True, text=True)
-
-    if result.returncode:
-        logger.info("was not able to find nodeport")
-        assert False, f"Command: {node_port_cmd} to find node port failed."
-
-    return result
+    return subprocess.run(node_port_cmd, shell=True, capture_output=True, text=True)
 
 
 def has_node_port(ops_test: OpsTest, node_port_name: str) -> None:
@@ -51,9 +46,10 @@ def get_port_from_node_port(ops_test: OpsTest, node_port_name: str) -> str:
 def assert_node_port_availablity(
     ops_test: OpsTest, node_port_name: str, available: bool = True
 ) -> None:
+    incorrect_availablity = "not available" if available else "is available"
     assert (
         has_node_port(ops_test, node_port_name) == available
-    ), "No port information for expected service"
+    ), f"Port information {incorrect_availablity} for service"
 
 
 async def assert_all_unit_node_ports_available(ops_test: OpsTest):
@@ -66,6 +62,7 @@ async def assert_all_unit_node_ports_available(ops_test: OpsTest):
         exposed_node_port = get_port_from_node_port(
             ops_test, node_port_name=f"{MONGOS_APP_NAME}-{unit_id}-external"
         )
+
         assert await is_external_mongos_client_reachble(
             ops_test, exposed_node_port
         ), "client is not reachable"
@@ -77,19 +74,26 @@ async def is_external_mongos_client_reachble(
     """Returns True if the mongos client is reachable on the provided node port via the k8s ip."""
     public_k8s_ip = get_public_k8s_ip()
     username, password = await get_mongos_user_password(ops_test, MONGOS_APP_NAME)
-    print(f"mongodb://{username}:{password}@{public_k8s_ip}:{exposed_node_port}")
-    external_mongos_client = MongoClient(
-        f"mongodb://{username}:{password}@{public_k8s_ip}:{exposed_node_port}"
-    )
-    external_mongos_client.admin.command("usersInfo")
-    external_mongos_client.close()
+    try:
+        external_mongos_client = MongoClient(
+            f"mongodb://{username}:{password}@{public_k8s_ip}:{exposed_node_port}"
+        )
+        external_mongos_client.admin.command("usersInfo")
+    except ServerSelectionTimeoutError:
+        return False
+    finally:
+        external_mongos_client.close()
+
+    return True
 
 
 async def assert_all_unit_node_ports_are_unavailable(ops_test: OpsTest):
     """Assert all ports available in mongos deployment."""
     for unit_id in range(len(ops_test.model.applications[MONGOS_APP_NAME].units)):
         assert_node_port_availablity(
-            ops_test, node_port_name=f"{MONGOS_APP_NAME}-{unit_id}-external"
+            ops_test,
+            node_port_name=f"{MONGOS_APP_NAME}-{unit_id}-external",
+            available=False,
         )
 
 

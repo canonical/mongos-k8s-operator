@@ -10,6 +10,7 @@ from ..helpers import (
     deploy_cluster_components,
     build_cluster,
     MONGOS_APP_NAME,
+    wait_for_mongos_units_blocked,
 )
 
 from .helpers import (
@@ -49,38 +50,38 @@ async def test_mongos_external_connections(ops_test: OpsTest) -> None:
     await assert_all_unit_node_ports_available(ops_test)
 
 
-# @pytest.mark.group(1)
-# @pytest.mark.abort_on_fail
-# async def test_mongos_external_connections_scale(ops_test: OpsTest) -> None:
-#     """Tests that new mongos units are accessible externally."""
-#     await ops_test.model.applications[MONGOS_APP_NAME].scale(2)
-#     await ops_test.model.wait_for_idle(apps=[MONGOS_APP_NAME], idle_period=15)
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_mongos_external_connections_scale(ops_test: OpsTest) -> None:
+    """Tests that new mongos units are accessible externally."""
+    await ops_test.model.applications[MONGOS_APP_NAME].scale(2)
+    await ops_test.model.wait_for_idle(apps=[MONGOS_APP_NAME], idle_period=15)
 
-#     # verify each unit has a node port available
-#     await assert_all_unit_node_ports_available(ops_test)
+    # verify each unit has a node port available
+    await assert_all_unit_node_ports_available(ops_test)
 
 
-# @pytest.mark.group(1)
-# @pytest.mark.abort_on_fail
-# async def test_mongos_bad_configuration(ops_test: OpsTest) -> None:
-#     """Tests that mongos is accessible externally."""
-#     configuration_parameters = {"expose-external": "nonsensical-setting"}
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_mongos_bad_configuration(ops_test: OpsTest) -> None:
+    """Tests that mongos is accessible externally."""
+    configuration_parameters = {"expose-external": "nonsensical-setting"}
 
-#     # apply new configuration options
-#     await ops_test.model.applications[MONGOS_APP_NAME].set_config(
-#         configuration_parameters
-#     )
+    # apply new configuration options
+    await ops_test.model.applications[MONGOS_APP_NAME].set_config(
+        configuration_parameters
+    )
 
-#     # verify that Charmed Mongos is blocked and reports incorrect credentials
-#     await wait_for_mongos_units_blocked(
-#         ops_test,
-#         MONGOS_APP_NAME,
-#         status="Config option for expose-external not valid.",
-#         timeout=300,
-#     )
+    # verify that Charmed Mongos is blocked and reports incorrect credentials
+    await wait_for_mongos_units_blocked(
+        ops_test,
+        MONGOS_APP_NAME,
+        status="Config option for expose-external not valid.",
+        timeout=300,
+    )
 
-#     # verify new-configuration didn't break old configuration
-#     await assert_all_unit_node_ports_available(ops_test)
+    # verify new-configuration didn't break old configuration
+    await assert_all_unit_node_ports_available(ops_test)
 
 
 @pytest.mark.group(1)
@@ -106,13 +107,13 @@ async def test_mongos_disable_external_connections(ops_test: OpsTest) -> None:
     assert not await is_external_mongos_client_reachble(ops_test, exposed_node_port)
 
 
-# @pytest.mark.group(1)
-# @pytest.mark.abort_on_fail
-# async def test_external_clients_use_nodeport(ops_test: OpsTest) -> None:
-#     """TODO Future PR, test that external clients use nodeport."""
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_external_clients_use_nodeport(ops_test: OpsTest) -> None:
+    """TODO Future PR, test that external clients use nodeport."""
 
 
-# @pytest.mark.group(1)
-# @pytest.mark.abort_on_fail
-# async def test_internal_clients_use_K8s(ops_test: OpsTest) -> None:
-#     """TODO Future PR, test that external clients use K8s even when nodeport is available."""
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_internal_clients_use_K8s(ops_test: OpsTest) -> None:
+    """TODO Future PR, test that external clients use K8s even when nodeport is available."""

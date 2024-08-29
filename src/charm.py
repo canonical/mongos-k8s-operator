@@ -80,17 +80,11 @@ class MongosCharm(ops.CharmBase):
     # BEGIN: hook functions
     def _on_config_changed(self, event: ConfigChangedEvent) -> None:
         """Listen to changes in the application configuration."""
-        external_config = self.model.config["expose-external"]
-        if external_config not in Config.ExternalConnections.VALID_EXTERNAL_CONFIG:
-            logger.error(
-                "External configuration: %s for expose-external is not valid, should be one of: %s",
-                external_config,
-                Config.ExternalConnections.VALID_EXTERNAL_CONFIG,
-            )
-            self.status.set_and_share_status(Config.Status.INVALID_EXTERNAL_CONFIG)
+        if not self.is_user_external_config_valid():
+            self.set_status_invalid_external_config()
             return
 
-        self.update_external_services(external_config)
+        self.update_external_services()
 
         # TODO DPE-5235 support updating data-integrator clients to have/not have public IP
         # depending on the result of the configuration
@@ -137,17 +131,10 @@ class MongosCharm(ops.CharmBase):
         )
 
     def _on_update_status(self, _):
-        """Handle the update status event"""
-        if (
-            self.model.config["expose-external"]
-            not in Config.ExternalConnections.VALID_EXTERNAL_CONFIG
-        ):
-            logger.error(
-                "External configuration: %s for expose-external is not valid, should be one of: %s",
-                self.model.config["expose-external"],
-                Config.ExternalConnections.VALID_EXTERNAL_CONFIG,
-            )
-            self.unit.status = Config.Status.INVALID_EXTERNAL_CONFIG
+        """Handle the update status event."""
+        if not self.is_user_external_config_valid():
+            self.set_status_invalid_external_config()
+            return
 
         if self.unit.status == Config.Status.UNHEALTHY_UPGRADE:
             return
@@ -166,25 +153,38 @@ class MongosCharm(ops.CharmBase):
     # END: hook functions
 
     # BEGIN: helper functions
+    def is_user_external_config_valid(self) -> bool:
+        """Returns True if the user set external config is valid."""
+        return (
+            self.model.config["expose-external"]
+            in Config.ExternalConnections.VALID_EXTERNAL_CONFIG
+        )
 
-    def update_external_services(self, external_config: str) -> None:
+    def set_status_invalid_external_config(self) -> None:
+        """Sets status for invalid external configuration."""
+        logger.error(
+            "External configuration: %s for expose-external is not valid, should be one of: %s",
+            self.model.config["expose-external"],
+            Config.ExternalConnections.VALID_EXTERNAL_CONFIG,
+        )
+        self.status.set_and_share_status(Config.Status.INVALID_EXTERNAL_CONFIG)
+
+    def update_external_services(self) -> None:
         """Update external services based on provided configuration."""
-        previous_config = self.expose_external
-        if external_config == Config.ExternalConnections.EXTERNAL_NODEPORT:
+        if (
+            self.model.config["expose-external"]
+            == Config.ExternalConnections.EXTERNAL_NODEPORT
+        ):
             # every unit attempts to create a nodeport service - if exists, will silently continue
             self.external_service = self.node_port_manager.apply_service(
                 service=self.node_port_manager.build_node_port_services(
                     port=Config.MONGOS_PORT
                 )
             )
-
-        if (
-            external_config == Config.ExternalConnections.NONE
-            and previous_config == Config.ExternalConnections.EXTERNAL_NODEPORT
-        ):
+        else:
             self.node_port_manager.delete_unit_service()
 
-        self.external_service = external_config
+        self.external_service = self.model.config["expose-external"]
 
     def get_keyfile_contents(self) -> str | None:
         """Retrieves the contents of the keyfile on host machine."""
