@@ -35,6 +35,7 @@ class Config:
         UNIT_SCOPE = "unit"
         PEERS = "router-peers"
         CLUSTER_RELATIONS_NAME = "cluster"
+        CLIENT_RELATIONS_NAME = "mongos_proxy"
         Scopes = Literal[APP_SCOPE, UNIT_SCOPE]
 
     class TLS:

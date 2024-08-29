@@ -1,25 +1,88 @@
 #!/usr/bin/env python3
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
-
-import subprocess
+from typing import Tuple
 import logging
+from pathlib import Path
+import yaml
+import subprocess
+
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_fixed,
+)
 
 from ..helpers import (
     MONGOS_APP_NAME,
-    get_mongos_user_password,
     MongoClient,
+    get_application_relation_data,
+    get_secret_data,
 )
 
 from pytest_operator.plugin import OpsTest
 from pymongo.errors import ServerSelectionTimeoutError
 
-logger = logging.getLogger(__name__)
 
 PORT_MAPPING_INDEX = 4
 
+logger = logging.getLogger(__name__)
 
-def get_node_port_info(ops_test, node_port_name: str):
+
+MONGODB_CHARM_NAME = "mongodb-k8s"
+CONFIG_SERVER_APP_NAME = "config-server"
+SHARD_APP_NAME = "shard0"
+MONGOS_PORT = 27018
+SHARD_REL_NAME = "sharding"
+CONFIG_SERVER_REL_NAME = "config-server"
+CLUSTER_REL_NAME = "cluster"
+
+METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
+
+
+@retry(stop=stop_after_attempt(10), wait=wait_fixed(15), reraise=True)
+async def get_mongos_user_password(
+    ops_test: OpsTest, app_name=MONGOS_APP_NAME, relation_name="cluster"
+) -> Tuple[str, str]:
+    secret_uri = await get_application_relation_data(
+        ops_test, app_name, relation_name=relation_name, key="secret-user"
+    )
+    assert secret_uri, "No secret URI found"
+
+    secret_data = await get_secret_data(ops_test, secret_uri)
+
+    return secret_data.get("username"), secret_data.get("password")
+
+
+@retry(stop=stop_after_attempt(10), wait=wait_fixed(15), reraise=True)
+async def get_client_connection_string(
+    ops_test: OpsTest, app_name=MONGOS_APP_NAME, relation_name="cluster"
+) -> Tuple[str, str]:
+    secret_uri = await get_application_relation_data(
+        ops_test, app_name, relation_name=relation_name, key="secret-user"
+    )
+    assert secret_uri, "No secret URI found"
+
+    secret_data = await get_secret_data(ops_test, secret_uri)
+    return secret_data.get("uris")
+
+
+def is_relation_joined(ops_test: OpsTest, endpoint_one: str, endpoint_two: str) -> bool:
+    """Check if a relation is joined.
+
+    Args:
+        ops_test: The ops test object passed into every test case
+        endpoint_one: The first endpoint of the relation
+        endpoint_two: The second endpoint of the relation
+    """
+    for rel in ops_test.model.relations:
+        endpoints = [endpoint.name for endpoint in rel.endpoints]
+        if endpoint_one in endpoints and endpoint_two in endpoints:
+            return True
+    return False
+
+
+def get_node_port_info(ops_test: OpsTest, node_port_name: str) -> str:
     node_port_cmd = f"kubectl get svc  -n  {ops_test.model.name} |  grep NodePort | grep {node_port_name}"
     return subprocess.run(node_port_cmd, shell=True, capture_output=True, text=True)
 
@@ -103,7 +166,11 @@ def get_public_k8s_ip() -> str:
     )
 
     if result.returncode:
-        logger.info("failed to retrieve public facing k8s IP")
+        logger.info("failed to retrieve public facing k8s IP error: %s", result.stderr)
+        assert False, "failed to retrieve public facing k8s IP"
+
+    if len(result.stdout.splitlines()) < 2:
+        logger.info("No entries for public facing k8s IP, : %s", result.stdout)
         assert False, "failed to retrieve public facing k8s IP"
 
     # port information is the first item of the last line

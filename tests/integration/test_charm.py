@@ -7,17 +7,13 @@ import pytest
 from pytest_operator.plugin import OpsTest
 
 from .helpers import (
+    build_cluster,
     check_mongos,
     get_direct_mongos_client,
     get_address_of_unit,
     wait_for_mongos_units_blocked,
-    SHARD_APP_NAME,
-    CONFIG_SERVER_APP_NAME,
-    CLUSTER_REL_NAME,
     MONGOS_APP_NAME,
     MONGOS_PORT,
-    SHARD_REL_NAME,
-    CONFIG_SERVER_REL_NAME,
     deploy_cluster_components,
 )
 
@@ -50,35 +46,7 @@ async def test_waits_for_config_server(ops_test: OpsTest) -> None:
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_mongos_starts_with_config_server(ops_test: OpsTest) -> None:
-    # prepare sharded cluster
-    await ops_test.model.wait_for_idle(
-        apps=[CONFIG_SERVER_APP_NAME, SHARD_APP_NAME],
-        idle_period=10,
-        raise_on_blocked=False,
-        raise_on_error=False,  # Removed this once DPE-4996 is resolved.
-    )
-    await ops_test.model.integrate(
-        f"{SHARD_APP_NAME}:{SHARD_REL_NAME}",
-        f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
-    )
-    await ops_test.model.wait_for_idle(
-        apps=[CONFIG_SERVER_APP_NAME, SHARD_APP_NAME],
-        idle_period=20,
-        raise_on_blocked=False,
-        raise_on_error=False,  # https://github.com/canonical/mongodb-k8s-operator/issues/301
-    )
-
-    # connect sharded cluster to mongos
-    await ops_test.model.integrate(
-        f"{MONGOS_APP_NAME}:{CLUSTER_REL_NAME}",
-        f"{CONFIG_SERVER_APP_NAME}:{CLUSTER_REL_NAME}",
-    )
-    await ops_test.model.wait_for_idle(
-        apps=[CONFIG_SERVER_APP_NAME, SHARD_APP_NAME, MONGOS_APP_NAME],
-        idle_period=20,
-        status="active",
-        raise_on_error=False,  # Removed this once DPE-4996 is resolved.
-    )
+    await build_cluster(ops_test)
 
     mongos_running = await check_mongos(ops_test, unit_id=0, auth=False)
     assert mongos_running, "Mongos is not currently running."
@@ -109,13 +77,7 @@ async def test_user_with_extra_roles(ops_test: OpsTest) -> None:
     test_user_uri = (
         f"mongodb://{TEST_USER_NAME}:{TEST_USER_PWD}@{mongos_host}:{MONGOS_PORT}"
     )
-    mongos_running = await check_mongos(
-        ops_test,
-        unit_id=0,
-        app_name=MONGOS_APP_NAME,
-        auth=True,
-        uri=test_user_uri,
-    )
+    mongos_running = await check_mongos(ops_test, uri=test_user_uri)
     assert mongos_running, "User created is not accessible."
 
 
