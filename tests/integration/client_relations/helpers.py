@@ -124,14 +124,17 @@ async def assert_all_unit_node_ports_available(ops_test: OpsTest):
         external_mongos_client.close()
 
 
-@retry(stop=stop_after_attempt(10), wait=wait_fixed(1), reraise=True)
 def get_public_k8s_ip() -> str:
     result = subprocess.run(
-        "sudo kubectl get nodes", shell=True, capture_output=True, text=True
+        "kubectl get nodes", shell=True, capture_output=True, text=True
     )
 
     if result.returncode:
-        logger.info("failed to retrieve public facing k8s IP")
+        logger.info("failed to retrieve public facing k8s IP error: %s", result.stderr)
+        assert False, "failed to retrieve public facing k8s IP"
+
+    if len(result.stdout.splitlines()) < 2:
+        logger.info("No entries for public facing k8s IP, : %s", result.stdout)
         assert False, "failed to retrieve public facing k8s IP"
 
     # port information is the first item of the last line
