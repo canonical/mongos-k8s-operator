@@ -131,7 +131,9 @@ class NodePortManager:
             service = self.get_unit_service()
         except ApiError as e:
             if e.status.code == 404:
-                logger.debug(f"Could not find {service.name} to delete.")
+                logger.debug(
+                    f"Could not find {self.get_unit_service_name()} to delete."
+                )
                 return
 
         if not service.metadata:
