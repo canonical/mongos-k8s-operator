@@ -1,0 +1,25 @@
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  mongos-k8s/1 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:834 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.4.4    unsupported  01:35:47Z
+
+App            Version  Status  Scale  Charm        Channel  Rev  Address         Exposed  Message
+config-server           active      1  mongodb-k8s  6/edge    53  10.152.183.61   no       Primary
+mongos-k8s              active      2  mongos-k8s              0  10.152.183.243  no       
+shard0                  active      1  mongodb-k8s  6/edge    53  10.152.183.58   no       Primary
+
+Unit              Workload  Agent  Address       Ports  Message
+config-server/0*  active    idle   10.1.171.141         Primary
+mongos-k8s/0*     active    idle   10.1.171.136         
+mongos-k8s/1      active    idle   10.1.171.143         
+shard0/0*         active    idle   10.1.171.142         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:840 Juju error logs:
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:904 Forgetting main...
