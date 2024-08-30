@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 """Manager for handling mongos Kubernetes resources for a single mongos pod."""
+
 from typing import Optional
 import logging
 from functools import cached_property
@@ -136,7 +137,9 @@ class NodePortManager:
             service = self.get_unit_service()
         except ApiError as e:
             if e.status.code == 404:
-                logger.debug(f"Could not find {self.get_unit_service_name()} to delete.")
+                logger.debug(
+                    f"Could not find {self.get_unit_service_name()} to delete."
+                )
                 return
 
         if not service.metadata:
@@ -205,6 +208,8 @@ class NodePortManager:
             if svc_port.port == 27018:
                 return svc_port.nodePort
 
-        raise Exception(f"Unable to find NodePort for {port_to_match} for the {service} service")
+        raise Exception(
+            f"Unable to find NodePort for {port_to_match} for the {service} service"
+        )
 
     # END: helpers

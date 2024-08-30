@@ -107,7 +107,9 @@ async def test_user_with_extra_roles(ops_test: OpsTest) -> None:
     mongos_client.close()
 
     mongos_host = await get_address_of_unit(ops_test, unit_id=0)
-    test_user_uri = f"mongodb://{TEST_USER_NAME}:{TEST_USER_PWD}@{mongos_host}:{MONGOS_PORT}"
+    test_user_uri = (
+        f"mongodb://{TEST_USER_NAME}:{TEST_USER_PWD}@{mongos_host}:{MONGOS_PORT}"
+    )
     test_user_accessible = await check_mongos(ops_test, uri=test_user_uri)
     assert test_user_accessible, "User created is not accessible."
 
@@ -126,8 +128,12 @@ async def test_removed_relation_no_longer_has_access(ops_test: OpsTest):
     await ops_test.model.applications[MONGOS_APP_NAME].remove_relation(
         f"{APPLICATION_APP_NAME}:{CLIENT_RELATION_NAME}", f"{MONGOS_APP_NAME}"
     )
-    await ops_test.model.wait_for_idle(apps=[MONGOS_APP_NAME], status="active", idle_period=20)
+    await ops_test.model.wait_for_idle(
+        apps=[MONGOS_APP_NAME], status="active", idle_period=20
+    )
 
     mongos_can_connect_with_auth = await check_mongos(ops_test, uri=client_user_uri)
 
-    assert not mongos_can_connect_with_auth, "Client can still connect after relation broken."
+    assert (
+        not mongos_can_connect_with_auth
+    ), "Client can still connect after relation broken."
