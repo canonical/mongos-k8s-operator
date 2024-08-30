@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
+import json
 from typing import Tuple
 import logging
 from pathlib import Path
@@ -18,6 +19,7 @@ from ..helpers import (
     MongoClient,
     get_application_relation_data,
     get_secret_data,
+    get_mongos_user_password,
 )
 
 from pytest_operator.plugin import OpsTest
@@ -38,20 +40,6 @@ CONFIG_SERVER_REL_NAME = "config-server"
 CLUSTER_REL_NAME = "cluster"
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
-
-
-@retry(stop=stop_after_attempt(10), wait=wait_fixed(15), reraise=True)
-async def get_mongos_user_password(
-    ops_test: OpsTest, app_name=MONGOS_APP_NAME, relation_name="cluster"
-) -> Tuple[str, str]:
-    secret_uri = await get_application_relation_data(
-        ops_test, app_name, relation_name=relation_name, key="secret-user"
-    )
-    assert secret_uri, "No secret URI found"
-
-    secret_data = await get_secret_data(ops_test, secret_uri)
-
-    return secret_data.get("username"), secret_data.get("password")
 
 
 @retry(stop=stop_after_attempt(10), wait=wait_fixed(15), reraise=True)
@@ -162,19 +150,16 @@ async def assert_all_unit_node_ports_are_unavailable(ops_test: OpsTest):
 
 def get_public_k8s_ip() -> str:
     result = subprocess.run(
-        "kubectl get nodes", shell=True, capture_output=True, text=True
+        "kubectl get nodes -o json", shell=True, capture_output=True, text=True
     )
 
     if result.returncode:
         logger.info("failed to retrieve public facing k8s IP error: %s", result.stderr)
         assert False, "failed to retrieve public facing k8s IP"
 
-    if len(result.stdout.splitlines()) < 2:
-        logger.info("No entries for public facing k8s IP, : %s", result.stdout)
+    node_info = json.loads(result.stdout)
+
+    try:
+        return node_info["items"][0]["status"]["addresses"][0]["address"]
+    except KeyError:
         assert False, "failed to retrieve public facing k8s IP"
-
-    # port information is the first item of the last line
-    port_mapping = result.stdout.splitlines()[-1].split()[0]
-
-    # port mapping is of the form ip-172-31-18-133
-    return port_mapping.split("ip-")[1].replace("-", ".")

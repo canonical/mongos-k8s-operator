@@ -5,6 +5,7 @@
 
 import pytest
 from pytest_operator.plugin import OpsTest
+from typing import Tuple
 
 from ..helpers import (
     build_cluster,
@@ -14,11 +15,12 @@ from ..helpers import (
     check_mongos,
     get_direct_mongos_client,
     MONGOS_PORT,
+    get_secret_data,
+    get_application_relation_data,
 )
 from .helpers import (
     is_relation_joined,
     get_client_connection_string,
-    get_mongos_user_password,
 )
 
 CLIENT_RELATION_NAME = "mongos"
@@ -55,7 +57,6 @@ async def test_integrate_with_internal_client(ops_test: OpsTest) -> None:
     await ops_test.model.wait_for_idle(
         apps=[APPLICATION_APP_NAME, MONGOS_APP_NAME], status="active", idle_period=20
     )
-
     await ops_test.model.block_until(
         lambda: is_relation_joined(
             ops_test,
@@ -145,3 +146,15 @@ async def test_removed_relation_no_longer_has_access(ops_test: OpsTest):
     assert (
         not mongos_can_connect_with_auth
     ), "Client can still connect after relation broken."
+
+
+# TODO, use get_mongos_user_password in base helpers once DPE:5215 is fixed retrieve via secret
+async def get_mongos_user_password(
+    ops_test: OpsTest, app_name=MONGOS_APP_NAME, relation_name="cluster"
+) -> Tuple[str, str]:
+    secret_uri = await get_application_relation_data(
+        ops_test, app_name, relation_name=relation_name, key="secret-user"
+    )
+
+    secret_data = await get_secret_data(ops_test, secret_uri)
+    return secret_data.get("username"), secret_data.get("password")
