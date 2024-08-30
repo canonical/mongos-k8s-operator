@@ -21,6 +21,13 @@ class Config:
     LICENSE_PATH = "/licenses/LICENSE"
     DATA_DIR = "/var/lib/mongodb"
 
+    class ExternalConnections:
+        """External Connections related config for MongoDB Charm."""
+
+        NONE = "none"
+        EXTERNAL_NODEPORT = "nodeport"
+        VALID_EXTERNAL_CONFIG = [NONE, EXTERNAL_NODEPORT]
+
     class Relations:
         """Relations related config for MongoDB Charm."""
 
@@ -69,6 +76,9 @@ class Config:
 
         # TODO Future PR add more status messages here as constants
         UNHEALTHY_UPGRADE = BlockedStatus("Unhealthy after upgrade.")
+        INVALID_EXTERNAL_CONFIG = BlockedStatus(
+            "Config option for expose-external not valid."
+        )
 
     class Substrate:
         """Substrate related constants."""

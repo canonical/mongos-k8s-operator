@@ -3,8 +3,9 @@
 # See LICENSE file for licensing details.
 
 import json
-from typing import Any, Dict, List, Optional, Tuple
 import logging
+
+from typing import Any, Dict, List, Optional, Tuple
 
 from pathlib import Path
 import yaml
@@ -19,6 +20,7 @@ from tenacity import (
 
 logger = logging.getLogger(__name__)
 
+PORT_MAPPING_INDEX = 4
 
 MONGOS_APP_NAME = "mongos-k8s"
 MONGODB_CHARM_NAME = "mongodb-k8s"
