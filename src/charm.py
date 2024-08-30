@@ -387,15 +387,12 @@ class MongosCharm(ops.CharmBase):
         """
         return self.unit_host(self.unit)
 
-    def get_mongos_hosts(self, external: bool = False) -> Set:
+    def get_mongos_hosts(self) -> Set:
         """Returns the host for mongos as a str.
 
         The host for mongos can be either the Unix Domain Socket or an IP address depending on how
         the client wishes to connect to mongos (inside Juju or outside).
         """
-        if external and self.is_external_client:
-            return {self.node_port_manager.get_node_ip}
-
         hosts = {self.unit_host(self.unit)}
         for unit in self.peers_units:
             hosts.add(self.unit_host(unit))
