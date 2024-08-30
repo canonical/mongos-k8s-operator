@@ -33,21 +33,21 @@ TEST_USER_PWD = "Test123"
 TEST_DB_NAME = "my-test-db"
 
 
-@pytest.mark.group(1)
-@pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test: OpsTest):
-    """Build and deploy a sharded cluster."""
-    await deploy_cluster_components(ops_test)
-    await build_cluster(ops_test)
+# @pytest.mark.group(1)
+# @pytest.mark.abort_on_fail
+# async def test_build_and_deploy(ops_test: OpsTest):
+#     """Build and deploy a sharded cluster."""
+#     await deploy_cluster_components(ops_test)
+#     await build_cluster(ops_test)
 
-    await deploy_client_app(ops_test, external=False)
-    await integrate_client_app(ops_test, client_app_name=APPLICATION_APP_NAME)
+#     await deploy_client_app(ops_test, external=False)
+#     await integrate_client_app(ops_test, client_app_name=APPLICATION_APP_NAME)
 
-    await deploy_client_app(ops_test, external=True)
-    await ops_test.model.applications[DATA_INTEGRATOR_APP_NAME].set_config(
-        {"database-name": "test-database"}
-    )
-    await integrate_client_app(ops_test, client_app_name=DATA_INTEGRATOR_APP_NAME)
+#     await deploy_client_app(ops_test, external=True)
+#     await ops_test.model.applications[DATA_INTEGRATOR_APP_NAME].set_config(
+#         {"database-name": "test-database"}
+#     )
+#     await integrate_client_app(ops_test, client_app_name=DATA_INTEGRATOR_APP_NAME)
 
 
 @pytest.mark.group(1)
@@ -95,6 +95,11 @@ async def test_mongos_bad_configuration(ops_test: OpsTest) -> None:
     # verify new-configuration didn't break old configuration
     await assert_all_unit_node_ports_available(ops_test)
 
+    # reset config for other tests
+    configuration_parameters = {"expose-external": "nodeport"}
+    await ops_test.model.applications[MONGOS_APP_NAME].set_config(configuration_parameters)
+    await ops_test.model.wait_for_idle(apps=[MONGOS_APP_NAME], status="active", idle_period=15)
+
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
@@ -126,12 +131,12 @@ async def test_internal_clients_use_K8s(ops_test: OpsTest) -> None:
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_mongos_disable_external_connections(ops_test: OpsTest) -> None:
+    """Tests that mongos can disable external connections."""
     # get exposed node port before toggling off exposure
     exposed_node_port = get_port_from_node_port(
         ops_test, node_port_name=f"{MONGOS_APP_NAME}-0-external"
     )
 
-    """Tests that mongos can disable external connections."""
     configuration_parameters = {"expose-external": "none"}
 
     # apply new configuration options

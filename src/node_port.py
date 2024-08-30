@@ -194,4 +194,17 @@ class NodePortManager:
                 if a.type == typ:
                     return a.address
 
+    def get_node_port(self, port_to_match: int) -> int:
+        """Return node port for the provided port to match."""
+        service = self.get_unit_service()
+
+        if not service or not service.spec.type == "NodePort":
+            raise Exception("No service found for port.")
+
+        for svc_port in service.spec.ports:
+            if svc_port.port == 27018:
+                return svc_port.nodePort
+
+        raise Exception(f"Unable to find NodePort for {port_to_match} for the {service} service")
+
     # END: helpers

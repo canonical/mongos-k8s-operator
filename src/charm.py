@@ -78,14 +78,14 @@ class MongosCharm(ops.CharmBase):
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.update_status, self._on_update_status)
 
-        # when number of units change update hosts
-        self.framework.observe(self.on.leader_elected, self._update_client_related_hosts)
-        self.framework.observe(
-            self.on[Config.Relations.PEERS].relation_joined, self._update_client_related_hosts
-        )
-        self.framework.observe(
-            self.on[Config.Relations.PEERS].relation_departed, self._update_client_related_hosts
-        )
+        # # when number of units change update hosts
+        # self.framework.observe(self.on.leader_elected, self._update_client_related_hosts)
+        # self.framework.observe(
+        #     self.on[Config.Relations.PEERS].relation_joined, self._update_client_related_hosts
+        # )
+        # self.framework.observe(
+        #     self.on[Config.Relations.PEERS].relation_departed, self._update_client_related_hosts
+        # )
 
         # relations
         self.tls = MongoDBTLS(self, Config.Relations.PEERS, substrate=Config.SUBSTRATE)
@@ -104,6 +104,7 @@ class MongosCharm(ops.CharmBase):
             self.set_status_invalid_external_config()
             return
 
+        self.status.clear_status(Config.Status.INVALID_EXTERNAL_CONFIG)
         self.update_external_services()
 
         # toggling of external connectivity means we have to update integrated hosts
@@ -163,6 +164,9 @@ class MongosCharm(ops.CharmBase):
             return
 
         self.db_initialised = True
+
+        if not self.unit.is_leader():
+            return
 
         try:
             self.client_relations.oversee_users(None, None)
@@ -383,7 +387,7 @@ class MongosCharm(ops.CharmBase):
     def get_mongos_hosts(self, external: bool = False) -> Set:
         """Returns the host for mongos as a str.
 
-        The host for mongos can be either the Unix Domain Socket or an IP address depending on how
+        The host for mongos can be either the K8s pod name or an IP address depending on how
         the client wishes to connect to mongos (inside Juju or outside).
         """
         if external and self.is_external_client:
@@ -394,6 +398,17 @@ class MongosCharm(ops.CharmBase):
             hosts.add(self.unit_host(unit))
 
         return hosts
+
+    def get_mongos_port(self, external: bool = False) -> int:
+        """Returns the port for mongos as an int.
+
+        The port for mongos can be either the standard mongos port or NodePort depending on how
+        the client wishes to connect to mongos (inside Juju or outside).
+        """
+        if external and self.is_external_client:
+            return self.node_port_manager.get_node_port(port_to_match=Config.MONGOS_PORT)
+
+        return Config.MONGOS_PORT
 
     @staticmethod
     def _generate_relation_departed_key(rel_id: int) -> str:

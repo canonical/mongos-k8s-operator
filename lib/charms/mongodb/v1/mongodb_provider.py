@@ -302,9 +302,10 @@ class MongoDBProvider(Object):
         }
         if self.charm.is_role(Config.Role.MONGOS):
             mongo_args["port"] = Config.MONGOS_PORT
-            mongo_args["hosts"] = self.charm.get_mongos_hosts(
-                external=self.is_external_client(relation.id)
-            )
+            if self.substrate == Config.Substrate.K8S:
+                external = self.is_external_client(relation.id)
+                mongo_args["port"] = self.charm.get_mongos_port(external)
+                mongo_args["hosts"] = self.charm.get_mongos_hosts(external)
         else:
             mongo_args["replset"] = self.charm.app.name
 
