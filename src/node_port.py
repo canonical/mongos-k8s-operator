@@ -10,8 +10,8 @@ from ops.charm import CharmBase
 from lightkube.models.meta_v1 import ObjectMeta, OwnerReference
 from lightkube.core.client import Client
 from lightkube.core.exceptions import ApiError
-from lightkube.resources.core_v1 import Pod, Service
-from lightkube.models.core_v1 import ServicePort, ServiceSpec, Node
+from lightkube.resources.core_v1 import Pod, Service, Node
+from lightkube.models.core_v1 import ServicePort, ServiceSpec
 from ops.model import BlockedStatus
 
 logger = logging.getLogger(__name__)
@@ -153,12 +153,28 @@ class NodePortManager:
                 raise
 
     @property
+    def _node_name(self) -> str:
+        """Return the node name for this unit's pod ip."""
+        try:
+            pod = self.client.get(
+                Pod,
+                name=self.charm.unit.name.replace("/", "-"),
+                namespace=self.namespace,
+            )
+        except ApiError as e:
+            if e.status.code == 403:
+                self.on_deployed_without_trust()
+                return
+
+        return pod.spec.nodeName
+
+    @property
     def get_node_ip(self) -> Optional[str]:
         """Return node IP."""
         try:
             node = self.client.get(
                 Node,
-                name=self.get_unit_service_name(),
+                name=self._node_name,
                 namespace=self.namespace,
             )
         except ApiError as e:

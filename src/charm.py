@@ -224,13 +224,13 @@ class MongosCharm(ops.CharmBase):
         """Update external services based on provided configuration."""
         if self.model.config["expose-external"] == Config.ExternalConnections.EXTERNAL_NODEPORT:
             # every unit attempts to create a nodeport service - if exists, will silently continue
-            self.external_service = self.node_port_manager.apply_service(
+            self.node_port_manager.apply_service(
                 service=self.node_port_manager.build_node_port_services(port=Config.MONGOS_PORT)
             )
         else:
             self.node_port_manager.delete_unit_service()
 
-        self.external_service = self.model.config["expose-external"]
+        self.expose_external = self.model.config["expose-external"]
 
     def get_keyfile_contents(self) -> str | None:
         """Retrieves the contents of the keyfile on host machine."""
@@ -387,7 +387,7 @@ class MongosCharm(ops.CharmBase):
         the client wishes to connect to mongos (inside Juju or outside).
         """
         if external and self.is_external_client:
-            return {self.node_port_manager.get_node_ip()}
+            return {self.node_port_manager.get_node_ip}
 
         hosts = {self.unit_host(self.unit)}
         for unit in self.peers_units:
