@@ -22,6 +22,9 @@ from .helpers import (
     is_external_mongos_client_reachble,
     DATA_INTEGRATOR_APP_NAME,
     APPLICATION_APP_NAME,
+    get_client_connection_string,
+    get_public_k8s_ip,
+    get_k8s_local_mongodb_hosts,
 )
 
 
@@ -95,6 +98,33 @@ async def test_mongos_bad_configuration(ops_test: OpsTest) -> None:
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
+async def test_external_clients_use_nodeport(ops_test: OpsTest) -> None:
+    """TODO Future PR, test that external clients use nodeport."""
+    external_uri = await get_client_connection_string(
+        ops_test, app_name=DATA_INTEGRATOR_APP_NAME, relation_name="mongodb"
+    )
+
+    assert get_public_k8s_ip() in external_uri, "External client URI does not have public IP."
+
+    for host in get_k8s_local_mongodb_hosts(ops_test):
+        assert host not in external_uri, "External client should not have local hosts in URI."
+
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_internal_clients_use_K8s(ops_test: OpsTest) -> None:
+    """TODO Future PR, test that external clients use K8s even when nodeport is available."""
+    internal_uri = await get_client_connection_string(
+        ops_test, app_name=APPLICATION_APP_NAME, relation_name="mongos"
+    )
+
+    assert (
+        get_public_k8s_ip() not in internal_uri
+    ), "Public IP should not be present in URI of internal clients."
+
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
 async def test_mongos_disable_external_connections(ops_test: OpsTest) -> None:
     # get exposed node port before toggling off exposure
     exposed_node_port = get_port_from_node_port(
@@ -106,21 +136,24 @@ async def test_mongos_disable_external_connections(ops_test: OpsTest) -> None:
 
     # apply new configuration options
     await ops_test.model.applications[MONGOS_APP_NAME].set_config(configuration_parameters)
-    await ops_test.model.wait_for_idle(apps=[MONGOS_APP_NAME], idle_period=15)
+    await ops_test.model.wait_for_idle(
+        apps=[MONGOS_APP_NAME, DATA_INTEGRATOR_APP_NAME], idle_period=15
+    )
 
     # verify each unit has a node port available
     await assert_all_unit_node_ports_are_unavailable(ops_test)
 
     assert not await is_external_mongos_client_reachble(ops_test, exposed_node_port)
 
+    external_uri = await get_client_connection_string(
+        ops_test, app_name=DATA_INTEGRATOR_APP_NAME, relation_name="mongodb"
+    )
 
-@pytest.mark.group(1)
-@pytest.mark.abort_on_fail
-async def test_external_clients_use_nodeport(ops_test: OpsTest) -> None:
-    """TODO Future PR, test that external clients use nodeport."""
+    assert (
+        get_public_k8s_ip() not in external_uri
+    ), "External client URI should have have public IP, if expose-external=none."
 
-
-@pytest.mark.group(1)
-@pytest.mark.abort_on_fail
-async def test_internal_clients_use_K8s(ops_test: OpsTest) -> None:
-    """TODO Future PR, test that external clients use K8s even when nodeport is available."""
+    for host in get_k8s_local_mongodb_hosts(ops_test):
+        assert (
+            host in external_uri
+        ), "External client URI not updated after mongos toggled to  if expose-external=none."

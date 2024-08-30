@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
-from typing import Tuple
+from typing import Tuple, List
 import logging
 from pathlib import Path
 import yaml
@@ -147,6 +147,13 @@ async def assert_all_unit_node_ports_are_unavailable(ops_test: OpsTest):
             node_port_name=f"{MONGOS_APP_NAME}-{unit_id}-external",
             available=False,
         )
+
+
+def get_k8s_local_mongodb_hosts(ops_test: OpsTest) -> List[str]:
+    return [
+        f"{unit.name.replace('/', '-')}.mongos-k8s-endpoints"
+        for unit in ops_test.model.applications[MONGOS_APP_NAME].units
+    ]
 
 
 def get_public_k8s_ip() -> str:
