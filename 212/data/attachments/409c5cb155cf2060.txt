@@ -1,0 +1,22 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:834 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.4.4    unsupported  01:35:33Z
+
+App            Version  Status   Scale  Charm        Channel  Rev  Address         Exposed  Message
+config-server           active       1  mongodb-k8s  6/edge    53  10.152.183.139  no       
+mongos-k8s              waiting      2  mongos-k8s              0  10.152.183.238  no       installing agent
+shard0                  active       1  mongodb-k8s  6/edge    53  10.152.183.167  no       Primary
+
+Unit              Workload  Agent  Address       Ports  Message
+config-server/0*  active    idle   10.1.250.205         
+mongos-k8s/0*     blocked   idle   10.1.250.200         Config option for expose-external not valid.
+mongos-k8s/1      blocked   idle   10.1.250.207         Config option for expose-external not valid.
+shard0/0*         active    idle   10.1.250.206         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:840 Juju error logs:
+
+unit-mongos-k8s-1: 01:35:30 ERROR unit.mongos-k8s/1.juju-log External configuration: nonsensical-setting for expose-external is not valid, should be one of: ['none', 'nodeport']
+unit-mongos-k8s-0: 01:35:30 ERROR unit.mongos-k8s/0.juju-log External configuration: nonsensical-setting for expose-external is not valid, should be one of: ['none', 'nodeport']
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:904 Forgetting main...
