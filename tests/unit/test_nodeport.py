@@ -3,12 +3,11 @@
 import logging
 import unittest
 from unittest import mock
-from httpx import Request, Response
 from unittest.mock import patch, PropertyMock
 import httpx
 from ops.model import BlockedStatus
 from ops.testing import Harness
-from node_port import NodePortManager, ApiError
+from node_port import ApiError
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequiresEvents
 from charm import MongosCharm
 
@@ -78,22 +77,31 @@ class TestNodePort(unittest.TestCase):
         with self.assertRaises(ApiError):
             self.harness.charm.node_port_manager.delete_unit_service()
 
-    @patch("src.node_port.NodePortManager.get_service")
-    @patch("charm.NodePortManager.client", new_callable=PropertyMock)
-    def test_delete_unit_service_needs_juju_trust(self, get_service, client):
+    @patch("charm.NodePortManager.get_service")
+    def test_delete_unit_service_needs_juju_trust(self, get_service):
         """Verify that when charm needs juju trust a status is logged."""
-
         metadata_mock = mock.Mock()
-        metadata_mock.name = "serice-name"
+        metadata_mock.name = "service-name"
         service = mock.Mock()
         service.metadata = metadata_mock
         get_service.return_value = service
 
-        api_error = mock.Mock()
-        api_error.status.code = 403
+        # We need a valid API error due to error handling in lightkube
+        api_error = ApiError(
+            request=httpx.Request(url="http://controller/call", method="DELETE"),
+            response=httpx.Response(409, json={"message": "bad call", "code": 403}),
+        )
 
-        NodePortManager.delete_unit_service()
+        mocked_client = PropertyMock()
+        delete_mock = mock.Mock()
+        delete_mock.side_effect = api_error
+        mocked_client.delete = delete_mock
+
+        # Patch the actual client here
+        self.harness.charm.node_port_manager.client = mocked_client
+
+        self.harness.charm.node_port_manager.delete_unit_service()
 
         self.assertTrue(
-            isinstance(self.harness.charm.unit.status, BlockedStatus(STATUS_JUJU_TRUST))
+            self.harness.charm.unit.status == BlockedStatus(STATUS_JUJU_TRUST)
         )

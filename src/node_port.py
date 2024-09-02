@@ -75,7 +75,7 @@ class NodePortManager:
         """Blocks the application and returns a specific error message for deployments made without --trust."""
         logger.error("Could not apply service, application needs `juju trust`")
         self.charm.unit.status = BlockedStatus(
-            f"Insufficient permissions, try: `juju trust {self.app.name} --scope=cluster`"
+            f"Insufficient permissions, try: `juju trust {self.app_name} --scope=cluster`"
         )
 
     def build_node_port_services(self, port: str) -> Service:
