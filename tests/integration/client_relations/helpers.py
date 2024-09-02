@@ -114,12 +114,12 @@ async def assert_all_unit_node_ports_available(ops_test: OpsTest):
             ops_test, node_port_name=f"{MONGOS_APP_NAME}-{unit_id}-external"
         )
 
-        assert await is_external_mongos_client_reachble(
+        assert await is_external_mongos_client_reachable(
             ops_test, exposed_node_port
         ), "client is not reachable"
 
 
-async def is_external_mongos_client_reachble(
+async def is_external_mongos_client_reachable(
     ops_test: OpsTest, exposed_node_port: str
 ) -> bool:
     """Returns True if the mongos client is reachable on the provided node port via the k8s ip."""

@@ -17,7 +17,7 @@ from .helpers import (
     assert_all_unit_node_ports_available,
     assert_all_unit_node_ports_are_unavailable,
     get_port_from_node_port,
-    is_external_mongos_client_reachble,
+    is_external_mongos_client_reachable,
 )
 
 
@@ -104,7 +104,7 @@ async def test_mongos_disable_external_connections(ops_test: OpsTest) -> None:
     # verify each unit has a node port available
     await assert_all_unit_node_ports_are_unavailable(ops_test)
 
-    assert not await is_external_mongos_client_reachble(ops_test, exposed_node_port)
+    assert not await is_external_mongos_client_reachable(ops_test, exposed_node_port)
 
 
 @pytest.mark.group(1)
