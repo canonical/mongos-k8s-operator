@@ -74,8 +74,9 @@ class NodePortManager:
     # BEGIN: helpers
     def on_deployed_without_trust(self) -> None:
         """Blocks the application and returns a specific error message for deployments made without --trust."""
+        logger.error("Could not apply service, application needs `juju trust`")
         self.charm.unit.status = BlockedStatus(
-            f"Insufficient permissions, try: `juju trust {self.app.name} --scope=cluster`"
+            f"Insufficient permissions, try: `juju trust {self.app_name} --scope=cluster`"
         )
 
     def build_node_port_services(self, port: str) -> Service:
@@ -123,7 +124,7 @@ class NodePortManager:
             self.client.apply(service)
         except ApiError as e:
             if e.status.code == 403:
-                logger.error("Could not apply service, application needs `juju trust`")
+                self.on_deployed_without_trust()
                 return
             if e.status.code == 422 and "port is already allocated" in e.status.message:
                 logger.error(e.status.message)
@@ -150,7 +151,6 @@ class NodePortManager:
         except ApiError as e:
             if e.status.code == 403:
                 self.on_deployed_without_trust()
-                logger.error("Could not delete service, application needs `juju trust`")
                 return
             else:
                 raise

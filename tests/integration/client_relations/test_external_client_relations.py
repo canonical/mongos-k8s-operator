@@ -19,7 +19,7 @@ from .helpers import (
     assert_all_unit_node_ports_available,
     assert_all_unit_node_ports_are_unavailable,
     get_port_from_node_port,
-    is_external_mongos_client_reachble,
+    is_external_mongos_client_reachable,
     DATA_INTEGRATOR_APP_NAME,
     APPLICATION_APP_NAME,
     get_client_connection_string,
@@ -163,7 +163,7 @@ async def test_mongos_disable_external_connections(ops_test: OpsTest) -> None:
     # verify each unit has a node port available
     await assert_all_unit_node_ports_are_unavailable(ops_test)
 
-    assert not await is_external_mongos_client_reachble(ops_test, exposed_node_port)
+    assert not await is_external_mongos_client_reachable(ops_test, exposed_node_port)
 
     external_uri = await get_client_connection_string(
         ops_test, app_name=DATA_INTEGRATOR_APP_NAME, relation_name="mongodb"

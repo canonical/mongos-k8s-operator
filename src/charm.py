@@ -80,14 +80,18 @@ class MongosCharm(ops.CharmBase):
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.update_status, self._on_update_status)
 
-        # # when number of units change update hosts
-        # self.framework.observe(self.on.leader_elected, self._update_client_related_hosts)
-        # self.framework.observe(
-        #     self.on[Config.Relations.PEERS].relation_joined, self._update_client_related_hosts
-        # )
-        # self.framework.observe(
-        #     self.on[Config.Relations.PEERS].relation_departed, self._update_client_related_hosts
-        # )
+        # when number of units change update hosts
+        self.framework.observe(
+            self.on.leader_elected, self._update_client_related_hosts
+        )
+        self.framework.observe(
+            self.on[Config.Relations.PEERS].relation_joined,
+            self._update_client_related_hosts,
+        )
+        self.framework.observe(
+            self.on[Config.Relations.PEERS].relation_departed,
+            self._update_client_related_hosts,
+        )
 
         # relations
         self.tls = MongoDBTLS(self, Config.Relations.PEERS, substrate=Config.SUBSTRATE)

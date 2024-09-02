@@ -2,6 +2,7 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 from typing import Tuple, List
+import json
 import logging
 from pathlib import Path
 import yaml
@@ -115,12 +116,12 @@ async def assert_all_unit_node_ports_available(ops_test: OpsTest):
             ops_test, node_port_name=f"{MONGOS_APP_NAME}-{unit_id}-external"
         )
 
-        assert await is_external_mongos_client_reachble(
+        assert await is_external_mongos_client_reachable(
             ops_test, exposed_node_port
         ), "client is not reachable"
 
 
-async def is_external_mongos_client_reachble(
+async def is_external_mongos_client_reachable(
     ops_test: OpsTest, exposed_node_port: str
 ) -> bool:
     """Returns True if the mongos client is reachable on the provided node port via the k8s ip."""
@@ -158,22 +159,19 @@ def get_k8s_local_mongodb_hosts(ops_test: OpsTest) -> List[str]:
 
 def get_public_k8s_ip() -> str:
     result = subprocess.run(
-        "kubectl get nodes", shell=True, capture_output=True, text=True
+        "kubectl get nodes -o json", shell=True, capture_output=True, text=True
     )
 
     if result.returncode:
         logger.info("failed to retrieve public facing k8s IP error: %s", result.stderr)
         assert False, "failed to retrieve public facing k8s IP"
 
-    if len(result.stdout.splitlines()) < 2:
-        logger.info("No entries for public facing k8s IP, : %s", result.stdout)
+    node_info = json.loads(result.stdout)
+
+    try:
+        return node_info["items"][0]["status"]["addresses"][0]["address"]
+    except KeyError:
         assert False, "failed to retrieve public facing k8s IP"
-
-    # port information is the first item of the last line
-    port_mapping = result.stdout.splitlines()[-1].split()[0]
-
-    # port mapping is of the form ip-172-31-18-133
-    return port_mapping.split("ip-")[1].replace("-", ".")
 
 
 async def deploy_client_app(ops_test: OpsTest, external: bool):
