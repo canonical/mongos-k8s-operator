@@ -13,7 +13,12 @@ from ..helpers import (
     wait_for_mongos_units_blocked,
 )
 
-from .helpers import assert_all_unit_node_ports_available
+from .helpers import (
+    assert_all_unit_node_ports_available,
+    assert_all_unit_node_ports_are_unavailable,
+    get_port_from_node_port,
+    is_external_mongos_client_reachable,
+)
 
 
 TEST_USER_NAME = "TestUserName1"
@@ -41,7 +46,7 @@ async def test_mongos_external_connections(ops_test: OpsTest) -> None:
     )
     await ops_test.model.wait_for_idle(apps=[MONGOS_APP_NAME], idle_period=15)
 
-    # # verify each unit has a node port available
+    # verify each unit has a node port available
     await assert_all_unit_node_ports_available(ops_test)
 
 
@@ -81,8 +86,25 @@ async def test_mongos_bad_configuration(ops_test: OpsTest) -> None:
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_turn_off_nodeport(ops_test: OpsTest) -> None:
-    """TODO Future PR, test that when the user toggles nodeport to none, it is no longer exposed."""
+async def test_mongos_disable_external_connections(ops_test: OpsTest) -> None:
+    # get exposed node port before toggling off exposure
+    exposed_node_port = get_port_from_node_port(
+        ops_test, node_port_name=f"{MONGOS_APP_NAME}-0-external"
+    )
+
+    """Tests that mongos can disable external connections."""
+    configuration_parameters = {"expose-external": "none"}
+
+    # apply new configuration options
+    await ops_test.model.applications[MONGOS_APP_NAME].set_config(
+        configuration_parameters
+    )
+    await ops_test.model.wait_for_idle(apps=[MONGOS_APP_NAME], idle_period=15)
+
+    # verify each unit has a node port available
+    await assert_all_unit_node_ports_are_unavailable(ops_test)
+
+    assert not await is_external_mongos_client_reachable(ops_test, exposed_node_port)
 
 
 @pytest.mark.group(1)
