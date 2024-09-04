@@ -73,7 +73,9 @@ def is_relation_joined(ops_test: OpsTest, endpoint_one: str, endpoint_two: str) 
 
 
 def get_node_port_info(ops_test: OpsTest, node_port_name: str) -> str:
-    node_port_cmd = f"kubectl get svc  -n  {ops_test.model.name} |  grep NodePort | grep {node_port_name}"
+    node_port_cmd = (
+        f"kubectl get svc  -n  {ops_test.model.name} |  grep NodePort | grep {node_port_name}"
+    )
     return subprocess.run(node_port_cmd, shell=True, capture_output=True, text=True)
 
 
@@ -121,13 +123,12 @@ async def assert_all_unit_node_ports_available(ops_test: OpsTest):
         ), "client is not reachable"
 
 
-async def is_external_mongos_client_reachable(
-    ops_test: OpsTest, exposed_node_port: str
-) -> bool:
+async def is_external_mongos_client_reachable(ops_test: OpsTest, exposed_node_port: str) -> bool:
     """Returns True if the mongos client is reachable on the provided node port via the k8s ip."""
     public_k8s_ip = get_public_k8s_ip()
     username, password = await get_mongos_user_password(ops_test, MONGOS_APP_NAME)
     try:
+        print(f"mongodb://{username}:{password}@{public_k8s_ip}:{exposed_node_port}")
         external_mongos_client = MongoClient(
             f"mongodb://{username}:{password}@{public_k8s_ip}:{exposed_node_port}"
         )
@@ -192,3 +193,16 @@ async def integrate_client_app(ops_test: OpsTest, client_app_name: str):
     await ops_test.model.wait_for_idle(
         apps=[client_app_name, MONGOS_APP_NAME], status="active", idle_period=20
     )
+
+
+async def assert_app_uri_matches_external_setting(
+    ops_test: OpsTest, app_name: str, rel_name: str, external: bool
+):
+    uri = await get_client_connection_string(ops_test, app_name=app_name, relation_name=rel_name)
+
+    pulic_ip_present_in_uri = get_public_k8s_ip() in uri
+    assert pulic_ip_present_in_uri == external, f"client URI for {app_name} has incorrect hosts."
+
+    for host in get_k8s_local_mongodb_hosts(ops_test):
+        local_host_in_ip = host in uri
+        assert local_host_in_ip != external, f"client URI for {app_name} has incorrect hosts."
