@@ -60,14 +60,14 @@ class NodePortManager:
             name=pod_name or self.pod_name,
         )
 
-    def get_unit_service_name(self) -> str:
+    def get_unit_service_name(self, unit_name) -> str:
         """Returns the service name for the current unit."""
-        unit_id = self.charm.unit.name.split("/")[1]
-        return f"{self.app_name}-{unit_id}-external"
+        unit_name = unit_name.replace("/", "-")
+        return f"{unit_name}-external"
 
-    def get_unit_service(self) -> Service | None:
+    def get_unit_service(self, unit_name) -> Service | None:
         """Gets the Service via the K8s API for the current unit."""
-        return self.get_service(self.get_unit_service_name())
+        return self.get_service(self.get_unit_service_name(unit_name))
 
     # END: getters
 
@@ -87,7 +87,7 @@ class NodePortManager:
 
         return Service(
             metadata=ObjectMeta(
-                name=self.get_unit_service_name(),
+                name=self.get_unit_service_name(self.charm.unit.name),
                 namespace=self.namespace,
                 # When we scale-down K8s will keep the Services for the deleted units around,
                 # unless the Services' owner is also deleted.
@@ -135,11 +135,11 @@ class NodePortManager:
     def delete_unit_service(self) -> None:
         """Deletes a unit Service, if it exists."""
         try:
-            service = self.get_unit_service()
+            service = self.get_unit_service(unit_name=self.charm.unit.name)
         except ApiError as e:
             if e.status.code == 404:
                 logger.debug(
-                    f"Could not find {self.get_unit_service_name()} to delete."
+                    f"Could not find {self.get_unit_service_name(self.charm.unit.name)} to delete."
                 )
                 return
 
@@ -155,13 +155,12 @@ class NodePortManager:
             else:
                 raise
 
-    @property
-    def _node_name(self) -> str:
+    def _node_name(self, unit_name: str) -> str:
         """Return the node name for this unit's pod ip."""
         try:
             pod = self.client.get(
                 Pod,
-                name=self.charm.unit.name.replace("/", "-"),
+                name=unit_name.replace("/", "-"),
                 namespace=self.namespace,
             )
         except ApiError as e:
@@ -171,13 +170,12 @@ class NodePortManager:
 
         return pod.spec.nodeName
 
-    @property
-    def get_node_ip(self) -> Optional[str]:
-        """Return node IP."""
+    def get_node_ip(self, unit_name: str) -> Optional[str]:
+        """Return node IP for the provided unit."""
         try:
             node = self.client.get(
                 Node,
-                name=self._node_name,
+                name=self._node_name(unit_name),
                 namespace=self.namespace,
             )
         except ApiError as e:
@@ -197,9 +195,9 @@ class NodePortManager:
                 if a.type == typ:
                     return a.address
 
-    def get_node_port(self, port_to_match: int) -> int:
+    def get_node_port(self, port_to_match: int, unit_name: str) -> int:
         """Return node port for the provided port to match."""
-        service = self.get_unit_service()
+        service = self.get_unit_service(unit_name=unit_name)
 
         if not service or not service.spec.type == "NodePort":
             raise Exception("No service found for port.")

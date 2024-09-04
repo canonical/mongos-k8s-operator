@@ -10,7 +10,7 @@ from exceptions import MissingSecretError
 from ops.pebble import PathError, ProtocolError, Layer
 from node_port import NodePortManager
 
-from typing import Set, Optional, Dict
+from typing import Set, Optional, Dict, List
 from charms.mongodb.v0.config_server_interface import ClusterRequirer
 
 
@@ -399,6 +399,11 @@ class MongosCharm(ops.CharmBase):
 
         return True
 
+    def get_units(self) -> List[Unit]:
+        units = [self.unit]
+        units.extend(self.peers_units)
+        return units
+
     def get_mongos_host(self) -> str:
         """Returns the host for mongos as a str.
 
@@ -407,33 +412,49 @@ class MongosCharm(ops.CharmBase):
         """
         return self.unit_host(self.unit)
 
-    def get_mongos_hosts(self) -> Set:
+    def get_ext_mongos_hosts(self) -> Set:
+        """Returns the K8s hosts for mongos"""
+        hosts = set()
+        for unit in self.get_units():
+            hosts.add(self.node_port_manager.get_node_ip(unit.name))
+
+        return hosts
+
+    def get_k8s_mongos_hosts(self) -> Set:
+        """Returns the K8s hosts for mongos"""
+        hosts = set()
+        for unit in self.get_units():
+            hosts.add(self.unit_host(unit))
+
+        return hosts
+
+    def get_mongos_hosts_for_client(self) -> Set:
         """Returns the hosts for mongos as a str.
 
         The host for mongos can be either the K8s pod name or an IP address depending on how
         the app has been configured.
         """
         if self.is_external_client:
-            return {self.node_port_manager.get_node_ip}
+            return self.get_ext_mongos_hosts()
 
-        hosts = {self.unit_host(self.unit)}
-        for unit in self.peers_units:
-            hosts.add(self.unit_host(unit))
+        return self.get_k8s_mongos_hosts()
 
-        return hosts
+    def get_mongos_port_for_client(self) -> List[int] | int:
+        """Returns the port(s) for mongos as an int.
 
-    def get_mongos_port(self) -> int:
-        """Returns the port for mongos as an int.
-
-        The host for mongos can be either the K8s pod name or an IP address depending on how
-        the app has been configured.
+        In the case of external clients, there can be many available ports.
         """
-        if self.is_external_client:
-            return self.node_port_manager.get_node_port(
-                port_to_match=Config.MONGOS_PORT
-            )
+        if not self.is_external_client:
+            return Config.MONGOS_PORT
 
-        return Config.MONGOS_PORT
+        units = [self.unit]
+        units.extend(self.peers_units)
+        return [
+            self.node_port_manager.get_node_port(
+                port_to_match=Config.MONGOS_PORT, unit_name=unit.name
+            )
+            for unit in units
+        ]
 
     @staticmethod
     def _generate_relation_departed_key(rel_id: int) -> str:
@@ -760,9 +781,9 @@ class MongosCharm(ops.CharmBase):
             database=self.database,
             username=self.get_secret(APP_SCOPE, Config.Secrets.USERNAME),
             password=self.get_secret(APP_SCOPE, Config.Secrets.PASSWORD),
-            hosts=self.get_mongos_hosts(),
+            hosts=self.get_k8s_mongos_hosts(),
             # unlike the vm mongos charm, the K8s charm does not communicate with the unix socket
-            port=self.get_mongos_port(),
+            port=Config.MONGOS_PORT,
             roles=self.extra_user_roles,
             tls_external=external_ca is not None,
             tls_internal=internal_ca is not None,
