@@ -112,33 +112,14 @@ async def test_mongos_bad_configuration(ops_test: OpsTest) -> None:
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_external_clients_use_nodeport(ops_test: OpsTest) -> None:
-    """TODO Future PR, test that external clients use nodeport."""
-    external_uri = await get_client_connection_string(
-        ops_test, app_name=DATA_INTEGRATOR_APP_NAME, relation_name="mongodb"
+async def test_all_clients_use_nodeport(ops_test: OpsTest) -> None:
+    """Test that all clients use nodeport."""
+    await assert_app_uri_matches_external_setting(
+        ops_test, app_name=DATA_INTEGRATOR_APP_NAME, rel_name="mongodb", external=True
     )
-
-    assert (
-        get_public_k8s_ip() in external_uri
-    ), "External client URI does not have public IP."
-
-    for host in get_k8s_local_mongodb_hosts(ops_test):
-        assert (
-            host not in external_uri
-        ), "External client should not have local hosts in URI."
-
-
-@pytest.mark.group(1)
-@pytest.mark.abort_on_fail
-async def test_internal_clients_use_K8s(ops_test: OpsTest) -> None:
-    """TODO Future PR, test that external clients use K8s even when nodeport is available."""
-    internal_uri = await get_client_connection_string(
-        ops_test, app_name=APPLICATION_APP_NAME, relation_name="mongos"
+    await assert_app_uri_matches_external_setting(
+        ops_test, app_name=APPLICATION_APP_NAME, rel_name="mongos", external=True
     )
-
-    assert (
-        get_public_k8s_ip() not in internal_uri
-    ), "Public IP should not be present in URI of internal clients."
 
 
 @pytest.mark.group(1)
@@ -165,15 +146,28 @@ async def test_mongos_disable_external_connections(ops_test: OpsTest) -> None:
 
     assert not await is_external_mongos_client_reachable(ops_test, exposed_node_port)
 
-    external_uri = await get_client_connection_string(
-        ops_test, app_name=DATA_INTEGRATOR_APP_NAME, relation_name="mongodb"
+    await assert_app_uri_matches_external_setting(
+        ops_test, app_name=DATA_INTEGRATOR_APP_NAME, rel_name="mongodb", external=False
+    )
+    await assert_app_uri_matches_external_setting(
+        ops_test, app_name=APPLICATION_APP_NAME, rel_name="mongos", external=False
     )
 
+
+async def assert_app_uri_matches_external_setting(
+    ops_test: OpsTest, app_name: str, rel_name: str, external: bool
+):
+    uri = await get_client_connection_string(
+        ops_test, app_name=app_name, relation_name=rel_name
+    )
+
+    pulic_ip_present_in_uri = get_public_k8s_ip() in uri
     assert (
-        get_public_k8s_ip() not in external_uri
-    ), "External client URI should have have public IP, if expose-external=none."
+        pulic_ip_present_in_uri == external
+    ), f"client URI for {app_name} has incorrect hosts."
 
     for host in get_k8s_local_mongodb_hosts(ops_test):
+        local_host_in_ip = host in uri
         assert (
-            host in external_uri
-        ), "External client URI not updated after mongos toggled to  if expose-external=none."
+            local_host_in_ip != external
+        ), f"client URI for {app_name} has incorrect hosts."

@@ -407,13 +407,13 @@ class MongosCharm(ops.CharmBase):
         """
         return self.unit_host(self.unit)
 
-    def get_mongos_hosts(self, external: bool = False) -> Set:
-        """Returns the host for mongos as a str.
+    def get_mongos_hosts(self) -> Set:
+        """Returns the hosts for mongos as a str.
 
         The host for mongos can be either the K8s pod name or an IP address depending on how
-        the client wishes to connect to mongos (inside Juju or outside).
+        the app has been configured.
         """
-        if external and self.is_external_client:
+        if self.is_external_client:
             return {self.node_port_manager.get_node_ip}
 
         hosts = {self.unit_host(self.unit)}
@@ -422,13 +422,13 @@ class MongosCharm(ops.CharmBase):
 
         return hosts
 
-    def get_mongos_port(self, external: bool = False) -> int:
+    def get_mongos_port(self) -> int:
         """Returns the port for mongos as an int.
 
-        The port for mongos can be either the standard mongos port or NodePort depending on how
-        the client wishes to connect to mongos (inside Juju or outside).
+        The host for mongos can be either the K8s pod name or an IP address depending on how
+        the app has been configured.
         """
-        if external and self.is_external_client:
+        if self.is_external_client:
             return self.node_port_manager.get_node_port(
                 port_to_match=Config.MONGOS_PORT
             )
@@ -753,7 +753,6 @@ class MongosCharm(ops.CharmBase):
     @property
     def mongos_config(self) -> MongoConfiguration:
         """Generates a MongoDBConfiguration object for mongos in the deployment of MongoDB."""
-        hosts = self.get_mongos_hosts()
         external_ca, _ = self.tls.get_tls_files(internal=False)
         internal_ca, _ = self.tls.get_tls_files(internal=True)
 
@@ -761,9 +760,9 @@ class MongosCharm(ops.CharmBase):
             database=self.database,
             username=self.get_secret(APP_SCOPE, Config.Secrets.USERNAME),
             password=self.get_secret(APP_SCOPE, Config.Secrets.PASSWORD),
-            hosts=hosts,
+            hosts=self.get_mongos_hosts(),
             # unlike the vm mongos charm, the K8s charm does not communicate with the unix socket
-            port=Config.MONGOS_PORT,
+            port=self.get_mongos_port(),
             roles=self.extra_user_roles,
             tls_external=external_ca is not None,
             tls_internal=internal_ca is not None,
