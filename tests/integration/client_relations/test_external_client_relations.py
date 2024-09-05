@@ -60,7 +60,9 @@ async def test_mongos_external_connections(ops_test: OpsTest) -> None:
     await ops_test.model.applications[MONGOS_APP_NAME].set_config(
         configuration_parameters
     )
-    await ops_test.model.wait_for_idle(apps=[MONGOS_APP_NAME], idle_period=15)
+    await ops_test.model.wait_for_idle(
+        apps=[MONGOS_APP_NAME], status="active", idle_period=15
+    )
 
     # verify each unit has a node port available
     await assert_all_unit_node_ports_available(ops_test)
@@ -72,7 +74,9 @@ async def test_mongos_external_connections(ops_test: OpsTest) -> None:
 async def test_mongos_external_connections_scale(ops_test: OpsTest) -> None:
     """Tests that new mongos units are accessible externally."""
     await ops_test.model.applications[MONGOS_APP_NAME].scale(2)
-    await ops_test.model.wait_for_idle(apps=[MONGOS_APP_NAME], idle_period=15)
+    await ops_test.model.wait_for_idle(
+        apps=[MONGOS_APP_NAME], status="active", idle_period=15
+    )
 
     # verify each unit has a node port available
     await assert_all_unit_node_ports_available(ops_test)
@@ -138,7 +142,9 @@ async def test_mongos_disable_external_connections(ops_test: OpsTest) -> None:
         configuration_parameters
     )
     await ops_test.model.wait_for_idle(
-        apps=[MONGOS_APP_NAME, DATA_INTEGRATOR_APP_NAME], idle_period=15
+        apps=[MONGOS_APP_NAME, DATA_INTEGRATOR_APP_NAME],
+        status="active",
+        idle_period=15,
     )
 
     # verify each unit has a node port available

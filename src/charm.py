@@ -8,7 +8,7 @@ import json
 from exceptions import MissingSecretError
 
 from ops.pebble import PathError, ProtocolError, Layer
-from node_port import NodePortManager
+from node_port import NodePortManager, ApiError
 
 from typing import Set, Optional, Dict, List
 from charms.mongodb.v0.config_server_interface import ClusterRequirer
@@ -413,10 +413,18 @@ class MongosCharm(ops.CharmBase):
         return self.unit_host(self.unit)
 
     def get_ext_mongos_hosts(self) -> Set:
-        """Returns the K8s hosts for mongos"""
+        """Returns the K8s hosts for mongos.
+
+        Note: for external connections it is not enough to know the external ip, but also the
+        port that is associated with the client.
+        """
         hosts = set()
         for unit in self.get_units():
-            hosts.add(self.node_port_manager.get_node_ip(unit.name))
+            unit_ip = self.node_port_manager.get_node_ip(unit.name)
+            unit_port = self.node_port_manager.get_node_port(
+                port_to_match=Config.MONGOS_PORT, unit_name=unit.name
+            )
+            hosts.add(f"{unit_ip}:{unit_port}")
 
         return hosts
 
@@ -438,23 +446,6 @@ class MongosCharm(ops.CharmBase):
             return self.get_ext_mongos_hosts()
 
         return self.get_k8s_mongos_hosts()
-
-    def get_mongos_port_for_client(self) -> List[int] | int:
-        """Returns the port(s) for mongos as an int.
-
-        In the case of external clients, there can be many available ports.
-        """
-        if not self.is_external_client:
-            return Config.MONGOS_PORT
-
-        units = [self.unit]
-        units.extend(self.peers_units)
-        return [
-            self.node_port_manager.get_node_port(
-                port_to_match=Config.MONGOS_PORT, unit_name=unit.name
-            )
-            for unit in units
-        ]
 
     @staticmethod
     def _generate_relation_departed_key(rel_id: int) -> str:
@@ -637,6 +628,16 @@ class MongosCharm(ops.CharmBase):
             logger.error("Deferring on updating app relation data since: error: %r", e)
             event.defer()
             return
+        except ApiError as e:
+            if e.status.code == 404:
+                # it is possible that a unit is enabling node port when we try to update hosts
+                logger.debug(
+                    "Deferring on updating app relation data since service not found for more or one units"
+                )
+                event.defer()
+                return
+
+            raise
 
     # END: helper functions
 
