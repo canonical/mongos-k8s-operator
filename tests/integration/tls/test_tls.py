@@ -19,7 +19,9 @@ from .helpers import (
     MONGOS_APP_NAME,
     CERTS_APP_NAME,
     rotate_and_verify_certs,
+    get_sans_ips,
 )
+from ..client_relations.helpers import get_public_k8s_ip
 
 
 MONGOS_SERVICE = "mongos.service"
@@ -63,6 +65,41 @@ async def test_mongos_tls_enabled(ops_test: OpsTest) -> None:
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
+async def test_mongos_tls_nodeport(ops_test: OpsTest):
+    """Tests that TLS is stable"""
+    # test that charm can enable nodeport without breaking mongos or accidently disabling TLS
+    await ops_test.model.applications[MONGOS_APP_NAME].set_config({"expose-external": "nodeport"})
+    await ops_test.model.wait_for_idle(
+        apps=[MONGOS_APP_NAME],
+        idle_period=30,
+        status="active",
+        timeout=TIMEOUT,
+    )
+    await check_mongos_tls_enabled(ops_test)
+
+    # check for expected IP addresses in the pem file
+    for unit in ops_test.model.applications[MONGOS_APP_NAME].units:
+        assert get_public_k8s_ip() in await get_sans_ips(ops_test, unit, internal=True)
+        assert get_public_k8s_ip() in await get_sans_ips(ops_test, unit, internal=False)
+
+    # test that charm can disable nodeport without breaking mongos or accidently disabling TLS
+    await ops_test.model.applications[MONGOS_APP_NAME].set_config({"expose-external": "none"})
+    await ops_test.model.wait_for_idle(
+        apps=[MONGOS_APP_NAME],
+        idle_period=30,
+        status="active",
+        timeout=TIMEOUT,
+    )
+    await check_mongos_tls_enabled(ops_test)
+
+    # check for no IP addresses in the pem file
+    for unit in ops_test.model.applications[MONGOS_APP_NAME].units:
+        assert get_public_k8s_ip() not in await get_sans_ips(ops_test, unit, internal=True)
+        assert get_public_k8s_ip() not in await get_sans_ips(ops_test, unit, internal=False)
+
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
 async def test_mongos_rotate_certs(ops_test: OpsTest, tmp_path: Path) -> None:
     await rotate_and_verify_certs(ops_test, MONGOS_APP_NAME, tmpdir=tmp_path)
 
@@ -99,16 +136,13 @@ async def test_mongos_tls_ca_mismatch(ops_test: OpsTest) -> None:
         CERTS_APP_NAME, application_name=DIFFERENT_CERTS_APP_NAME, channel="stable"
     )
     await ops_test.model.wait_for_idle(
-        apps=[DIFFERENT_CERTS_APP_NAME],
+        apps=[MONGOS_APP_NAME],
         idle_period=10,
         raise_on_blocked=False,
-        status="active",
         timeout=TIMEOUT,
     )
 
-    await toggle_tls_mongos(
-        ops_test, enable=True, certs_app_name=DIFFERENT_CERTS_APP_NAME
-    )
+    await toggle_tls_mongos(ops_test, enable=True, certs_app_name=DIFFERENT_CERTS_APP_NAME)
     await wait_for_mongos_units_blocked(
         ops_test,
         MONGOS_APP_NAME,

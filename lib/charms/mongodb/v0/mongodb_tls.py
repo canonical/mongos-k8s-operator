@@ -1,4 +1,4 @@
-# Copyright 2023 Canonical Ltd.
+# Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 """In this class we manage client database relations.
@@ -27,6 +27,7 @@ from ops.charm import ActionEvent, RelationBrokenEvent, RelationJoinedEvent
 from ops.framework import Object
 from ops.model import ActiveStatus, MaintenanceStatus, Unit, WaitingStatus
 
+
 from config import Config
 
 UNIT_SCOPE = Config.Relations.UNIT_SCOPE
@@ -38,11 +39,11 @@ SANS_IPS_KEY = "sans_ips"
 LIBID = "e02a50f0795e4dd292f58e93b4f493dd"
 
 # Increment this major API version when introducing breaking changes
-LIBAPI = 0
+LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 15
+LIBPATCH = 3
 
 logger = logging.getLogger(__name__)
 
@@ -163,11 +164,17 @@ class MongoDBTLS(Object):
 
     def _on_tls_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Disable TLS when TLS relation broken."""
-        logger.debug("Disabling external and internal TLS for unit: %s", self.charm.unit.name)
+        if not self.charm.db_initialised:
+            logger.info("Deferring %s. db is not initialised.", str(type(event)))
+            event.defer()
+            return
+
         if self.charm.upgrade_in_progress:
             logger.warning(
                 "Disabling TLS is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
             )
+
+        logger.debug("Disabling external and internal TLS for unit: %s", self.charm.unit.name)
 
         for internal in [True, False]:
             self.set_tls_secret(internal, Config.TLS.SECRET_CA_LABEL, None)
@@ -190,6 +197,11 @@ class MongoDBTLS(Object):
             logger.debug(
                 "mongos requires config-server in order to start, do not restart with TLS until integrated to config-server"
             )
+            event.defer()
+            return
+
+        if not self.charm.db_initialised:
+            logger.info("Deferring %s. db is not initialised.", str(type(event)))
             event.defer()
             return
 
