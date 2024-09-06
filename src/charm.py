@@ -5,12 +5,13 @@
 # See LICENSE file for licensing details.
 from ops.main import main
 import json
+from datetime import datetime
 from exceptions import MissingSecretError
 
 from ops.pebble import PathError, ProtocolError, Layer
 from node_port import NodePortManager
 
-from typing import Set, Optional, Dict
+from typing import Set, Optional, Dict, List
 from charms.mongodb.v0.config_server_interface import ClusterRequirer
 
 
@@ -74,9 +75,7 @@ class MongosCharm(ops.CharmBase):
 
         # lifecycle events
         self.framework.observe(self.on.config_changed, self._on_config_changed)
-        self.framework.observe(
-            self.on.mongos_pebble_ready, self._on_mongos_pebble_ready
-        )
+        self.framework.observe(self.on.mongos_pebble_ready, self._on_mongos_pebble_ready)
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.update_status, self._on_update_status)
 
@@ -98,6 +97,8 @@ class MongosCharm(ops.CharmBase):
             return
 
         self.update_external_services()
+
+        self.update_tls_sans()
 
         # TODO DPE-5235 support updating data-integrator clients to have/not have public IP
         # depending on the result of the configuration
@@ -143,9 +144,7 @@ class MongosCharm(ops.CharmBase):
             logger.info(
                 "Missing integration to config-server. mongos cannot run start sequence unless connected to config-server."
             )
-            self.status.set_and_share_status(
-                BlockedStatus("Missing relation to config-server.")
-            )
+            self.status.set_and_share_status(BlockedStatus("Missing relation to config-server."))
             event.defer()
             return
 
@@ -178,9 +177,7 @@ class MongosCharm(ops.CharmBase):
             logger.info(
                 "Missing integration to config-server. mongos cannot run unless connected to config-server."
             )
-            self.status.set_and_share_status(
-                BlockedStatus("Missing relation to config-server.")
-            )
+            self.status.set_and_share_status(BlockedStatus("Missing relation to config-server."))
             return
 
         if tls_statuses := self.cluster.get_tls_statuses():
@@ -190,9 +187,7 @@ class MongosCharm(ops.CharmBase):
         # restart on high loaded databases can be very slow (e.g. up to 10-20 minutes).
         if not self.cluster.is_mongos_running():
             logger.info("mongos has not started yet")
-            self.status.set_and_share_status(
-                WaitingStatus("Waiting for mongos to start.")
-            )
+            self.status.set_and_share_status(WaitingStatus("Waiting for mongos to start."))
             return
 
         self.status.set_and_share_status(ActiveStatus())
@@ -218,20 +213,49 @@ class MongosCharm(ops.CharmBase):
 
     def update_external_services(self) -> None:
         """Update external services based on provided configuration."""
-        if (
-            self.model.config["expose-external"]
-            == Config.ExternalConnections.EXTERNAL_NODEPORT
-        ):
+        if self.model.config["expose-external"] == Config.ExternalConnections.EXTERNAL_NODEPORT:
             # every unit attempts to create a nodeport service - if exists, will silently continue
             self.node_port_manager.apply_service(
-                service=self.node_port_manager.build_node_port_services(
-                    port=Config.MONGOS_PORT
-                )
+                service=self.node_port_manager.build_node_port_services(port=Config.MONGOS_PORT)
             )
         else:
             self.node_port_manager.delete_unit_service()
 
         self.expose_external = self.model.config["expose-external"]
+
+    def update_tls_sans(self) -> None:
+        current_sans = self.tls.get_current_sans()
+        current_sans_ip = set(current_sans["sans_ips"]) if current_sans else set()
+        expected_sans_ip = set(self.tls.get_new_sans()["sans_ips"]) if current_sans else set()
+        sans_ip_changed = current_sans_ip ^ expected_sans_ip
+
+        if not sans_ip_changed:
+            return
+
+        logger.info(
+            (
+                f'Broker {self.unit.name.split("/")[1]} updating certificate SANs - '
+                f"OLD SANs = {current_sans_ip - expected_sans_ip}, "
+                f"NEW SANs = {expected_sans_ip - current_sans_ip}"
+            )
+        )
+
+        # question for Marc, why not also internal certs
+        self.tls.certs.on.certificate_expiring.emit(
+            certificate=self.tls.get_tls_secret(
+                internal=True, label_name=Config.TLS.SECRET_CERT_LABEL
+            ),
+            expiry=datetime.now().isoformat(),
+        )
+        self.tls.certs.on.certificate_expiring.emit(
+            certificate=self.tls.get_tls_secret(
+                internal=False, label_name=Config.TLS.SECRET_CERT_LABEL
+            ),
+            expiry=datetime.now().isoformat(),
+        )
+
+        # TODO ensures only single requested new certs, will be replaced on new certificate-available event
+        # self.tls.certificate = False
 
     def get_keyfile_contents(self) -> str | None:
         """Retrieves the contents of the keyfile on host machine."""
@@ -249,9 +273,7 @@ class MongosCharm(ops.CharmBase):
 
     def is_integrated_to_config_server(self) -> bool:
         """Returns True if the mongos application is integrated to a config-server."""
-        return (
-            self.model.get_relation(Config.Relations.CLUSTER_RELATIONS_NAME) is not None
-        )
+        return self.model.get_relation(Config.Relations.CLUSTER_RELATIONS_NAME) is not None
 
     def get_secret(self, scope: str, key: str) -> Optional[str]:
         """Get secret from the secret storage."""
@@ -293,9 +315,7 @@ class MongosCharm(ops.CharmBase):
         content = secret.get_content()
 
         if not content.get(key) or content[key] == Config.Secrets.SECRET_DELETED_LABEL:
-            logger.error(
-                f"Non-existing secret {scope}:{key} was attempted to be removed."
-            )
+            logger.error(f"Non-existing secret {scope}:{key} was attempted to be removed.")
             return
 
         content[key] = Config.Secrets.SECRET_DELETED_LABEL
@@ -322,9 +342,7 @@ class MongosCharm(ops.CharmBase):
             return
 
         # a mongos shard can only be related to one config server
-        config_server_rel = self.model.relations[
-            Config.Relations.CLUSTER_RELATIONS_NAME
-        ][0]
+        config_server_rel = self.model.relations[Config.Relations.CLUSTER_RELATIONS_NAME][0]
         self.cluster.database_requires.update_relation_data(
             config_server_rel.id, {DATABASE_TAG: database}
         )
@@ -379,25 +397,64 @@ class MongosCharm(ops.CharmBase):
 
         return True
 
+    def get_units(self) -> List[Unit]:
+        units = [self.unit]
+        units.extend(self.peers_units)
+        return units
+
+    def get_k8s_mongos_hosts(self) -> Set:
+        """Returns the K8s hosts for mongos"""
+        hosts = set()
+        for unit in self.get_units():
+            hosts.add(self.get_k8s_mongos_host(unit))
+
+        return hosts
+
+    def get_ext_mongos_host(self, unit: Unit, incl_port=True) -> str | None:
+        """Returns the ext hosts for mongos on the provided unit."""
+        if self.is_external_client:
+            return None
+
+        unit_ip = self.node_port_manager.get_node_ip(unit.name)
+        if not incl_port:
+            return unit_ip
+
+        unit_port = self.node_port_manager.get_node_port(
+            port_to_match=Config.MONGOS_PORT, unit_name=unit.name
+        )
+        return f"{unit_ip}:{unit_port}"
+
+    def get_k8s_mongos_host(self, unit: Unit) -> str:
+        """Create a DNS name for a MongoDB unit.
+
+        Args:
+            unit_name: the juju unit name, e.g. "mongodb/1".
+
+        Returns:
+            A string representing the hostname of the MongoDB unit.
+        """
+        unit_id = unit.name.split("/")[1]
+        return f"{self.app.name}-{unit_id}.{self.app.name}-endpoints"
+
+    def get_ext_mongos_hosts(self) -> Set:
+        """Returns the ext hosts for mongos.
+
+        Note: for external connections it is not enough to know the external ip, but also the
+        port that is associated with the client.
+        """
+        hosts = set()
+        for unit in self.get_units():
+            hosts.add(self.get_ext_mongos_host(unit))
+
+        return hosts
+
     def get_mongos_host(self) -> str:
         """Returns the host for mongos as a str.
 
         The host for mongos can be either the Unix Domain Socket or an IP address depending on how
         the client wishes to connect to mongos (inside Juju or outside).
         """
-        return self.unit_host(self.unit)
-
-    def get_mongos_hosts(self) -> Set:
-        """Returns the host for mongos as a str.
-
-        The host for mongos can be either the Unix Domain Socket or an IP address depending on how
-        the client wishes to connect to mongos (inside Juju or outside).
-        """
-        hosts = {self.unit_host(self.unit)}
-        for unit in self.peers_units:
-            hosts.add(self.unit_host(unit))
-
-        return hosts
+        return self.get_k8s_mongos_host(self.unit)
 
     @staticmethod
     def _generate_relation_departed_key(rel_id: int) -> str:
@@ -485,9 +542,7 @@ class MongosCharm(ops.CharmBase):
 
         for license_name in licenses:
             try:
-                license_file = container.pull(
-                    path=Config.get_license_path(license_name)
-                )
+                license_file = container.pull(path=Config.get_license_path(license_name))
                 f = open(f"LICENSE_{license_name}", "x")
                 f.write(str(license_file.read()))
                 f.close()
@@ -504,14 +559,10 @@ class MongosCharm(ops.CharmBase):
         for path in [Config.DATA_DIR]:
             paths = container.list_files(path, itself=True)
             if not len(paths) == 1:
-                raise ExtraDataDirError(
-                    "list_files doesn't return only the directory itself"
-                )
+                raise ExtraDataDirError("list_files doesn't return only the directory itself")
             logger.debug(f"Data directory ownership: {paths[0].user}:{paths[0].group}")
             if paths[0].user != Config.UNIX_USER or paths[0].group != Config.UNIX_GROUP:
-                container.exec(
-                    f"chown {Config.UNIX_USER}:{Config.UNIX_GROUP} -R {path}".split()
-                )
+                container.exec(f"chown {Config.UNIX_USER}:{Config.UNIX_GROUP} -R {path}".split())
 
     def push_file_to_unit(
         self,
@@ -545,18 +596,6 @@ class MongosCharm(ops.CharmBase):
                 container.remove_path(f"{Config.MONGOD_CONF_DIR}/{file}")
             except PathError as err:
                 logger.debug("Path unavailable: %s (%s)", file, str(err))
-
-    def unit_host(self, unit: Unit) -> str:
-        """Create a DNS name for a MongoDB unit.
-
-        Args:
-            unit_name: the juju unit name, e.g. "mongodb/1".
-
-        Returns:
-            A string representing the hostname of the MongoDB unit.
-        """
-        unit_id = unit.name.split("/")[1]
-        return f"{self.app.name}-{unit_id}.{self.app.name}-endpoints"
 
     def get_config_server_name(self) -> Optional[str]:
         """Returns the name of the Juju Application that mongos is using as a config server."""
@@ -614,7 +653,7 @@ class MongosCharm(ops.CharmBase):
             )
 
     @property
-    def peers_units(self) -> list[Unit]:
+    def peers_units(self) -> List[Unit]:
         """Get peers units in a safe way."""
         if not self._peers:
             return []
@@ -702,7 +741,7 @@ class MongosCharm(ops.CharmBase):
     @property
     def mongos_config(self) -> MongoConfiguration:
         """Generates a MongoDBConfiguration object for mongos in the deployment of MongoDB."""
-        hosts = self.get_mongos_hosts()
+        hosts = self.get_k8s_mongos_hosts()
         external_ca, _ = self.tls.get_tls_files(internal=False)
         internal_ca, _ = self.tls.get_tls_files(internal=True)
 

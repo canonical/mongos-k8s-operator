@@ -7,11 +7,14 @@ This class creates user and database for each application relation
 and expose needed information for client connection via fields in
 external relation.
 """
+import json
 import base64
 import logging
 import re
 import socket
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict
+import subprocess
+from ops.pebble import ExecError
 
 from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateAvailableEvent,
@@ -28,7 +31,8 @@ from config import Config
 
 UNIT_SCOPE = Config.Relations.UNIT_SCOPE
 Scopes = Config.Relations.Scopes
-
+SANS_DNS_KEY = "sans_dns"
+SANS_IPS_KEY = "sans_ips"
 
 # The unique Charmhub library identifier, never change it
 LIBID = "e02a50f0795e4dd292f58e93b4f493dd"
@@ -104,12 +108,13 @@ class MongoDBTLS(Object):
         else:
             key = self._parse_tls_file(param)
 
+        sans = self.get_new_sans()
         csr = generate_csr(
             private_key=key,
             subject=self._get_subject_name(),
             organization=self._get_subject_name(),
-            sans=self._get_sans(),
-            sans_ip=[str(self.charm.model.get_binding(self.peer_relation).network.bind_address)],
+            sans=sans[SANS_DNS_KEY],
+            sans_ip=sans[SANS_IPS_KEY],
         )
         self.set_tls_secret(internal, Config.TLS.SECRET_KEY_LABEL, key.decode("utf-8"))
         self.set_tls_secret(internal, Config.TLS.SECRET_CSR_LABEL, csr.decode("utf-8"))
@@ -281,7 +286,7 @@ class MongoDBTLS(Object):
             private_key=key,
             subject=self._get_subject_name(),
             organization=self._get_subject_name(),
-            sans=self._get_sans(),
+            sans=self.get_new_sans(),
             sans_ip=[str(self.charm.model.get_binding(self.peer_relation).network.bind_address)],
         )
         logger.debug("Requesting a certificate renewal.")
@@ -293,20 +298,81 @@ class MongoDBTLS(Object):
 
         self.set_tls_secret(internal, Config.TLS.SECRET_CSR_LABEL, new_csr.decode("utf-8"))
 
-    def _get_sans(self) -> List[str]:
+    def get_new_sans(self) -> Dict:
         """Create a list of DNS names for a MongoDB unit.
 
         Returns:
             A list representing the hostnames of the MongoDB unit.
         """
+        sans = {}
+
         unit_id = self.charm.unit.name.split("/")[1]
-        return [
+        sans[SANS_DNS_KEY] = [
             f"{self.charm.app.name}-{unit_id}",
             socket.getfqdn(),
-            f"{self.charm.app.name}-{unit_id}.{self.charm.app.name}-endpoints",
-            str(self.charm.model.get_binding(self.peer_relation).network.bind_address),
             "localhost",
+            f"{self.charm.app.name}-{unit_id}.{self.charm.app.name}-endpoints",
         ]
+
+        sans[SANS_IPS_KEY] = []
+
+        if Config.SUBSTRATE == Config.Substrate.VM:
+            sans[SANS_IPS_KEY].append(
+                str(self.charm.model.get_binding(self.peer_relation).network.bind_address)
+            )
+
+        elif (
+            Config.SUBSTRATE == Config.Substrate.K8S
+            and self.charm.is_role(Config.Role.MONGOS)
+            and self.charm.is_external_client
+        ):
+            sans[SANS_IPS_KEY].append(
+                self.charm.get_ext_mongos_host(self.charm.unit, incl_port=False)
+            )
+
+        return sans
+
+    def get_current_sans(self) -> List | None:
+        """Gets the current SANs for the unit cert."""
+        # if unit has no certificates do not proceed.
+        if not self.is_tls_enabled(internal=True) or not self.is_tls_enabled(internal=False):
+            return
+
+        command = [
+            "openssl",
+            "x509",
+            "-noout",
+            "-ext",
+            "subjectAltName",
+            "-in",
+            Config.TLS.EXT_PEM_FILE,
+        ]
+
+        try:
+            container = self.charm.unit.get_container(Config.CONTAINER_NAME)
+            process = container.exec(command=command, working_dir=Config.MONGOD_CONF_DIR)
+
+            output, _ = process.wait_output()
+            sans_lines = output.splitlines()
+        except (subprocess.CalledProcessError, ExecError) as e:
+            logger.error(e.stdout)
+            raise e
+
+        for line in sans_lines:
+            if "DNS" in line and "IP" in line:
+                break
+
+        sans_ip = []
+        sans_dns = []
+        for item in line.split(", "):
+            san_type, san_value = item.split(":")
+
+            if san_type == "DNS":
+                sans_dns.append(san_value)
+            if san_type == "IP Address":
+                sans_ip.append(san_value)
+
+        return {SANS_IPS_KEY: sorted(sans_ip), SANS_DNS_KEY: sorted(sans_dns)}
 
     def get_tls_files(self, internal: bool) -> Tuple[Optional[str], Optional[str]]:
         """Prepare TLS files in special MongoDB way.
