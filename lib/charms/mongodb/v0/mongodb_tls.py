@@ -282,12 +282,13 @@ class MongoDBTLS(Object):
         logger.debug("Generating a new Certificate Signing Request.")
         key = self.get_tls_secret(internal, Config.TLS.SECRET_KEY_LABEL).encode("utf-8")
         old_csr = self.get_tls_secret(internal, Config.TLS.SECRET_CSR_LABEL).encode("utf-8")
+        sans = self.get_new_sans()
         new_csr = generate_csr(
             private_key=key,
             subject=self._get_subject_name(),
             organization=self._get_subject_name(),
-            sans=self.get_new_sans(),
-            sans_ip=[str(self.charm.model.get_binding(self.peer_relation).network.bind_address)],
+            sans=sans[SANS_DNS_KEY],
+            sans_ip=sans[SANS_IPS_KEY],
         )
         logger.debug("Requesting a certificate renewal.")
 
@@ -316,16 +317,11 @@ class MongoDBTLS(Object):
 
         sans[SANS_IPS_KEY] = []
 
-        if Config.SUBSTRATE == Config.Substrate.VM:
+        if self.substrate == Config.Substrate.VM:
             sans[SANS_IPS_KEY].append(
                 str(self.charm.model.get_binding(self.peer_relation).network.bind_address)
             )
-
-        elif (
-            Config.SUBSTRATE == Config.Substrate.K8S
-            and self.charm.is_role(Config.Role.MONGOS)
-            and self.charm.is_external_client
-        ):
+        elif self.charm.is_role(Config.Role.MONGOS) and self.charm.is_external_client:
             sans[SANS_IPS_KEY].append(
                 self.charm.get_ext_mongos_host(self.charm.unit, incl_port=False)
             )

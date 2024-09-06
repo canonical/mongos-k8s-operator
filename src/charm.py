@@ -75,7 +75,9 @@ class MongosCharm(ops.CharmBase):
 
         # lifecycle events
         self.framework.observe(self.on.config_changed, self._on_config_changed)
-        self.framework.observe(self.on.mongos_pebble_ready, self._on_mongos_pebble_ready)
+        self.framework.observe(
+            self.on.mongos_pebble_ready, self._on_mongos_pebble_ready
+        )
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.update_status, self._on_update_status)
 
@@ -144,7 +146,9 @@ class MongosCharm(ops.CharmBase):
             logger.info(
                 "Missing integration to config-server. mongos cannot run start sequence unless connected to config-server."
             )
-            self.status.set_and_share_status(BlockedStatus("Missing relation to config-server."))
+            self.status.set_and_share_status(
+                BlockedStatus("Missing relation to config-server.")
+            )
             event.defer()
             return
 
@@ -177,7 +181,9 @@ class MongosCharm(ops.CharmBase):
             logger.info(
                 "Missing integration to config-server. mongos cannot run unless connected to config-server."
             )
-            self.status.set_and_share_status(BlockedStatus("Missing relation to config-server."))
+            self.status.set_and_share_status(
+                BlockedStatus("Missing relation to config-server.")
+            )
             return
 
         if tls_statuses := self.cluster.get_tls_statuses():
@@ -187,7 +193,9 @@ class MongosCharm(ops.CharmBase):
         # restart on high loaded databases can be very slow (e.g. up to 10-20 minutes).
         if not self.cluster.is_mongos_running():
             logger.info("mongos has not started yet")
-            self.status.set_and_share_status(WaitingStatus("Waiting for mongos to start."))
+            self.status.set_and_share_status(
+                WaitingStatus("Waiting for mongos to start.")
+            )
             return
 
         self.status.set_and_share_status(ActiveStatus())
@@ -213,10 +221,15 @@ class MongosCharm(ops.CharmBase):
 
     def update_external_services(self) -> None:
         """Update external services based on provided configuration."""
-        if self.model.config["expose-external"] == Config.ExternalConnections.EXTERNAL_NODEPORT:
+        if (
+            self.model.config["expose-external"]
+            == Config.ExternalConnections.EXTERNAL_NODEPORT
+        ):
             # every unit attempts to create a nodeport service - if exists, will silently continue
             self.node_port_manager.apply_service(
-                service=self.node_port_manager.build_node_port_services(port=Config.MONGOS_PORT)
+                service=self.node_port_manager.build_node_port_services(
+                    port=Config.MONGOS_PORT
+                )
             )
         else:
             self.node_port_manager.delete_unit_service()
@@ -226,7 +239,9 @@ class MongosCharm(ops.CharmBase):
     def update_tls_sans(self) -> None:
         current_sans = self.tls.get_current_sans()
         current_sans_ip = set(current_sans["sans_ips"]) if current_sans else set()
-        expected_sans_ip = set(self.tls.get_new_sans()["sans_ips"]) if current_sans else set()
+        expected_sans_ip = (
+            set(self.tls.get_new_sans()["sans_ips"]) if current_sans else set()
+        )
         sans_ip_changed = current_sans_ip ^ expected_sans_ip
 
         if not sans_ip_changed:
@@ -273,7 +288,9 @@ class MongosCharm(ops.CharmBase):
 
     def is_integrated_to_config_server(self) -> bool:
         """Returns True if the mongos application is integrated to a config-server."""
-        return self.model.get_relation(Config.Relations.CLUSTER_RELATIONS_NAME) is not None
+        return (
+            self.model.get_relation(Config.Relations.CLUSTER_RELATIONS_NAME) is not None
+        )
 
     def get_secret(self, scope: str, key: str) -> Optional[str]:
         """Get secret from the secret storage."""
@@ -315,7 +332,9 @@ class MongosCharm(ops.CharmBase):
         content = secret.get_content()
 
         if not content.get(key) or content[key] == Config.Secrets.SECRET_DELETED_LABEL:
-            logger.error(f"Non-existing secret {scope}:{key} was attempted to be removed.")
+            logger.error(
+                f"Non-existing secret {scope}:{key} was attempted to be removed."
+            )
             return
 
         content[key] = Config.Secrets.SECRET_DELETED_LABEL
@@ -342,7 +361,9 @@ class MongosCharm(ops.CharmBase):
             return
 
         # a mongos shard can only be related to one config server
-        config_server_rel = self.model.relations[Config.Relations.CLUSTER_RELATIONS_NAME][0]
+        config_server_rel = self.model.relations[
+            Config.Relations.CLUSTER_RELATIONS_NAME
+        ][0]
         self.cluster.database_requires.update_relation_data(
             config_server_rel.id, {DATABASE_TAG: database}
         )
@@ -412,7 +433,7 @@ class MongosCharm(ops.CharmBase):
 
     def get_ext_mongos_host(self, unit: Unit, incl_port=True) -> str | None:
         """Returns the ext hosts for mongos on the provided unit."""
-        if self.is_external_client:
+        if not self.is_external_client:
             return None
 
         unit_ip = self.node_port_manager.get_node_ip(unit.name)
@@ -542,7 +563,9 @@ class MongosCharm(ops.CharmBase):
 
         for license_name in licenses:
             try:
-                license_file = container.pull(path=Config.get_license_path(license_name))
+                license_file = container.pull(
+                    path=Config.get_license_path(license_name)
+                )
                 f = open(f"LICENSE_{license_name}", "x")
                 f.write(str(license_file.read()))
                 f.close()
@@ -559,10 +582,14 @@ class MongosCharm(ops.CharmBase):
         for path in [Config.DATA_DIR]:
             paths = container.list_files(path, itself=True)
             if not len(paths) == 1:
-                raise ExtraDataDirError("list_files doesn't return only the directory itself")
+                raise ExtraDataDirError(
+                    "list_files doesn't return only the directory itself"
+                )
             logger.debug(f"Data directory ownership: {paths[0].user}:{paths[0].group}")
             if paths[0].user != Config.UNIX_USER or paths[0].group != Config.UNIX_GROUP:
-                container.exec(f"chown {Config.UNIX_USER}:{Config.UNIX_GROUP} -R {path}".split())
+                container.exec(
+                    f"chown {Config.UNIX_USER}:{Config.UNIX_GROUP} -R {path}".split()
+                )
 
     def push_file_to_unit(
         self,
