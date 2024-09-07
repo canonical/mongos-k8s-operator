@@ -139,9 +139,7 @@ async def check_tls(ops_test, unit, enabled) -> None:
 async def get_sans_ips(ops_test: OpsTest, unit: Unit, internal: bool) -> str:
     """Retrieves the sans for the for mongos on the provided unit."""
     cert_name = "internal" if internal else "external"
-    get_sans_cmd = (
-        f"openssl x509 -in  /etc/mongod/{cert_name}-cert.pem -noout -text | grep Address"
-    )
+    get_sans_cmd = f"openssl x509 -in  /etc/mongod/{cert_name}-cert.pem -noout -text | grep Address"
     complete_command = f"ssh --container mongos {unit.name} {get_sans_cmd}"
     _, result, _ = await ops_test.juju(*complete_command.split())
 
@@ -170,7 +168,9 @@ async def time_file_created(ops_test: OpsTest, unit_name: str, path: str) -> int
     return process_ls_time(ls_output)
 
 
-async def time_process_started(ops_test: OpsTest, unit_name: str, process_name: str) -> int:
+async def time_process_started(
+    ops_test: OpsTest, unit_name: str, process_name: str
+) -> int:
     """Retrieves the time that a given process started according to systemd."""
     logs = await run_command_on_unit(ops_test, unit_name, "/charm/bin/pebble changes")
 
@@ -240,7 +240,9 @@ async def check_certs_correctly_distributed(
         ][0]
 
         # Read the content of the cert file stored in the unit
-        cert_file_content = await get_file_content(ops_test, unit.name, cert_path, tmpdir)
+        cert_file_content = await get_file_content(
+            ops_test, unit.name, cert_path, tmpdir
+        )
 
         # Get the external cert value from the relation
         relation_cert = "\n".join(tls_item["chain"]).strip()
@@ -272,7 +274,9 @@ async def scp_file_preserve_ctime(
     return f"{filename}"
 
 
-async def get_file_content(ops_test: OpsTest, unit_name: str, path: str, tmpdir: Path) -> str:
+async def get_file_content(
+    ops_test: OpsTest, unit_name: str, path: str, tmpdir: Path
+) -> str:
     filename = await scp_file_preserve_ctime(ops_test, unit_name, path, tmpdir)
 
     with open(filename, mode="r") as fd:
@@ -351,7 +355,9 @@ async def rotate_and_verify_certs(ops_test: OpsTest, app: str, tmpdir: Path) -> 
         original_tls_info[unit.name]["mongos_service"] = await time_process_started(
             ops_test, unit.name, MONGOS_SERVICE
         )
-        await check_certs_correctly_distributed(ops_test, unit, app_name=app, tmpdir=tmpdir)
+        await check_certs_correctly_distributed(
+            ops_test, unit, app_name=app, tmpdir=tmpdir
+        )
 
     # set external and internal key using auto-generated key for each unit
     for unit in ops_test.model.applications[app].units:
@@ -361,18 +367,32 @@ async def rotate_and_verify_certs(ops_test: OpsTest, app: str, tmpdir: Path) -> 
 
     # wait for certificate to be available and processed. Can get receive two certificate
     # available events and restart twice so we want to ensure we are idle for at least 1 minute
-    await ops_test.model.wait_for_idle(apps=[app], status="active", timeout=1000, idle_period=60)
+    await ops_test.model.wait_for_idle(
+        apps=[app], status="active", timeout=1000, idle_period=60
+    )
 
     # After updating both the external key and the internal key a new certificate request will be
     # made; then the certificates should be available and updated.
     for unit in ops_test.model.applications[app].units:
-        new_external_cert = await get_file_content(ops_test, unit.name, EXTERNAL_CERT_PATH, tmpdir)
-        new_internal_cert = await get_file_content(ops_test, unit.name, INTERNAL_CERT_PATH, tmpdir)
-        new_external_cert_time = await time_file_created(ops_test, unit.name, EXTERNAL_CERT_PATH)
-        new_internal_cert_time = await time_file_created(ops_test, unit.name, INTERNAL_CERT_PATH)
-        new_mongos_service_time = await time_process_started(ops_test, unit.name, MONGOS_SERVICE)
+        new_external_cert = await get_file_content(
+            ops_test, unit.name, EXTERNAL_CERT_PATH, tmpdir
+        )
+        new_internal_cert = await get_file_content(
+            ops_test, unit.name, INTERNAL_CERT_PATH, tmpdir
+        )
+        new_external_cert_time = await time_file_created(
+            ops_test, unit.name, EXTERNAL_CERT_PATH
+        )
+        new_internal_cert_time = await time_file_created(
+            ops_test, unit.name, INTERNAL_CERT_PATH
+        )
+        new_mongos_service_time = await time_process_started(
+            ops_test, unit.name, MONGOS_SERVICE
+        )
 
-        await check_certs_correctly_distributed(ops_test, unit, app_name=app, tmpdir=tmpdir)
+        await check_certs_correctly_distributed(
+            ops_test, unit, app_name=app, tmpdir=tmpdir
+        )
         assert (
             new_external_cert != original_tls_info[unit.name]["external_cert_contents"]
         ), "external cert not rotated"
