@@ -227,38 +227,49 @@ class MongosCharm(ops.CharmBase):
         self.expose_external = self.model.config["expose-external"]
 
     def update_tls_sans(self) -> None:
-        current_sans = self.tls.get_current_sans()
-        current_sans_ip = set(current_sans["sans_ips"]) if current_sans else set()
-        expected_sans_ip = set(self.tls.get_new_sans()["sans_ips"]) if current_sans else set()
-        sans_ip_changed = current_sans_ip ^ expected_sans_ip
+        """Emits a certificate expiring event when sans in current certificates are out of date.
 
-        if not sans_ip_changed:
-            return
+        This can occur for a variety of reasons:
+        1. Node port has been toggled on
+        2. Node port has been toggled off
+        3. The public K8s IP has changed
+        """
 
-        logger.info(
-            (
-                f'Broker {self.unit.name.split("/")[1]} updating certificate SANs - '
-                f"OLD SANs = {current_sans_ip - expected_sans_ip}, "
-                f"NEW SANs = {expected_sans_ip - current_sans_ip}"
+        for internal in [True, False]:
+            if internal and not self.unit.is_leader():
+                continue
+
+            # if the certificate has already been requested, we do not want to re-request
+            # another one and lead to an infinite chain of certificate events.
+            if self.tls.is_set_waiting_for_cert_to_update(internal):
+                continue
+
+            current_sans = self.tls.get_current_sans(internal)
+            current_sans_ip = set(current_sans["sans_ips"]) if current_sans else set()
+            expected_sans_ip = set(self.tls.get_new_sans()["sans_ips"]) if current_sans else set()
+            sans_ip_changed = current_sans_ip ^ expected_sans_ip
+
+            if not sans_ip_changed:
+                continue
+
+            logger.info(
+                (
+                    f'Broker {self.unit.name.split("/")[1]} updating certificate SANs - '
+                    f"OLD SANs = {current_sans_ip - expected_sans_ip}, "
+                    f"NEW SANs = {expected_sans_ip - current_sans_ip}"
+                )
             )
-        )
 
-        # question for Marc, why not also internal certs
-        self.tls.certs.on.certificate_expiring.emit(
-            certificate=self.tls.get_tls_secret(
-                internal=True, label_name=Config.TLS.SECRET_CERT_LABEL
-            ),
-            expiry=datetime.now().isoformat(),
-        )
-        self.tls.certs.on.certificate_expiring.emit(
-            certificate=self.tls.get_tls_secret(
-                internal=False, label_name=Config.TLS.SECRET_CERT_LABEL
-            ),
-            expiry=datetime.now().isoformat(),
-        )
-
-        # TODO ensures only single requested new certs, will be replaced on new certificate-available event
-        # self.tls.certificate = False
+            self.tls.certs.on.certificate_expiring.emit(
+                certificate=self.tls.get_tls_secret(
+                    internal=internal, label_name=Config.TLS.SECRET_CERT_LABEL
+                ),
+                expiry=datetime.now().isoformat(),
+            )
+            # without this, it is possible that we constantly request new certificates
+            # over and over again - blocking the event queue from processing the expired
+            # certificate event.
+            self.tls.set_waiting_for_cert_to_update(waiting=True, internal=internal)
 
     def get_keyfile_contents(self) -> str | None:
         """Retrieves the contents of the keyfile on host machine."""
