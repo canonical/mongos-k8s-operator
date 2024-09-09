@@ -7,14 +7,13 @@ This class creates user and database for each application relation
 and expose needed information for client connection via fields in
 external relation.
 """
-import json
 import base64
+import json
 import logging
 import re
 import socket
-from typing import List, Optional, Tuple, Dict
 import subprocess
-from ops.pebble import ExecError
+from typing import Dict, List, Optional, Tuple
 
 from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateAvailableEvent,
@@ -25,8 +24,8 @@ from charms.tls_certificates_interface.v3.tls_certificates import (
 )
 from ops.charm import ActionEvent, RelationBrokenEvent, RelationJoinedEvent
 from ops.framework import Object
-from ops.model import ActiveStatus, MaintenanceStatus, Unit, WaitingStatus
-
+from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus
+from ops.pebble import ExecError
 
 from config import Config
 
@@ -39,11 +38,11 @@ SANS_IPS_KEY = "sans_ips"
 LIBID = "e02a50f0795e4dd292f58e93b4f493dd"
 
 # Increment this major API version when introducing breaking changes
-LIBAPI = 0
+LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 3
+LIBPATCH = 4
 
 WAIT_CERT_UPDATE = "wait-cert-updated"
 
@@ -351,30 +350,19 @@ class MongoDBTLS(Object):
         if not self.is_tls_enabled(internal=internal):
             return
 
-        pem_file = Config.TLS.INT_PEM_FILE if internal else Config.TLS.EXT_PEM_FILE
-        command = [
-            "openssl",
-            "x509",
-            "-noout",
-            "-ext",
-            "subjectAltName",
-            "-in",
-            pem_file,
-        ]
-
         try:
-            container = self.charm.unit.get_container(Config.CONTAINER_NAME)
-            process = container.exec(command=command, working_dir=Config.MONGOD_CONF_DIR)
-
-            output, _ = process.wait_output()
-            sans_lines = output.splitlines()
+            sans_lines = self.get_sans_from_host(internal)
         except (subprocess.CalledProcessError, ExecError) as e:
             logger.error(e.stdout)
             raise e
 
+        line = ""
         for line in sans_lines:
             if "DNS" in line and "IP" in line:
                 break
+
+        if "DNS" not in line and "IP" not in line:
+            return None
 
         sans_ip = []
         sans_dns = []
@@ -387,6 +375,34 @@ class MongoDBTLS(Object):
                 sans_ip.append(san_value)
 
         return {SANS_IPS_KEY: sorted(sans_ip), SANS_DNS_KEY: sorted(sans_dns)}
+
+    def get_sans_from_host(self, internal) -> List[str]:
+        """Returns the sans lines from the host.
+
+        Raises: subprocess.CalledProcessError, ExecError
+        """
+        pem_file = Config.TLS.INT_PEM_FILE if internal else Config.TLS.EXT_PEM_FILE
+
+        command = [
+            "openssl",
+            "x509",
+            "-noout",
+            "-ext",
+            "subjectAltName",
+            "-in",
+            pem_file,
+        ]
+
+        if self.substrate == Config.Substrate.K8S:
+            container = self.charm.unit.get_container(Config.CONTAINER_NAME)
+            process = container.exec(command=command, working_dir=Config.MONGOD_CONF_DIR)
+            output, _ = process.wait_output()
+            sans_lines = output.splitlines()
+        else:
+            output = subprocess.check_output(command, shell=True)
+            sans_lines = output.decode("utf-8").splitlines()
+
+        return sans_lines
 
     def get_tls_files(self, internal: bool) -> Tuple[Optional[str], Optional[str]]:
         """Prepare TLS files in special MongoDB way.
@@ -452,7 +468,7 @@ class MongoDBTLS(Object):
         waiting: bool,
         internal: bool,
     ):
-        """Sets a boolean indicator, indicating whether or not we are waiting for a cert to update."""
+        """Sets a boolean indicator, for whether or not we are waiting for a cert to update."""
         if internal and not self.charm.unit.is_leader():
             return
 
