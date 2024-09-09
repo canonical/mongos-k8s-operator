@@ -331,13 +331,11 @@ class MongoDBTLS(Object):
             f"{self.charm.app.name}-{unit_id}.{self.charm.app.name}-endpoints",
         ]
 
-        sans[SANS_IPS_KEY] = []
+        sans[SANS_IPS_KEY] = [
+            str(self.charm.model.get_binding(self.peer_relation).network.bind_address)
+        ]
 
-        if self.substrate == Config.Substrate.VM:
-            sans[SANS_IPS_KEY].append(
-                str(self.charm.model.get_binding(self.peer_relation).network.bind_address)
-            )
-        elif self.charm.is_role(Config.Role.MONGOS) and self.charm.is_external_client:
+        if self.charm.is_role(Config.Role.MONGOS) and self.charm.is_external_client:
             sans[SANS_IPS_KEY].append(
                 self.charm.get_ext_mongos_host(self.charm.unit, incl_port=False)
             )
@@ -358,15 +356,15 @@ class MongoDBTLS(Object):
 
         line = ""
         for line in sans_lines:
-            if "DNS" in line and "IP" in line:
+            if "DNS" in line or "IP" in line:
                 break
-
-        if "DNS" not in line and "IP" not in line:
-            return None
 
         sans_ip = []
         sans_dns = []
         for item in line.split(", "):
+            if ":" not in item:
+                continue
+
             san_type, san_value = item.split(":")
 
             if san_type == "DNS":

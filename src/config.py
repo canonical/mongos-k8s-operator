@@ -14,7 +14,7 @@ class Config:
     SUBSTRATE = "k8s"
     CONTAINER_NAME = "mongos"
     USER_ROLE_CREATE_USERS = "admin"
-    SERVICE_NAME = "mongod"  # this must match the name of the service in the ROCK
+    SERVICE_NAME = "mongos"  # this must match the name of the service in the ROCK
     MONGOD_CONF_DIR = "/etc/mongod"
     UNIX_USER = "mongodb"
     UNIX_GROUP = "mongodb"
@@ -76,9 +76,7 @@ class Config:
 
         # TODO Future PR add more status messages here as constants
         UNHEALTHY_UPGRADE = BlockedStatus("Unhealthy after upgrade.")
-        INVALID_EXTERNAL_CONFIG = BlockedStatus(
-            "Config option for expose-external not valid."
-        )
+        INVALID_EXTERNAL_CONFIG = BlockedStatus("Config option for expose-external not valid.")
 
     class Substrate:
         """Substrate related constants."""

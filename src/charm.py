@@ -8,7 +8,7 @@ import json
 from datetime import datetime
 from exceptions import MissingSecretError
 
-from ops.pebble import PathError, ProtocolError, Layer
+from ops.pebble import PathError, ProtocolError, Layer, APIError
 from node_port import NodePortManager
 
 from typing import Set, Optional, Dict, List
@@ -343,7 +343,13 @@ class MongosCharm(ops.CharmBase):
     def restart_charm_services(self):
         """Restart mongos service."""
         container = self.unit.get_container(Config.CONTAINER_NAME)
-        container.stop(Config.SERVICE_NAME)
+        try:
+            container.stop(Config.SERVICE_NAME)
+        except APIError:
+            # note that some libs will make a call to restart mongos service, before it has
+            # started (i.e. config_server.py) leading to a race condition where there is an
+            # attempt to stop the service before starting it.
+            pass
 
         container.add_layer(Config.CONTAINER_NAME, self._mongos_layer, combine=True)
         container.replan()
