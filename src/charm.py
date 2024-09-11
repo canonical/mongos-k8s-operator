@@ -631,13 +631,20 @@ class MongosCharm(ops.CharmBase):
     @property
     def expose_external(self) -> Optional[str]:
         """Returns mode of exposure for external connections."""
-        if (
-            self.app_peer_data.get("expose-external", Config.ExternalConnections.NONE)
-            == Config.ExternalConnections.NONE
-        ):
+        # don't let an incorrect configuration
+        if not self.is_user_external_config_valid():
+            if (
+                self.app_peer_data.get("expose-external", Config.ExternalConnections.NONE)
+                == Config.ExternalConnections.NONE
+            ):
+                return None
+
+            return self.app_peer_data["expose-external"]
+
+        if self.model.config["expose-external"] == Config.ExternalConnections.NONE:
             return None
 
-        return self.app_peer_data["expose-external"]
+        return self.model.config["expose-external"]
 
     @expose_external.setter
     def expose_external(self, expose_external: str) -> None:
