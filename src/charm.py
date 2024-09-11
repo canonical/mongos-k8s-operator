@@ -5,7 +5,7 @@
 # See LICENSE file for licensing details.
 from ops.main import main
 import json
-from exceptions import MissingSecretError, FailedToGetHostsError
+from exceptions import MissingSecretError
 
 from ops.pebble import PathError, ProtocolError, Layer
 from node_port import (
@@ -23,7 +23,7 @@ from pymongo.errors import PyMongoError
 
 from charms.mongodb.v0.mongo import MongoConfiguration, MongoConnection
 from charms.mongos.v0.set_status import MongosStatusHandler
-from charms.mongodb.v1.mongodb_provider import MongoDBProvider
+from charms.mongodb.v1.mongodb_provider import MongoDBProvider, FailedToGetHostsError
 from charms.mongodb.v0.mongodb_tls import MongoDBTLS
 from charms.mongodb.v0.mongodb_secrets import SecretCache
 from charms.mongodb.v0.mongodb_secrets import generate_secret_label

@@ -30,7 +30,3 @@ class MissingSecretError(MongoSecretError):
 
 class SecretAlreadyExistsError(MongoSecretError):
     """A secret that we want to create already exists."""
-
-
-class FailedToGetHostsError(Exception):
-    """Raised when charm fails to retrieve hosts."""
