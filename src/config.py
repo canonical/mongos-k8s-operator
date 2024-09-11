@@ -76,7 +76,9 @@ class Config:
 
         # TODO Future PR add more status messages here as constants
         UNHEALTHY_UPGRADE = BlockedStatus("Unhealthy after upgrade.")
-        INVALID_EXTERNAL_CONFIG = BlockedStatus("Config option for expose-external not valid.")
+        INVALID_EXTERNAL_CONFIG = BlockedStatus(
+            "Config option for expose-external not valid."
+        )
 
     class Substrate:
         """Substrate related constants."""
