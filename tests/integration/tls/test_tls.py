@@ -77,7 +77,10 @@ async def test_mongos_tls_enabled(ops_test: OpsTest) -> None:
 async def test_mongos_tls_nodeport(ops_test: OpsTest):
     """Tests that TLS is stable"""
     # test that charm can enable nodeport without breaking mongos or accidentally disabling TLS
-    await ops_test.model.applications[MONGOS_APP_NAME].set_config({"expose-external": "nodeport"})
+    await ops_test.model.applications[MONGOS_APP_NAME].set_config(
+        {"expose-external": "nodeport"}
+    )
+
     await ops_test.model.wait_for_idle(
         apps=[MONGOS_APP_NAME],
         idle_period=60,
@@ -93,7 +96,9 @@ async def test_mongos_tls_nodeport(ops_test: OpsTest):
         assert get_public_k8s_ip() in await get_sans_ips(ops_test, unit, internal=False)
 
     # test that charm can disable nodeport without breaking mongos or accidentally disabling TLS
-    await ops_test.model.applications[MONGOS_APP_NAME].set_config({"expose-external": "none"})
+    await ops_test.model.applications[MONGOS_APP_NAME].set_config(
+        {"expose-external": "none"}
+    )
     await ops_test.model.wait_for_idle(
         apps=[MONGOS_APP_NAME],
         idle_period=60,
@@ -105,8 +110,12 @@ async def test_mongos_tls_nodeport(ops_test: OpsTest):
 
     # check for no public k8s IP address in the pem file
     for unit in ops_test.model.applications[MONGOS_APP_NAME].units:
-        assert get_public_k8s_ip() not in await get_sans_ips(ops_test, unit, internal=True)
-        assert get_public_k8s_ip() not in await get_sans_ips(ops_test, unit, internal=False)
+        assert get_public_k8s_ip() not in await get_sans_ips(
+            ops_test, unit, internal=True
+        )
+        assert get_public_k8s_ip() not in await get_sans_ips(
+            ops_test, unit, internal=False
+        )
 
 
 @pytest.mark.group(1)
@@ -155,7 +164,9 @@ async def test_mongos_tls_ca_mismatch(ops_test: OpsTest) -> None:
         timeout=TIMEOUT,
     )
 
-    await toggle_tls_mongos(ops_test, enable=True, certs_app_name=DIFFERENT_CERTS_APP_NAME)
+    await toggle_tls_mongos(
+        ops_test, enable=True, certs_app_name=DIFFERENT_CERTS_APP_NAME
+    )
     await wait_for_mongos_units_blocked(
         ops_test,
         MONGOS_APP_NAME,
