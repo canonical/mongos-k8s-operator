@@ -5,10 +5,15 @@
 # See LICENSE file for licensing details.
 from ops.main import main
 import json
-from exceptions import MissingSecretError
+from exceptions import MissingSecretError, FailedToGetHostsError
 
 from ops.pebble import PathError, ProtocolError, Layer
-from node_port import NodePortManager, ApiError
+from node_port import (
+    NodePortManager,
+    ApiError,
+    FailedToFindNodePortError,
+    FailedToFindServiceError,
+)
 
 from typing import Set, Optional, Dict, List
 from charms.mongodb.v0.config_server_interface import ClusterRequirer
@@ -60,6 +65,10 @@ class MissingConfigServerError(Exception):
 
 class ExtraDataDirError(Exception):
     """Raised when there is unexpected data in the data directory."""
+
+
+class NoExternalHostError(Exception):
+    """Raised when there is not an external host for a unit, when there is expected to be one."""
 
 
 class MongosCharm(ops.CharmBase):
@@ -419,12 +428,28 @@ class MongosCharm(ops.CharmBase):
         port that is associated with the client.
         """
         hosts = set()
-        for unit in self.get_units():
-            unit_ip = self.node_port_manager.get_node_ip(unit.name)
-            unit_port = self.node_port_manager.get_node_port(
-                port_to_match=Config.MONGOS_PORT, unit_name=unit.name
+
+        if not self.is_external_client:
+            return hosts
+
+        try:
+            for unit in self.get_units():
+                unit_ip = self.node_port_manager.get_node_ip(unit.name)
+                unit_port = self.node_port_manager.get_node_port(
+                    port_to_match=Config.MONGOS_PORT, unit_name=unit.name
+                )
+                if unit_ip and unit_port:
+                    hosts.add(f"{unit_ip}:{unit_port}")
+                else:
+                    raise NoExternalHostError(f"No external host for unit {unit.name}")
+        except (
+            NoExternalHostError,
+            FailedToFindNodePortError,
+            FailedToFindServiceError,
+        ) as e:
+            raise FailedToGetHostsError(
+                "Failed to retrieve external hosts due to %s", e
             )
-            hosts.add(f"{unit_ip}:{unit_port}")
 
         return hosts
 

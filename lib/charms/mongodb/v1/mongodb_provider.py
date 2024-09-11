@@ -20,6 +20,7 @@ from ops.charm import CharmBase, EventBase, RelationBrokenEvent, RelationChanged
 from ops.framework import Object
 from ops.model import Relation
 from pymongo.errors import PyMongoError
+from exceptions import FailedToGetHostsError
 
 from config import Config
 
@@ -138,7 +139,11 @@ class MongoDBProvider(Object):
 
         try:
             self.oversee_users(departed_relation_id, event)
-        except PyMongoError as e:
+        except (PyMongoError, FailedToGetHostsError) as e:
+            # Failed to get hosts error is unique to mongos-k8s charm. In other charms we do not
+            # forsee issues to retrieve hosts. However in external mongos-k8s, the leader can
+            # attempt to retrieve hosts while non-leader units are still enabling node port
+            # resulting in an exception.
             logger.error("Deferring _on_relation_event since: error=%r", e)
             event.defer()
             return

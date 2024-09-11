@@ -24,6 +24,14 @@ logging.getLogger("httpx").disabled = True
 logging.getLogger("httpcore").disabled = True
 
 
+class FailedToFindNodePortError(Exception):
+    """Raised NodePort cannot be found, but is excepted to be present."""
+
+
+class FailedToFindServiceError(Exception):
+    """Raised service cannot be found, but is excepted to be present."""
+
+
 class NodePortManager:
     """Manager for handling mongos Kubernetes resources for a single mongos pod."""
 
@@ -129,8 +137,7 @@ class NodePortManager:
             if e.status.code == 422 and "port is already allocated" in e.status.message:
                 logger.error(e.status.message)
                 return
-            else:
-                raise
+            raise
 
     def delete_unit_service(self) -> None:
         """Deletes a unit Service, if it exists."""
@@ -152,8 +159,7 @@ class NodePortManager:
             if e.status.code == 403:
                 self.on_deployed_without_trust()
                 return
-            else:
-                raise
+            raise
 
     def _node_name(self, unit_name: str) -> str:
         """Return the node name for this unit's pod ip."""
@@ -167,6 +173,8 @@ class NodePortManager:
             if e.status.code == 403:
                 self.on_deployed_without_trust()
                 return
+
+            raise
 
         return pod.spec.nodeName
 
@@ -183,6 +191,8 @@ class NodePortManager:
                 logger.error("Could not delete service, application needs `juju trust`")
                 self.on_deployed_without_trust()
                 return
+
+            raise
         # [
         #    NodeAddress(address='192.168.0.228', type='InternalIP'),
         #    NodeAddress(address='example.com', type='Hostname')
@@ -200,13 +210,13 @@ class NodePortManager:
         service = self.get_unit_service(unit_name=unit_name)
 
         if not service or not service.spec.type == "NodePort":
-            raise Exception("No service found for port.")
+            raise FailedToFindServiceError(f"No service found for port on {unit_name}")
 
         for svc_port in service.spec.ports:
             if svc_port.port == 27018:
                 return svc_port.nodePort
 
-        raise Exception(
+        raise FailedToFindNodePortError(
             f"Unable to find NodePort for {port_to_match} for the {service} service"
         )
 
