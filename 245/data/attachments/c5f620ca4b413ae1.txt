@@ -1,0 +1,24 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:834 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.5.3    unsupported  01:36:51Z
+
+App            Version  Status   Scale  Charm        Channel  Rev  Address         Exposed  Message
+config-server           active       1  mongodb-k8s  6/edge    53  10.152.183.145  no       Primary
+mongos-k8s              blocked      2  mongos-k8s              0  10.152.183.182  no       Config option for expose-external not valid.
+shard0                  active       1  mongodb-k8s  6/edge    53  10.152.183.216  no       Primary
+
+Unit              Workload  Agent  Address     Ports  Message
+config-server/0*  active    idle   10.1.36.77         Primary
+mongos-k8s/0*     blocked   idle   10.1.36.72         Config option for expose-external not valid.
+mongos-k8s/1      blocked   idle   10.1.36.79         Config option for expose-external not valid.
+shard0/0*         active    idle   10.1.36.78         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:840 Juju error logs:
+
+unit-config-server-0: 01:30:51 ERROR unit.config-server/0.juju-log config-server:4: Failed to add shard shard0 to the config server, error=OperationFailure('Authentication failed., full error: {\'ok\': 0.0, \'errmsg\': \'Authentication failed.\', \'code\': 18, \'codeName\': \'AuthenticationFailed\', \'$clusterTime\': {\'clusterTime\': Timestamp(1726018250, 1), \'signature\': {\'hash\': b\'\\xb5V\\xbb\\xa0\\xd8\\xc9\\x19\\x94H\\xc7\\x1aJ\\x94pI\\xc2G\\x03"\\xd0\', \'keyId\': 7413191798610198553}}, \'operationTime\': Timestamp(1726018250, 1)}')
+unit-config-server-0: 01:30:51 ERROR unit.config-server/0.juju-log config-server:4: shard0 shard does not have the same auth as the config server.
+unit-mongos-k8s-1: 01:35:59 ERROR unit.mongos-k8s/1.juju-log External configuration: nonsensical-setting for expose-external is not valid, should be one of: ['none', 'nodeport']
+unit-mongos-k8s-0: 01:35:59 ERROR unit.mongos-k8s/0.juju-log External configuration: nonsensical-setting for expose-external is not valid, should be one of: ['none', 'nodeport']
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:904 Forgetting main...
