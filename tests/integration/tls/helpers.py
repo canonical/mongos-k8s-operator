@@ -5,7 +5,7 @@
 from pathlib import Path
 from pytest_operator.plugin import OpsTest
 from ..helpers import get_application_relation_data
-from tenacity import RetryError
+from tenacity import RetryError, Retrying, stop_after_attempt, wait_exponential
 from datetime import datetime
 from typing import Optional, Dict
 import json
@@ -120,20 +120,26 @@ async def mongos_tls_command(ops_test: OpsTest, unit, internal=True) -> str:
 async def check_tls(ops_test, unit, enabled, internal=True) -> None:
     """Returns True if TLS matches the expected state "enabled"."""
     try:
-        mongos_tls_check = await mongos_tls_command(
-            ops_test, unit=unit, internal=internal
-        )
-        print(mongos_tls_check)
-        complete_command = f"ssh --container mongos {unit.name} {mongos_tls_check}"
-        return_code, _, stderr = await ops_test.juju(*complete_command.split())
+        for attempt in Retrying(
+            stop=stop_after_attempt(10),
+            wait=wait_exponential(multiplier=1, min=2, max=30),
+        ):
+            with attempt:
+                mongos_tls_check = await mongos_tls_command(
+                    ops_test, unit=unit, internal=internal
+                )
+                complete_command = (
+                    f"ssh --container mongos {unit.name} {mongos_tls_check}"
+                )
+                return_code, _, stderr = await ops_test.juju(*complete_command.split())
 
-        tls_enabled = return_code == 0
-        if enabled != tls_enabled:
-            logger.error(stderr)
-            raise ValueError(
-                f"TLS is{' not' if not tls_enabled else ''} enabled on {unit.name}"
-            )
-        return True
+                tls_enabled = return_code == 0
+                if enabled != tls_enabled:
+                    logger.error(stderr)
+                    raise ValueError(
+                        f"TLS is{' not' if not tls_enabled else ''} enabled on {unit.name}"
+                    )
+                return True
     except RetryError:
         return False
 
