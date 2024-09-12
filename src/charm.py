@@ -448,6 +448,17 @@ class MongosCharm(ops.CharmBase):
         units.extend(self.peers_units)
         return units
 
+    def get_mongos_hosts_for_client(self) -> Set:
+        """Returns the hosts for mongos as a str.
+
+        The host for mongos can be either the K8s pod name or an IP address depending on how
+        the app has been configured.
+        """
+        if self.is_external_client:
+            return self.get_ext_mongos_hosts()
+
+        return self.get_k8s_mongos_hosts()
+
     def get_k8s_mongos_hosts(self) -> Set:
         """Returns the K8s hosts for mongos"""
         hosts = set()
