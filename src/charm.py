@@ -9,7 +9,11 @@ from datetime import datetime
 from exceptions import MissingSecretError
 
 from ops.pebble import PathError, ProtocolError, Layer, APIError
-from node_port import NodePortManager
+from node_port import (
+    NodePortManager,
+    FailedToFindNodePortError,
+    FailedToFindServiceError,
+)
 
 from typing import Set, Optional, Dict, List
 from charms.mongodb.v0.config_server_interface import ClusterRequirer
@@ -19,7 +23,7 @@ from pymongo.errors import PyMongoError
 
 from charms.mongodb.v0.mongo import MongoConfiguration, MongoConnection
 from charms.mongos.v0.set_status import MongosStatusHandler
-from charms.mongodb.v1.mongodb_provider import MongoDBProvider
+from charms.mongodb.v1.mongodb_provider import MongoDBProvider, FailedToGetHostsError
 from charms.mongodb.v1.mongodb_tls import MongoDBTLS
 from charms.mongodb.v0.mongodb_secrets import SecretCache
 from charms.mongodb.v0.mongodb_secrets import generate_secret_label
@@ -61,6 +65,10 @@ class MissingConfigServerError(Exception):
 
 class ExtraDataDirError(Exception):
     """Raised when there is unexpected data in the data directory."""
+
+
+class NoExternalHostError(Exception):
+    """Raised when there is not an external host for a unit, when there is expected to be one."""
 
 
 class MongosCharm(ops.CharmBase):
@@ -453,14 +461,26 @@ class MongosCharm(ops.CharmBase):
         if not self.is_external_client:
             return None
 
-        unit_ip = self.node_port_manager.get_node_ip(unit.name)
-        if not incl_port:
-            return unit_ip
+        try:
+            unit_ip = self.node_port_manager.get_node_ip(unit.name)
+            if not incl_port:
+                return unit_ip
 
-        unit_port = self.node_port_manager.get_node_port(
-            port_to_match=Config.MONGOS_PORT, unit_name=unit.name
-        )
-        return f"{unit_ip}:{unit_port}"
+            unit_port = self.node_port_manager.get_node_port(
+                port_to_match=Config.MONGOS_PORT, unit_name=unit.name
+            )
+            if unit_ip and unit_port:
+                return "{unit_ip}:{unit_port}"
+            else:
+                raise NoExternalHostError(f"No external host for unit {unit.name}")
+        except (
+            NoExternalHostError,
+            FailedToFindNodePortError,
+            FailedToFindServiceError,
+        ) as e:
+            raise FailedToGetHostsError(
+                "Failed to retrieve external hosts due to %s", e
+            )
 
     def get_k8s_mongos_host(self, unit: Unit) -> str:
         """Create a DNS name for a MongoDB unit.
