@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
-from typing import Tuple
 import pytest
 from pytest_operator.plugin import OpsTest
 
@@ -13,8 +12,7 @@ from ..helpers import (
     check_mongos,
     get_direct_mongos_client,
     MONGOS_PORT,
-    get_secret_data,
-    get_application_relation_data,
+    get_mongos_user_password,
 )
 from .helpers import (
     deploy_client_app,
@@ -136,15 +134,3 @@ async def test_removed_relation_no_longer_has_access(ops_test: OpsTest):
     assert (
         not mongos_can_connect_with_auth
     ), "Client can still connect after relation broken."
-
-
-# TODO, use get_mongos_user_password in base helpers once DPE:5215 is fixed retrieve via secret
-async def get_mongos_user_password(
-    ops_test: OpsTest, app_name=MONGOS_APP_NAME, relation_name="cluster"
-) -> Tuple[str, str]:
-    secret_uri = await get_application_relation_data(
-        ops_test, app_name, relation_name=relation_name, key="secret-user"
-    )
-
-    secret_data = await get_secret_data(ops_test, secret_uri)
-    return secret_data.get("username"), secret_data.get("password")

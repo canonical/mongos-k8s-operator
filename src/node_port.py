@@ -38,8 +38,10 @@ class NodePortManager:
     def __init__(
         self,
         charm: CharmBase,
+        port: int,
     ):
         self.charm = charm
+        self.port = port
         self.pod_name = self.charm.unit.name.replace("/", "-")
         self.app_name = self.charm.app.name
         self.namespace = self.charm.model.name
@@ -213,7 +215,7 @@ class NodePortManager:
             raise FailedToFindServiceError(f"No service found for port on {unit_name}")
 
         for svc_port in service.spec.ports:
-            if svc_port.port == 27018:
+            if svc_port.port == self.port:
                 return svc_port.nodePort
 
         raise FailedToFindNodePortError(

@@ -79,7 +79,7 @@ class MongosCharm(ops.CharmBase):
         self.role = Config.Role.MONGOS
         self.secrets = SecretCache(self)
         self.status = MongosStatusHandler(self)
-        self.node_port_manager = NodePortManager(self)
+        self.node_port_manager = NodePortManager(self, port=Config.MONGOS_PORT)
 
         # lifecycle events
         self.framework.observe(self.on.config_changed, self._on_config_changed)
@@ -443,13 +443,12 @@ class MongosCharm(ops.CharmBase):
                 else:
                     raise NoExternalHostError(f"No external host for unit {unit.name}")
         except (
+            ApiError,
             NoExternalHostError,
             FailedToFindNodePortError,
             FailedToFindServiceError,
         ) as e:
-            raise FailedToGetHostsError(
-                "Failed to retrieve external hosts due to %s", e
-            )
+            raise FailedToGetHostsError(f"Failed to retrieve external hosts due to {e}")
 
         return hosts
 
