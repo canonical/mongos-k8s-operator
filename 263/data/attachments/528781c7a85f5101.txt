@@ -1,0 +1,39 @@
+[32mINFO    [0m juju.model:model.py:2098 Deploying ch:amd64/jammy/self-signed-certificates-155
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  self-signed-certificates-separate/0 [allocating] waiting: installing agent
+[32mINFO    [0m pytest_operator.plugin:plugin.py:834 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.5.3    unsupported  01:57:19Z
+
+App                                Version  Status   Scale  Charm                     Channel        Rev  Address         Exposed  Message
+config-server                               active       1  mongodb-k8s               6/edge          54  10.152.183.49   no       Primary
+mongos-k8s                                  waiting      1  mongos-k8s                                 0  10.152.183.97   no       installing agent
+self-signed-certificates                    active       1  self-signed-certificates  latest/edge    192  10.152.183.191  no       
+self-signed-certificates-separate           active       1  self-signed-certificates  latest/stable  155  10.152.183.128  no       
+shard0                                      active       1  mongodb-k8s               6/edge          54  10.152.183.27   no       Primary
+
+Unit                                  Workload  Agent  Address      Ports  Message
+config-server/0*                      active    idle   10.1.29.205         Primary
+mongos-k8s/0*                         waiting   idle   10.1.29.200         Waiting for MongoDB to start
+self-signed-certificates-separate/0*  active    idle   10.1.29.208         
+self-signed-certificates/0*           active    idle   10.1.29.207         
+shard0/0*                             active    idle   10.1.29.206         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:840 Juju error logs:
+
+unit-mongos-k8s-0: 01:36:02 ERROR unit.mongos-k8s/0.juju-log certificates:6: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongos-k8s-0: 01:36:03 ERROR unit.mongos-k8s/0.juju-log certificates:6: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-config-server-0: 01:38:45 ERROR unit.config-server/0.juju-log certificates:7: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-config-server-0: 01:38:45 ERROR unit.config-server/0.juju-log certificates:7: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-shard0-0: 01:38:45 ERROR unit.shard0/0.juju-log certificates:8: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-shard0-0: 01:38:45 ERROR unit.shard0/0.juju-log certificates:8: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-mongos-k8s-0: 01:42:11 ERROR unit.mongos-k8s/0.juju-log certificates:6: An unknown certificate is available -- ignoring.
+unit-mongos-k8s-0: 01:42:11 ERROR unit.mongos-k8s/0.juju-log certificates:6: An unknown certificate is available -- ignoring.
+unit-mongos-k8s-0: 01:49:20 ERROR unit.mongos-k8s/0.juju-log certificates:9: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongos-k8s-0: 01:49:21 ERROR unit.mongos-k8s/0.juju-log certificates:9: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-self-signed-certificates-0: 01:52:02 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "f803607e-2f5b-42f4-809d-3dfc235db045:r#9#mongos-k8s": settings f803607e-2f5b-42f4-809d-3dfc235db045:r#9#mongos-k8s not found (not found)
+unit-mongos-k8s-0: 01:52:20 ERROR unit.mongos-k8s/0.juju-log certificates:10: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongos-k8s-0: 01:52:20 ERROR unit.mongos-k8s/0.juju-log certificates:10: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:904 Forgetting main...
