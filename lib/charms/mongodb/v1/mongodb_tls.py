@@ -7,15 +7,11 @@ This class creates user and database for each application relation
 and expose needed information for client connection via fields in
 external relation.
 """
-from cryptography import x509
-from cryptography.hazmat.backends import default_backend
-
 import base64
 import json
 import logging
 import re
 import socket
-import subprocess
 from typing import Dict, List, Optional, Tuple
 
 from charms.tls_certificates_interface.v3.tls_certificates import (
@@ -25,10 +21,11 @@ from charms.tls_certificates_interface.v3.tls_certificates import (
     generate_csr,
     generate_private_key,
 )
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
 from ops.charm import ActionEvent, RelationBrokenEvent, RelationJoinedEvent
 from ops.framework import Object
 from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus
-from ops.pebble import ExecError
 
 from config import Config
 
@@ -323,19 +320,19 @@ class MongoDBTLS(Object):
         Returns:
             A list representing the hostnames of the MongoDB unit.
         """
-        sans = {}
-
         unit_id = self.charm.unit.name.split("/")[1]
-        sans[SANS_DNS_KEY] = [
-            f"{self.charm.app.name}-{unit_id}",
-            socket.getfqdn(),
-            "localhost",
-            f"{self.charm.app.name}-{unit_id}.{self.charm.app.name}-endpoints",
-        ]
 
-        sans[SANS_IPS_KEY] = [
-            str(self.charm.model.get_binding(self.peer_relation).network.bind_address)
-        ]
+        sans = {
+            SANS_DNS_KEY: [
+                f"{self.charm.app.name}-{unit_id}",
+                socket.getfqdn(),
+                "localhost",
+                f"{self.charm.app.name}-{unit_id}.{self.charm.app.name}-endpoints",
+            ],
+            SANS_IPS_KEY: [
+                str(self.charm.model.get_binding(self.peer_relation).network.bind_address)
+            ],
+        }
 
         if self.charm.is_role(Config.Role.MONGOS) and self.charm.is_external_client:
             sans[SANS_IPS_KEY].append(
@@ -353,7 +350,7 @@ class MongoDBTLS(Object):
         pem_file = self.get_tls_secret(internal, Config.TLS.SECRET_CERT_LABEL)
 
         try:
-            cert = cert = x509.load_pem_x509_certificate(pem_file.encode(), default_backend())
+            cert = x509.load_pem_x509_certificate(pem_file.encode(), default_backend())
             sans = cert.extensions.get_extension_for_class(x509.SubjectAlternativeName).value
             sans_ip = [str(san) for san in sans.get_values_for_type(x509.IPAddress)]
             sans_dns = [str(san) for san in sans.get_values_for_type(x509.DNSName)]
