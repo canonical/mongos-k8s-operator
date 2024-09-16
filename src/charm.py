@@ -8,7 +8,7 @@ import json
 from datetime import datetime
 from exceptions import MissingSecretError
 
-from ops.pebble import PathError, ProtocolError, Layer, APIError
+from ops.pebble import PathError, ProtocolError, Layer
 from node_port import (
     NodePortManager,
     FailedToFindNodePortError,
@@ -79,7 +79,7 @@ class MongosCharm(ops.CharmBase):
         self.role = Config.Role.MONGOS
         self.secrets = SecretCache(self)
         self.status = MongosStatusHandler(self)
-        self.node_port_manager = NodePortManager(self)
+        self.node_port_manager = NodePortManager(self, port=Config.MONGOS_PORT)
 
         # lifecycle events
         self.framework.observe(self.on.config_changed, self._on_config_changed)
@@ -367,16 +367,9 @@ class MongosCharm(ops.CharmBase):
     def restart_charm_services(self):
         """Restart mongos service."""
         container = self.unit.get_container(Config.CONTAINER_NAME)
-        try:
-            container.stop(Config.SERVICE_NAME)
-        except APIError:
-            # note that some libs will make a call to restart mongos service, before it has
-            # started (i.e. config_server.py) leading to a race condition where there is an
-            # attempt to stop the service before starting it.
-            pass
-
         container.add_layer(Config.CONTAINER_NAME, self._mongos_layer, combine=True)
         container.replan()
+        container.restart(Config.SERVICE_NAME)
 
     def set_database(self, database: str) -> None:
         """Updates the database requested for the mongos user."""
@@ -463,7 +456,8 @@ class MongosCharm(ops.CharmBase):
         """Returns the K8s hosts for mongos"""
         hosts = set()
         for unit in self.get_units():
-            hosts.add(self.get_k8s_mongos_host(unit))
+            unit_id = unit.name.split("/")[1]
+            hosts.add(f"{self.app.name}-{unit_id}.{self.app.name}-endpoints")
 
         return hosts
 
@@ -493,18 +487,6 @@ class MongosCharm(ops.CharmBase):
                 "Failed to retrieve external hosts due to %s", e
             )
 
-    def get_k8s_mongos_host(self, unit: Unit) -> str:
-        """Create a DNS name for a MongoDB unit.
-
-        Args:
-            unit_name: the juju unit name, e.g. "mongodb/1".
-
-        Returns:
-            A string representing the hostname of the MongoDB unit.
-        """
-        unit_id = unit.name.split("/")[1]
-        return f"{self.app.name}-{unit_id}.{self.app.name}-endpoints"
-
     def get_ext_mongos_hosts(self) -> Set:
         """Returns the ext hosts for mongos.
 
@@ -523,7 +505,8 @@ class MongosCharm(ops.CharmBase):
         The host for mongos can be either the Unix Domain Socket or an IP address depending on how
         the client wishes to connect to mongos (inside Juju or outside).
         """
-        return self.get_k8s_mongos_host(self.unit)
+        unit_id = self.unit.name.split("/")[1]
+        return f"{self.app.name}-{unit_id}.{self.app.name}-endpoints"
 
     @staticmethod
     def _generate_relation_departed_key(rel_id: int) -> str:

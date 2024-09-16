@@ -14,7 +14,7 @@ class Config:
     SUBSTRATE = "k8s"
     CONTAINER_NAME = "mongos"
     USER_ROLE_CREATE_USERS = "admin"
-    SERVICE_NAME = "mongos"  # this must match the name of the service in the ROCK
+    SERVICE_NAME = "mongos"
     MONGOD_CONF_DIR = "/etc/mongod"
     UNIX_USER = "mongodb"
     UNIX_GROUP = "mongodb"
