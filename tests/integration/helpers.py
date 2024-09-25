@@ -2,6 +2,7 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import subprocess
 import json
 import logging
 
@@ -165,9 +166,14 @@ async def wait_for_mongos_units_blocked(
         await ops_test.model.set_config({hook_interval_key: old_interval})
 
 
-async def deploy_cluster_components(ops_test: OpsTest) -> None:
+async def deploy_cluster_components(
+    ops_test: OpsTest, channel: str | None = None
+) -> None:
     """Deploys all cluster components and waits for idle."""
-    mongos_charm = await ops_test.build_charm(".")
+    if channel:
+        mongos_charm = MONGOS_APP_NAME
+    else:
+        mongos_charm = await ops_test.build_charm(".")
     resources = {
         "mongodb-image": METADATA["resources"]["mongodb-image"]["upstream-source"]
     }
@@ -176,6 +182,8 @@ async def deploy_cluster_components(ops_test: OpsTest) -> None:
         resources=resources,
         application_name=MONGOS_APP_NAME,
         series="jammy",
+        channel=channel,
+        trust=True,
     )
 
     await ops_test.model.deploy(
@@ -381,3 +389,9 @@ async def get_direct_mongos_client(
     """Returns a direct mongodb client potentially passing over some of the units."""
     mongos_uri = uri or await get_mongos_uri(ops_test, unit_id, auth, app_name)
     return MongoClient(mongos_uri, directConnection=True)
+
+
+def get_juju_status(model_name: str, app_name: str) -> str:
+    return subprocess.check_output(
+        f"juju status --model {model_name} {app_name}".split()
+    ).decode("utf-8")

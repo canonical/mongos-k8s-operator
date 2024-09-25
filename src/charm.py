@@ -5,6 +5,7 @@
 # See LICENSE file for licensing details.
 from ops.main import main
 import json
+from charms.mongos.v0.upgrade_helpers import UnitState, unit_number
 from exceptions import MissingSecretError
 
 from ops.pebble import PathError, ProtocolError, Layer
@@ -14,6 +15,7 @@ from node_port import (
     FailedToFindNodePortError,
     FailedToFindServiceError,
 )
+import k8s_upgrade
 
 from typing import Set, Optional, Dict, List
 from charms.mongodb.v0.config_server_interface import ClusterRequirer
@@ -30,6 +32,7 @@ from charms.mongodb.v0.mongodb_secrets import generate_secret_label
 from charms.mongodb.v1.helpers import get_mongos_args
 
 from config import Config
+from k8s_upgrade import MongosUpgrade
 
 import ops
 from ops.model import (
@@ -40,7 +43,12 @@ from ops.model import (
     ActiveStatus,
     Unit,
 )
-from ops.charm import StartEvent, RelationDepartedEvent, ConfigChangedEvent
+from ops.charm import (
+    StartEvent,
+    RelationDepartedEvent,
+    ConfigChangedEvent,
+    UpdateStatusEvent,
+)
 
 import logging
 
@@ -87,6 +95,7 @@ class MongosCharm(ops.CharmBase):
             self.on.mongos_pebble_ready, self._on_mongos_pebble_ready
         )
         self.framework.observe(self.on.start, self._on_start)
+        self.framework.observe(self.on.stop, self._on_stop)
         self.framework.observe(self.on.update_status, self._on_update_status)
 
         # when number of units change update hosts
@@ -105,6 +114,7 @@ class MongosCharm(ops.CharmBase):
         # relations
         self.tls = MongoDBTLS(self, Config.Relations.PEERS, substrate=Config.SUBSTRATE)
         self.cluster = ClusterRequirer(self, substrate=Config.SUBSTRATE)
+        self.upgrade = MongosUpgrade(self)
 
         self.client_relations = MongoDBProvider(
             self,
@@ -129,6 +139,31 @@ class MongosCharm(ops.CharmBase):
         # TODO DPE-5235 support updating data-integrator clients to have/not have public IP
         # depending on the result of the configuration
 
+    def _configure_layers(self, container: Container) -> bool:
+        if not container.can_connect():
+            logger.debug("mongos container is not ready yet.")
+            return False
+        try:
+            # mongos needs keyFile and TLS certificates on filesystem
+            self._push_keyfile_to_workload(container)
+            self._pull_licenses(container)
+            self._set_data_dir_permissions(container)
+
+        except (PathError, ProtocolError, MissingSecretError) as e:
+            logger.error("Cannot initialize workload: %r", e)
+            return False
+
+        # Add initial Pebble config layer using the Pebble API
+        current_layers = container.get_plan()
+        new_layer = self._mongos_layer
+        if current_layers.services != new_layer.services:
+            logger.error(f"Adding layer {Config.CONTAINER_NAME}")
+            container.add_layer(Config.CONTAINER_NAME, new_layer, combine=True)
+            # Restart changed services and start startup-enabled services.
+            container.replan()
+
+        return True
+
     def _on_mongos_pebble_ready(self, event) -> None:
         """Configure MongoDB pebble layer specification."""
         if not self.is_integrated_to_config_server():
@@ -139,33 +174,21 @@ class MongosCharm(ops.CharmBase):
 
         # Get a reference the container attribute
         container = self.unit.get_container(Config.CONTAINER_NAME)
-        if not container.can_connect():
-            logger.debug("mongos container is not ready yet.")
+        if not self._configure_layers(container):
             event.defer()
             return
 
-        try:
-            # mongos needs keyFile and TLS certificates on filesystem
-            self._push_keyfile_to_workload(container)
-            self._pull_licenses(container)
-            self._set_data_dir_permissions(container)
-
-        except (PathError, ProtocolError, MissingSecretError) as e:
-            logger.error("Cannot initialize workload: %r", e)
-            event.defer()
-            return
-
-        # Add initial Pebble config layer using the Pebble API
-        container.add_layer(Config.CONTAINER_NAME, self._mongos_layer, combine=True)
-
-        # Restart changed services and start startup-enabled services.
-        container.replan()
+        self.status.set_and_share_status(ActiveStatus())
+        self.upgrade._reconcile_upgrade(event)
 
     def _on_start(self, event: StartEvent) -> None:
         """Handle the start event."""
         # start hooks are fired before relation hooks and `mongos` requires a config-server in
         # order to start. Wait to receive config-server info from the relation event before
         # starting `mongos` daemon
+        if self.unit.is_leader() and not self.upgrade_in_progress:
+            self.upgrade._upgrade.set_versions_in_app_databag()
+
         if not self.is_integrated_to_config_server():
             logger.info(
                 "Missing integration to config-server. mongos cannot run start sequence unless connected to config-server."
@@ -176,12 +199,19 @@ class MongosCharm(ops.CharmBase):
             event.defer()
             return
 
+        container = self.unit.get_container(Config.CONTAINER_NAME)
+        if not self._configure_layers(container=container):
+            logger.error("Failed to replan")
+            event.defer()
+            return
+
         if not self.cluster.is_mongos_running():
-            logger.debug("mongos service is not ready yet.")
+            logger.error("mongos service is not ready yet.")
             event.defer()
             return
 
         self.db_initialised = True
+        self.upgrade._reconcile_upgrade(event)
 
         if not self.unit.is_leader():
             return
@@ -195,13 +225,10 @@ class MongosCharm(ops.CharmBase):
             )
             event.defer()
 
-    def _on_update_status(self, _):
+    def _on_update_status(self, event: UpdateStatusEvent):
         """Handle the update status event."""
         if not self.is_user_external_config_valid():
             self.set_status_invalid_external_config()
-            return
-
-        if self.unit.status == Config.Status.UNHEALTHY_UPGRADE:
             return
 
         if not self.is_integrated_to_config_server():
@@ -212,6 +239,8 @@ class MongosCharm(ops.CharmBase):
                 BlockedStatus("Missing relation to config-server.")
             )
             return
+
+        self.upgrade._reconcile_upgrade(event)
 
         if tls_statuses := self.cluster.get_tls_statuses():
             self.status.set_and_share_status(tls_statuses)
@@ -230,6 +259,19 @@ class MongosCharm(ops.CharmBase):
         self.update_tls_sans()
 
         self.status.set_and_share_status(ActiveStatus())
+
+    def _on_stop(self, event) -> None:
+        current_unit_number = unit_number(self.unit)
+        # Raise partition to prevent other units from restarting if an upgrade is in progress.
+        # If an upgrade is not in progress, the leader unit will reset the partition to 0.
+        if k8s_upgrade.partition.get(app_name=self.app.name) < current_unit_number:
+            k8s_upgrade.partition.set(app_name=self.app.name, value=current_unit_number)
+            logger.debug(f"Partition set to {current_unit_number} during stop event")
+        if not self.upgrade._upgrade:
+            logger.debug("Peer relation missing during stop event")
+            return
+
+        self.upgrade._upgrade.unit_state = UnitState.RESTARTING
 
     # END: hook functions
 
@@ -792,15 +834,17 @@ class MongosCharm(ops.CharmBase):
     @property
     def mongos_initialised(self) -> bool:
         """Check if mongos is initialised."""
-        return "mongos_initialised" in self.app_peer_data
+        return json.loads(self.app_peer_data.get("mongos_initialised", "false"))
 
     @mongos_initialised.setter
     def mongos_initialised(self, value: bool):
         """Set the mongos_initialised flag."""
-        if value:
-            self.app_peer_data["mongos_initialised"] = str(value)
-        elif "mongos_initialised" in self.app_peer_data:
-            del self.app_peer_data["mongos_initialised"]
+        if isinstance(value, bool):
+            self.app_peer_data["mongos_initialised"] = json.dumps(value)
+        else:
+            raise ValueError(
+                f"'mongos_initialised' must be a boolean value. Provided {value} is of type {type(value)}"
+            )
 
     @property
     def _unit_ip(self) -> str:
@@ -884,11 +928,10 @@ class MongosCharm(ops.CharmBase):
 
     @property
     def upgrade_in_progress(self) -> bool:
-        """Returns true if an upgrade is currently in progress.
-
-        TODO implement this function once upgrades are supported.
-        """
-        return False
+        """Returns true if an upgrade is currently in progress."""
+        if not self.upgrade._upgrade:
+            return False
+        return self.upgrade._upgrade.in_progress
 
     @property
     def config_server_db(self) -> str:

@@ -8,6 +8,15 @@ bases:
     architectures: [amd64]
 parts:
   charm:
+    override-build: |
+      rustup default stable
+      craftctl default
+    build-snaps:
+      - rustup
+    build-packages:
+      - libffi-dev
+      - libssl-dev
+      - pkg-config
     override-pull: |
       craftctl default
       if [[ ! -f requirements.txt ]]
@@ -15,13 +24,13 @@ parts:
           echo 'ERROR: Use "tox run -e build-dev" instead of calling "charmcraft pack" directly' >&2
           exit 1
       fi
+  files:
+    plugin: dump
+    source: .
+    prime:
+      - charm_internal_version
+      - charm_version
+      - workload_version
     override-build: |
       rustup default stable
       craftctl default
-    charm-strict-dependencies: true
-    build-snaps:
-      - rustup
-    build-packages:
-      - libffi-dev
-      - libssl-dev
-      - pkg-config
