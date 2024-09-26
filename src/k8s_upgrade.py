@@ -184,28 +184,27 @@ class KubernetesUpgrade(AbstractUpgrade):
         self._unit_databag["workload"] = value
 
     def _determine_partition(
-        self, units: List[Unit], action_event: ActionEvent | None, force: bool
+        self, units: List[Unit], action_event: ActionEvent | None
     ) -> int:
         if not self.in_progress:
             return 0
         logger.debug(f"{self._peer_relation.data=}")
-        for upgrade_order_index, unit in enumerate(units):
+        for unit in units:
             # Note: upgrade_order_index != unit number
             state = self._peer_relation.data[unit].get("state")
             if state:
                 state = UnitState(state)
             if (
-                not force and state is not UnitState.HEALTHY
+                not action_event and state is not UnitState.HEALTHY
             ) or self._unit_workload_container_versions[
                 unit.name
             ] != self._app_workload_container_version:
-                if not action_event and upgrade_order_index == 1:
-                    # User confirmation needed to resume upgrade (i.e. upgrade second unit)
-                    return unit_number(units[0])
                 return unit_number(unit)
         return 0
 
-    def reconcile_partition(self, *, action_event: ActionEvent | None = None) -> None:  # noqa: C901
+    def reconcile_partition(
+        self, *, action_event: ActionEvent | None = None
+    ) -> None:  # noqa: C901
         """If ready, lower partition to upgrade next unit.
 
         If upgrade is not in progress, set partition to 0. (If a unit receives a stop event, it may
@@ -218,14 +217,12 @@ class KubernetesUpgrade(AbstractUpgrade):
         - confirm first upgraded unit is healthy and resume upgrade
         - force upgrade of next unit if 1 or more upgraded units are unhealthy
         """
-        force = bool(action_event)
 
         units = self._sorted_units
 
         partition_ = self._determine_partition(
             units,
             action_event,
-            force,
         )
         logger.debug(f"{self._partition=}, {partition_=}")
         # Only lower the partition—do not raise it.
@@ -242,7 +239,7 @@ class KubernetesUpgrade(AbstractUpgrade):
         if partition_ < self._partition:
             self._partition = partition_
             logger.debug(
-                f"Lowered partition to {partition_} {action_event=} {force=} {self.in_progress=}"
+                f"Lowered partition to {partition_} {action_event=} {self.in_progress=}"
             )
         if action_event:
             assert len(units) >= 2
@@ -291,6 +288,7 @@ class MongosUpgrade(GenericMongosUpgrade):
             charm.on[PEER_RELATION_ENDPOINT_NAME].relation_changed,
             self._reconcile_upgrade,
         )
+        self.framework.observe(charm.on.upgrade_charm, self._on_upgrade)
         self.framework.observe(
             self.post_app_upgrade_event, self.run_post_app_upgrade_task
         )
@@ -341,9 +339,6 @@ class MongosUpgrade(GenericMongosUpgrade):
         self._set_upgrade_status()
 
     def _set_upgrade_status(self):
-        if not self._upgrade.in_progress:
-            return
-
         if self.charm.unit.is_leader():
             self.charm.app.status = self._upgrade.app_status or ActiveStatus()
         # Set/clear upgrade unit status if no other unit status - upgrade status for units should
@@ -357,6 +352,9 @@ class MongosUpgrade(GenericMongosUpgrade):
             self.charm.status.set_and_share_status(
                 self._upgrade.get_unit_juju_status() or ActiveStatus()
             )
+
+    def _on_upgrade(self, event) -> None:
+        self._upgrade.save_revision()
 
     def _on_upgrade_peer_relation_created(self, _) -> None:
         self._upgrade.save_revision()

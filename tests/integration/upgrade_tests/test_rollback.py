@@ -47,7 +47,7 @@ def faulty_upgrade_charm(local_charm, tmp_path: Path):
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest):
     """Build and deploy a sharded cluster."""
-    await deploy_cluster_components(ops_test)
+    await deploy_cluster_components(ops_test, n_units=3)
     await build_cluster(ops_test)
 
 
@@ -64,7 +64,7 @@ async def test_rollback(ops_test: OpsTest, local_charm, faulty_upgrade_charm) ->
         wait=tenacity.wait_fixed(10),
     ):
         with attempt:
-            assert "Upgrade incompatible" in get_juju_status(
+            assert "Unhealthy after" in get_juju_status(
                 ops_test.model.name, MONGOS_APP_NAME
             ), "Not indicating charm incompatible"
 
