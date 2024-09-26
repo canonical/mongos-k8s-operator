@@ -154,6 +154,14 @@ async def test_tls_reenabled(ops_test: OpsTest) -> None:
 async def test_mongos_tls_ca_mismatch(ops_test: OpsTest) -> None:
     """Tests that mongos charm can disable TLS."""
     await toggle_tls_mongos(ops_test, enable=False)
+
+    await wait_for_mongos_units_blocked(
+        ops_test,
+        MONGOS_APP_NAME,
+        status="mongos requires TLS to be enabled.",
+        timeout=300,
+    )
+
     await ops_test.model.deploy(
         CERTS_APP_NAME, application_name=DIFFERENT_CERTS_APP_NAME, channel="stable"
     )
