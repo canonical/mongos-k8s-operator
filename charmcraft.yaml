@@ -28,7 +28,6 @@ parts:
     plugin: dump
     source: .
     prime:
-      - charm_internal_version
       - charm_version
       - workload_version
     override-build: |
