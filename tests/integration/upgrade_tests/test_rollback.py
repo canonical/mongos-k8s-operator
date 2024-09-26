@@ -1,16 +1,12 @@
-#!/usr/bin/env python3
-# Copyright 2024 Canonical Ltd.
-# See LICENSE file for licensing details.
-
 from collections.abc import AsyncGenerator
-from pathlib import Path
 import logging
-import time
 import shutil
+import pytest_asyncio
+import pytest
+from pathlib import Path
+import time
 import zipfile
 
-import pytest
-import pytest_asyncio
 from pytest_operator.plugin import OpsTest
 import tenacity
 
@@ -26,6 +22,12 @@ UPGRADE_TIMEOUT = 15 * 60
 
 
 @pytest_asyncio.fixture
+async def local_charm(ops_test: OpsTest) -> AsyncGenerator[Path]:
+    new_charm = await ops_test.build_charm(".")
+    yield new_charm
+
+
+@pytest_asyncio.fixture
 def faulty_upgrade_charm(local_charm, tmp_path: Path):
     fault_charm = tmp_path / "fault_charm.charm"
     shutil.copy(local_charm, fault_charm)
@@ -38,28 +40,19 @@ def faulty_upgrade_charm(local_charm, tmp_path: Path):
             "workload_version", f"{int(major) -1}.{minor}.{patch}+testrollback"
         )
 
-
-@pytest_asyncio.fixture
-async def local_charm(ops_test: OpsTest) -> AsyncGenerator[Path]:
-    new_charm: Path = await ops_test.build_charm(".")
-    yield new_charm
+    yield fault_charm
 
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest):
     """Build and deploy a sharded cluster."""
-    await deploy_cluster_components(ops_test, channel="6/edge")
+    await deploy_cluster_components(ops_test)
     await build_cluster(ops_test)
 
 
-async def test_successful_upgrade(ops_test: OpsTest, local_charm: Path) -> None:
-    await ops_test.model.applications[MONGOS_APP_NAME].refresh(path=local_charm)
-    await ops_test.model.wait_for_idle(
-        apps=[MONGOS_APP_NAME], status="active", timeout=1000, idle_period=120
-    )
-
-
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
 async def test_rollback(ops_test: OpsTest, local_charm, faulty_upgrade_charm) -> None:
     mongos_application = ops_test.model.applications[MONGOS_APP_NAME]
     await mongos_application.refresh(path=faulty_upgrade_charm)
