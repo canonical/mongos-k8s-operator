@@ -35,7 +35,11 @@ class FailedToFindServiceError(Exception):
 class NodePortManager:
     """Manager for handling mongos Kubernetes resources for a single mongos pod."""
 
-    def __init__(self, charm: CharmBase, port: int):
+    def __init__(
+        self,
+        charm: CharmBase,
+        port: int,
+    ):
         self.charm = charm
         self.port = port
         self.pod_name = self.charm.unit.name.replace("/", "-")

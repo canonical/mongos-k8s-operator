@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
+from typing import Tuple, List
 import json
-from typing import Tuple
 import logging
 from pathlib import Path
 import yaml
@@ -22,6 +22,7 @@ from ..helpers import (
     get_mongos_user_password,
 )
 
+
 from pytest_operator.plugin import OpsTest
 from pymongo.errors import ServerSelectionTimeoutError
 
@@ -30,6 +31,7 @@ PORT_MAPPING_INDEX = 4
 
 logger = logging.getLogger(__name__)
 
+APPLICATION_APP_NAME = "application"
 
 MONGODB_CHARM_NAME = "mongodb-k8s"
 CONFIG_SERVER_APP_NAME = "config-server"
@@ -38,7 +40,7 @@ MONGOS_PORT = 27018
 SHARD_REL_NAME = "sharding"
 CONFIG_SERVER_REL_NAME = "config-server"
 CLUSTER_REL_NAME = "cluster"
-
+DATA_INTEGRATOR_APP_NAME = "data-integrator"
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 
 
@@ -160,6 +162,13 @@ async def assert_all_unit_node_ports_are_unavailable(ops_test: OpsTest):
         )
 
 
+def get_k8s_local_mongodb_hosts(ops_test: OpsTest) -> List[str]:
+    return [
+        f"{unit.name.replace('/', '-')}.mongos-k8s-endpoints"
+        for unit in ops_test.model.applications[MONGOS_APP_NAME].units
+    ]
+
+
 def get_public_k8s_ip() -> str:
     result = subprocess.run(
         "kubectl get nodes -o json", shell=True, capture_output=True, text=True
@@ -175,3 +184,23 @@ def get_public_k8s_ip() -> str:
         return node_info["items"][0]["status"]["addresses"][0]["address"]
     except KeyError:
         assert False, "failed to retrieve public facing k8s IP"
+
+
+async def deploy_client_app(ops_test: OpsTest, external: bool):
+    if not external:
+        application_charm = await ops_test.build_charm("tests/integration/application/")
+    else:
+        application_charm = DATA_INTEGRATOR_APP_NAME
+    await ops_test.model.deploy(application_charm)
+    await ops_test.model.wait_for_idle(
+        apps=[APPLICATION_APP_NAME],
+        idle_period=10,
+        raise_on_blocked=False,
+    )
+
+
+async def integrate_client_app(ops_test: OpsTest, client_app_name: str):
+    await ops_test.model.integrate(client_app_name, MONGOS_APP_NAME)
+    await ops_test.model.wait_for_idle(
+        apps=[client_app_name, MONGOS_APP_NAME], status="active", idle_period=20
+    )

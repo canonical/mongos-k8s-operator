@@ -31,8 +31,7 @@ requires:
 
 provides:
   mongos_proxy:
-    interface: mongos_client
-
+    interface: mongodb_client
 containers:
   mongos:
     resource: mongodb-image

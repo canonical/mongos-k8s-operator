@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
-
-
 import pytest
 from pytest_operator.plugin import OpsTest
-from typing import Tuple
 
 from ..helpers import (
     build_cluster,
@@ -15,12 +12,14 @@ from ..helpers import (
     check_mongos,
     get_direct_mongos_client,
     MONGOS_PORT,
-    get_secret_data,
-    get_application_relation_data,
+    get_mongos_user_password,
 )
 from .helpers import (
+    deploy_client_app,
+    integrate_client_app,
     is_relation_joined,
     get_client_connection_string,
+    APPLICATION_APP_NAME,
 )
 
 CLIENT_RELATION_NAME = "mongos"
@@ -29,34 +28,23 @@ MONGOS_RELATION_NAME = "mongos_proxy"
 TEST_USER_NAME = "TestUserName1"
 TEST_USER_PWD = "Test123"
 TEST_DB_NAME = "my-test-db"
-APPLICATION_APP_NAME = "application"
 
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy a sharded cluster."""
-    application_charm = await ops_test.build_charm("tests/integration/application/")
-    await ops_test.model.deploy(application_charm)
-
+    await deploy_client_app(ops_test, external=False)
     await deploy_cluster_components(ops_test)
     await build_cluster(ops_test)
-
-    await ops_test.model.wait_for_idle(
-        apps=[APPLICATION_APP_NAME],
-        idle_period=10,
-        raise_on_blocked=False,
-    )
 
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_integrate_with_internal_client(ops_test: OpsTest) -> None:
     """Tests that when a client is integrated with mongos a user it receives connection info."""
-    await ops_test.model.integrate(APPLICATION_APP_NAME, MONGOS_APP_NAME)
-    await ops_test.model.wait_for_idle(
-        apps=[APPLICATION_APP_NAME, MONGOS_APP_NAME], status="active", idle_period=20
-    )
+    await integrate_client_app(ops_test, client_app_name=APPLICATION_APP_NAME)
+
     await ops_test.model.block_until(
         lambda: is_relation_joined(
             ops_test,
@@ -146,15 +134,3 @@ async def test_removed_relation_no_longer_has_access(ops_test: OpsTest):
     assert (
         not mongos_can_connect_with_auth
     ), "Client can still connect after relation broken."
-
-
-# TODO, use get_mongos_user_password in base helpers once DPE:5215 is fixed retrieve via secret
-async def get_mongos_user_password(
-    ops_test: OpsTest, app_name=MONGOS_APP_NAME, relation_name="cluster"
-) -> Tuple[str, str]:
-    secret_uri = await get_application_relation_data(
-        ops_test, app_name, relation_name=relation_name, key="secret-user"
-    )
-
-    secret_data = await get_secret_data(ops_test, secret_uri)
-    return secret_data.get("username"), secret_data.get("password")
