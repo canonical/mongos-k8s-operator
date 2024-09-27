@@ -4,13 +4,14 @@
 
 """Manager for handling mongos Kubernetes resources for a single mongos pod."""
 
+from typing import Optional
 import logging
 from functools import cached_property
 from ops.charm import CharmBase
 from lightkube.models.meta_v1 import ObjectMeta, OwnerReference
 from lightkube.core.client import Client
 from lightkube.core.exceptions import ApiError
-from lightkube.resources.core_v1 import Pod, Service
+from lightkube.resources.core_v1 import Pod, Service, Node
 from lightkube.models.core_v1 import ServicePort, ServiceSpec
 from ops.model import BlockedStatus
 
@@ -23,14 +24,24 @@ logging.getLogger("httpx").disabled = True
 logging.getLogger("httpcore").disabled = True
 
 
+class FailedToFindNodePortError(Exception):
+    """Raised NodePort cannot be found, but is excepted to be present."""
+
+
+class FailedToFindServiceError(Exception):
+    """Raised service cannot be found, but is excepted to be present."""
+
+
 class NodePortManager:
     """Manager for handling mongos Kubernetes resources for a single mongos pod."""
 
     def __init__(
         self,
         charm: CharmBase,
+        port: int,
     ):
         self.charm = charm
+        self.port = port
         self.pod_name = self.charm.unit.name.replace("/", "-")
         self.app_name = self.charm.app.name
         self.namespace = self.charm.model.name
@@ -59,14 +70,14 @@ class NodePortManager:
             name=pod_name or self.pod_name,
         )
 
-    def get_unit_service_name(self) -> str:
+    def get_unit_service_name(self, unit_name) -> str:
         """Returns the service name for the current unit."""
-        unit_id = self.charm.unit.name.split("/")[1]
-        return f"{self.app_name}-{unit_id}-external"
+        unit_name = unit_name.replace("/", "-")
+        return f"{unit_name}-external"
 
-    def get_unit_service(self) -> Service | None:
+    def get_unit_service(self, unit_name) -> Service | None:
         """Gets the Service via the K8s API for the current unit."""
-        return self.get_service(self.get_unit_service_name())
+        return self.get_service(self.get_unit_service_name(unit_name))
 
     # END: getters
 
@@ -86,7 +97,7 @@ class NodePortManager:
 
         return Service(
             metadata=ObjectMeta(
-                name=self.get_unit_service_name(),
+                name=self.get_unit_service_name(self.charm.unit.name),
                 namespace=self.namespace,
                 # When we scale-down K8s will keep the Services for the deleted units around,
                 # unless the Services' owner is also deleted.
@@ -128,17 +139,16 @@ class NodePortManager:
             if e.status.code == 422 and "port is already allocated" in e.status.message:
                 logger.error(e.status.message)
                 return
-            else:
-                raise
+            raise
 
     def delete_unit_service(self) -> None:
         """Deletes a unit Service, if it exists."""
         try:
-            service = self.get_unit_service()
+            service = self.get_unit_service(unit_name=self.charm.unit.name)
         except ApiError as e:
             if e.status.code == 404:
                 logger.debug(
-                    f"Could not find {self.get_unit_service_name()} to delete."
+                    f"Could not find {self.get_unit_service_name(self.charm.unit.name)} to delete."
                 )
                 return
 
@@ -151,7 +161,65 @@ class NodePortManager:
             if e.status.code == 403:
                 self.on_deployed_without_trust()
                 return
-            else:
-                raise
+            raise
+
+    def _node_name(self, unit_name: str) -> str:
+        """Return the node name for this unit's pod ip."""
+        try:
+            pod = self.client.get(
+                Pod,
+                name=unit_name.replace("/", "-"),
+                namespace=self.namespace,
+            )
+        except ApiError as e:
+            if e.status.code == 403:
+                self.on_deployed_without_trust()
+                return
+
+            raise
+
+        return pod.spec.nodeName
+
+    def get_node_ip(self, unit_name: str) -> Optional[str]:
+        """Return node IP for the provided unit."""
+        try:
+            node = self.client.get(
+                Node,
+                name=self._node_name(unit_name),
+                namespace=self.namespace,
+            )
+        except ApiError as e:
+            if e.status.code == 403:
+                logger.error("Could not delete service, application needs `juju trust`")
+                self.on_deployed_without_trust()
+                return
+
+            raise
+        # [
+        #    NodeAddress(address='192.168.0.228', type='InternalIP'),
+        #    NodeAddress(address='example.com', type='Hostname')
+        # ]
+        # Remember that OpenStack, for example, will return an internal hostname, which is not
+        # accessible from the outside. Give preference to ExternalIP, then InternalIP first
+        # Separated, as we want to give preference to ExternalIP, InternalIP and then Hostname
+        for typ in ["ExternalIP", "InternalIP", "Hostname"]:
+            for a in node.status.addresses:
+                if a.type == typ:
+                    return a.address
+
+    def get_node_port(self, port_to_match: int, unit_name: str) -> int:
+        """Return node port for the provided port to match."""
+        service = self.get_unit_service(unit_name=unit_name)
+
+        if not service or not service.spec.type == "NodePort":
+            raise FailedToFindServiceError(f"No service found for port on {unit_name}")
+
+        for svc_port in service.spec.ports:
+            if svc_port.port == self.port:
+                return svc_port.nodePort
+
+        raise FailedToFindNodePortError(
+            f"Unable to find NodePort for {port_to_match} for the {service} service"
+        )
 
     # END: helpers

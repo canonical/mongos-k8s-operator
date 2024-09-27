@@ -7,6 +7,10 @@ from ops.charm import CharmBase
 from ops.framework import Object
 from ops.model import StatusBase
 
+import logging
+from ops.model import ActiveStatus
+
+logger = logging.getLogger(__name__)
 
 # The unique Charmhub library identifier, never change it
 LIBID = "0713372afa0841359edbb777273ecdbf"
@@ -16,7 +20,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 1
+LIBPATCH = 2
 
 
 class MongosStatusHandler(Object):
@@ -48,5 +52,17 @@ class MongosStatusHandler(Object):
 
     def set_app_status(self):
         """TODO Future Feature/Epic: parse statuses and set a status for the entire app."""
+
+    def clear_status(self, status_to_clear):
+        """Clears the provided status."""
+        if self.charm.unit.status != status_to_clear:
+            logger.debug(
+                "cannot clear status: %s, unit not in that status, unit in %s",
+                status_to_clear,
+                self.charm.unit.status,
+            )
+
+        # TODO: In the future compute the next highest priority status.
+        self.charm.unit.status = ActiveStatus()
 
     # END: Helpers

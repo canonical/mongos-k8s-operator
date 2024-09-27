@@ -8,9 +8,14 @@ import json
 from exceptions import MissingSecretError
 
 from ops.pebble import PathError, ProtocolError, Layer
-from node_port import NodePortManager
+from node_port import (
+    NodePortManager,
+    ApiError,
+    FailedToFindNodePortError,
+    FailedToFindServiceError,
+)
 
-from typing import Set, Optional, Dict
+from typing import Set, Optional, Dict, List
 from charms.mongodb.v0.config_server_interface import ClusterRequirer
 
 
@@ -18,7 +23,7 @@ from pymongo.errors import PyMongoError
 
 from charms.mongodb.v0.mongo import MongoConfiguration, MongoConnection
 from charms.mongos.v0.set_status import MongosStatusHandler
-from charms.mongodb.v1.mongodb_provider import MongoDBProvider
+from charms.mongodb.v1.mongodb_provider import MongoDBProvider, FailedToGetHostsError
 from charms.mongodb.v0.mongodb_tls import MongoDBTLS
 from charms.mongodb.v0.mongodb_secrets import SecretCache
 from charms.mongodb.v0.mongodb_secrets import generate_secret_label
@@ -62,6 +67,10 @@ class ExtraDataDirError(Exception):
     """Raised when there is unexpected data in the data directory."""
 
 
+class NoExternalHostError(Exception):
+    """Raised when there is not an external host for a unit, when there is expected to be one."""
+
+
 class MongosCharm(ops.CharmBase):
     """Charm the service."""
 
@@ -70,7 +79,7 @@ class MongosCharm(ops.CharmBase):
         self.role = Config.Role.MONGOS
         self.secrets = SecretCache(self)
         self.status = MongosStatusHandler(self)
-        self.node_port_manager = NodePortManager(self)
+        self.node_port_manager = NodePortManager(self, port=Config.MONGOS_PORT)
 
         # lifecycle events
         self.framework.observe(self.on.config_changed, self._on_config_changed)
@@ -79,6 +88,19 @@ class MongosCharm(ops.CharmBase):
         )
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.update_status, self._on_update_status)
+
+        # when number of units change update hosts
+        self.framework.observe(
+            self.on.leader_elected, self._update_client_related_hosts
+        )
+        self.framework.observe(
+            self.on[Config.Relations.PEERS].relation_joined,
+            self._update_client_related_hosts,
+        )
+        self.framework.observe(
+            self.on[Config.Relations.PEERS].relation_departed,
+            self._update_client_related_hosts,
+        )
 
         # relations
         self.tls = MongoDBTLS(self, Config.Relations.PEERS, substrate=Config.SUBSTRATE)
@@ -97,7 +119,11 @@ class MongosCharm(ops.CharmBase):
             self.set_status_invalid_external_config()
             return
 
+        self.status.clear_status(Config.Status.INVALID_EXTERNAL_CONFIG)
         self.update_external_services()
+
+        # toggling of external connectivity means we have to update integrated hosts
+        self._update_client_related_hosts(event)
 
         # TODO DPE-5235 support updating data-integrator clients to have/not have public IP
         # depending on the result of the configuration
@@ -155,6 +181,9 @@ class MongosCharm(ops.CharmBase):
             return
 
         self.db_initialised = True
+
+        if not self.unit.is_leader():
+            return
 
         try:
             self.client_relations.oversee_users(None, None)
@@ -379,6 +408,11 @@ class MongosCharm(ops.CharmBase):
 
         return True
 
+    def get_units(self) -> List[Unit]:
+        units = [self.unit]
+        units.extend(self.peers_units)
+        return units
+
     def get_mongos_host(self) -> str:
         """Returns the host for mongos as a str.
 
@@ -387,17 +421,55 @@ class MongosCharm(ops.CharmBase):
         """
         return self.unit_host(self.unit)
 
-    def get_mongos_hosts(self) -> Set:
-        """Returns the host for mongos as a str.
+    def get_ext_mongos_hosts(self) -> Set:
+        """Returns the K8s hosts for mongos.
 
-        The host for mongos can be either the Unix Domain Socket or an IP address depending on how
-        the client wishes to connect to mongos (inside Juju or outside).
+        Note: for external connections it is not enough to know the external ip, but also the
+        port that is associated with the client.
         """
-        hosts = {self.unit_host(self.unit)}
-        for unit in self.peers_units:
+        hosts = set()
+
+        if not self.is_external_client:
+            return hosts
+
+        try:
+            for unit in self.get_units():
+                unit_ip = self.node_port_manager.get_node_ip(unit.name)
+                unit_port = self.node_port_manager.get_node_port(
+                    port_to_match=Config.MONGOS_PORT, unit_name=unit.name
+                )
+                if unit_ip and unit_port:
+                    hosts.add(f"{unit_ip}:{unit_port}")
+                else:
+                    raise NoExternalHostError(f"No external host for unit {unit.name}")
+        except (
+            ApiError,
+            NoExternalHostError,
+            FailedToFindNodePortError,
+            FailedToFindServiceError,
+        ) as e:
+            raise FailedToGetHostsError(f"Failed to retrieve external hosts due to {e}")
+
+        return hosts
+
+    def get_k8s_mongos_hosts(self) -> Set:
+        """Returns the K8s hosts for mongos"""
+        hosts = set()
+        for unit in self.get_units():
             hosts.add(self.unit_host(unit))
 
         return hosts
+
+    def get_mongos_hosts_for_client(self) -> Set:
+        """Returns the hosts for mongos as a str.
+
+        The host for mongos can be either the K8s pod name or an IP address depending on how
+        the app has been configured.
+        """
+        if self.is_external_client:
+            return self.get_ext_mongos_hosts()
+
+        return self.get_k8s_mongos_hosts()
 
     @staticmethod
     def _generate_relation_departed_key(rel_id: int) -> str:
@@ -566,6 +638,31 @@ class MongosCharm(ops.CharmBase):
         """Returns True is the mongos router is integrated to a config-server."""
         return self.cluster.get_config_server_name() is not None
 
+    def _update_client_related_hosts(self, event) -> None:
+        """Update hosts of client relations."""
+        if not self.db_initialised:
+            return
+
+        if not self.unit.is_leader():
+            return
+
+        try:
+            self.client_relations.update_app_relation_data()
+        except PyMongoError as e:
+            logger.error("Deferring on updating app relation data since: error: %r", e)
+            event.defer()
+            return
+        except ApiError as e:
+            if e.status.code == 404:
+                # it is possible that a unit is enabling node port when we try to update hosts
+                logger.debug(
+                    "Deferring on updating app relation data since service not found for more or one units"
+                )
+                event.defer()
+                return
+
+            raise
+
     # END: helper functions
 
     # BEGIN: properties
@@ -702,7 +799,6 @@ class MongosCharm(ops.CharmBase):
     @property
     def mongos_config(self) -> MongoConfiguration:
         """Generates a MongoDBConfiguration object for mongos in the deployment of MongoDB."""
-        hosts = self.get_mongos_hosts()
         external_ca, _ = self.tls.get_tls_files(internal=False)
         internal_ca, _ = self.tls.get_tls_files(internal=True)
 
@@ -710,7 +806,7 @@ class MongosCharm(ops.CharmBase):
             database=self.database,
             username=self.get_secret(APP_SCOPE, Config.Secrets.USERNAME),
             password=self.get_secret(APP_SCOPE, Config.Secrets.PASSWORD),
-            hosts=hosts,
+            hosts=self.get_k8s_mongos_hosts(),
             # unlike the vm mongos charm, the K8s charm does not communicate with the unix socket
             port=Config.MONGOS_PORT,
             roles=self.extra_user_roles,

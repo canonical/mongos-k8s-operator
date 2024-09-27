@@ -11,4 +11,4 @@ series:
 
 requires:
   mongos:
-    interface: mongos_client
+    interface: mongodb_client
