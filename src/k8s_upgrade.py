@@ -5,7 +5,7 @@
 
 from functools import cached_property
 from logging import getLogger
-from typing import List, Optional, TYPE_CHECKING
+from typing import List, TYPE_CHECKING
 
 import lightkube
 import lightkube.models.apps_v1
@@ -23,7 +23,7 @@ from charms.mongos.v0.upgrade_helpers import (
     unit_number,
 )
 from lightkube.core.exceptions import ApiError
-from ops import ActiveStatus, MaintenanceStatus, StatusBase
+from ops import ActiveStatus, StatusBase
 from ops.charm import ActionEvent
 from ops.framework import EventBase, EventSource
 from ops.model import BlockedStatus, Unit
@@ -330,7 +330,7 @@ class MongosUpgrade(GenericMongosUpgrade):
             self.charm.app.status = self._upgrade.app_status or ActiveStatus()
         # Set/clear upgrade unit status if no other unit status - upgrade status for units should
         # have the lowest priority.
-        if isinstance(self.charm.unit.status, (ActiveStatus, MaintenanceStatus)) or (
+        if isinstance(self.charm.unit.status, ActiveStatus) or (
             isinstance(self.charm.unit.status, BlockedStatus)
             and self.charm.unit.status.message.startswith(
                 "Rollback with `juju refresh`. Pre-upgrade check failed:"

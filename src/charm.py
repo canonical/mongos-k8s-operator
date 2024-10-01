@@ -230,6 +230,7 @@ class MongosCharm(ops.CharmBase):
             event.defer()
             return
 
+        self.status.set_and_share_status(ActiveStatus())
         self.upgrade._reconcile_upgrade(event)
         # Emit the post app upgrade event
         self.upgrade.post_app_upgrade_event.emit()
