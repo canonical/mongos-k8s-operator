@@ -96,6 +96,7 @@ class MongosCharm(ops.CharmBase):
         )
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.stop, self._on_stop)
+        self.framework.observe(self.on.upgrade_charm, self._on_upgrade)
         self.framework.observe(self.on.update_status, self._on_update_status)
 
         # when number of units change update hosts
@@ -186,9 +187,6 @@ class MongosCharm(ops.CharmBase):
         # start hooks are fired before relation hooks and `mongos` requires a config-server in
         # order to start. Wait to receive config-server info from the relation event before
         # starting `mongos` daemon
-        if self.unit.is_leader() and not self.upgrade_in_progress:
-            self.upgrade._upgrade.set_versions_in_app_databag()
-
         if not self.is_integrated_to_config_server():
             logger.info(
                 "Missing integration to config-server. mongos cannot run start sequence unless connected to config-server."
@@ -224,6 +222,17 @@ class MongosCharm(ops.CharmBase):
                 e,
             )
             event.defer()
+
+    def _on_upgrade(self, event) -> None:
+        container = self.unit.get_container(Config.CONTAINER_NAME)
+        if not self._configure_layers(container=container):
+            logger.error("Failed to replan")
+            event.defer()
+            return
+
+        self.upgrade._reconcile_upgrade(event)
+        # Emit the post app upgrade event
+        self.upgrade.post_app_upgrade_event.emit()
 
     def _on_update_status(self, event: UpdateStatusEvent):
         """Handle the update status event."""

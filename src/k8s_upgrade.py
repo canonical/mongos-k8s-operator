@@ -5,7 +5,7 @@
 
 from functools import cached_property
 from logging import getLogger
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 
 import lightkube
 import lightkube.models.apps_v1
@@ -23,13 +23,16 @@ from charms.mongos.v0.upgrade_helpers import (
     unit_number,
 )
 from lightkube.core.exceptions import ApiError
-from ops import ActiveStatus, StatusBase
-from ops.charm import ActionEvent, CharmBase
+from ops import ActiveStatus, MaintenanceStatus, StatusBase
+from ops.charm import ActionEvent
 from ops.framework import EventBase, EventSource
 from ops.model import BlockedStatus, Unit
 from overrides import override
 
 from config import Config
+
+if TYPE_CHECKING:
+    from charm import MongosCharm
 
 logger = getLogger()
 
@@ -84,7 +87,7 @@ class KubernetesUpgrade(AbstractUpgrade):
     This is the implementation of Kubernetes Upgrade methods.
     """
 
-    def __init__(self, charm: CharmBase, *args, **kwargs):
+    def __init__(self, charm: "MongosCharm", *args, **kwargs):
         try:
             partition.get(app_name=charm.app.name)
         except ApiError as err:
@@ -98,10 +101,10 @@ class KubernetesUpgrade(AbstractUpgrade):
         version = self._unit_workload_container_versions[self._unit.name]
         if version == self._app_workload_container_version:
             return ActiveStatus(
-                f'MongoDB {self._unit_workload_version} running; Img rev {version}; Charmed operator {self._current_versions["charm"]}'
+                f'MongoDB {self._current_versions["workload"]} running; Charmed operator {self._current_versions["charm"]}'
             )
         return ActiveStatus(
-            f'MongoDB {self._unit_workload_version} running; Img rev {version} (outdated); Charmed operator {self._current_versions["charm"]}'
+            f'MongoDB {self._current_versions["workload"]} running (restart pending); Charmed operator {self._current_versions["charm"]}'
         )
 
     @property
@@ -128,13 +131,6 @@ class KubernetesUpgrade(AbstractUpgrade):
     def _partition(self, value: int) -> None:
         """Sets the partition number."""
         partition.set(app_name=self._app_name, value=value)
-
-    def save_revision(self):
-        """Sets the revisions in the databag."""
-        self._unit_workload_version = self._current_versions["workload"]
-        logger.debug(
-            f'Saved {self._current_versions["workload"]=} in unit databag after first install'
-        )
 
     @cached_property  # Cache lightkube API call for duration of charm execution
     @override
@@ -173,15 +169,6 @@ class KubernetesUpgrade(AbstractUpgrade):
         )
         return stateful_set.status.updateRevision
 
-    @property
-    def _unit_workload_version(self) -> Optional[str]:
-        """Installed mongodb version for this unit."""
-        return self._unit_databag.get("workload")
-
-    @_unit_workload_version.setter
-    def _unit_workload_version(self, value: str):
-        self._unit_databag["workload"] = value
-
     def _determine_partition(
         self, units: List[Unit], action_event: ActionEvent | None
     ) -> int:
@@ -201,7 +188,9 @@ class KubernetesUpgrade(AbstractUpgrade):
                 return unit_number(unit)
         return 0
 
-    def reconcile_partition(self, *, action_event: ActionEvent | None = None) -> None:  # noqa: C901
+    def reconcile_partition(
+        self, *, action_event: ActionEvent | None = None
+    ) -> None:  # noqa: C901
         """If ready, lower partition to upgrade next unit.
 
         If upgrade is not in progress, set partition to 0. (If a unit receives a stop event, it may
@@ -271,12 +260,12 @@ class MongosUpgrade(GenericMongosUpgrade):
 
     post_app_upgrade_event = EventSource(_PostUpgradeCheckMongoDB)
 
-    def __init__(self, charm: CharmBase):
+    def __init__(self, charm: "MongosCharm"):
         self.charm = charm
         super().__init__(charm, PEER_RELATION_ENDPOINT_NAME)
 
     @override
-    def _observe_events(self, charm: CharmBase) -> None:
+    def _observe_events(self, charm: "MongosCharm") -> None:
         self.framework.observe(
             charm.on[PEER_RELATION_ENDPOINT_NAME].relation_created,
             self._on_upgrade_peer_relation_created,
@@ -285,7 +274,6 @@ class MongosUpgrade(GenericMongosUpgrade):
             charm.on[PEER_RELATION_ENDPOINT_NAME].relation_changed,
             self._reconcile_upgrade,
         )
-        self.framework.observe(charm.on.upgrade_charm, self._on_upgrade)
         self.framework.observe(
             self.post_app_upgrade_event, self.run_post_app_upgrade_task
         )
@@ -326,12 +314,14 @@ class MongosUpgrade(GenericMongosUpgrade):
                 )
                 self.charm.status.set_and_share_status(Config.Status.UNHEALTHY_UPGRADE)
                 return
-        if not self._upgrade.unit_state:
+        if (
+            not self._upgrade.unit_state
+            and self.charm.db_initialised
+            and self.charm.is_db_service_ready()
+        ):
             self._upgrade.unit_state = UnitState.HEALTHY
         if self.charm.unit.is_leader():
             self._upgrade.reconcile_partition()
-        if self._upgrade.unit_state is UnitState.RESTARTING:
-            self.post_app_upgrade_event.emit()
 
         self._set_upgrade_status()
 
@@ -340,7 +330,7 @@ class MongosUpgrade(GenericMongosUpgrade):
             self.charm.app.status = self._upgrade.app_status or ActiveStatus()
         # Set/clear upgrade unit status if no other unit status - upgrade status for units should
         # have the lowest priority.
-        if isinstance(self.charm.unit.status, ActiveStatus) or (
+        if isinstance(self.charm.unit.status, (ActiveStatus, MaintenanceStatus)) or (
             isinstance(self.charm.unit.status, BlockedStatus)
             and self.charm.unit.status.message.startswith(
                 "Rollback with `juju refresh`. Pre-upgrade check failed:"
@@ -350,11 +340,7 @@ class MongosUpgrade(GenericMongosUpgrade):
                 self._upgrade.get_unit_juju_status() or ActiveStatus()
             )
 
-    def _on_upgrade(self, event) -> None:
-        self._upgrade.save_revision()
-
     def _on_upgrade_peer_relation_created(self, _) -> None:
-        self._upgrade.save_revision()
         if self.charm.unit.is_leader():
             self._upgrade.set_versions_in_app_databag()
 
