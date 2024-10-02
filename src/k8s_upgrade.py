@@ -188,9 +188,7 @@ class KubernetesUpgrade(AbstractUpgrade):
                 return unit_number(unit)
         return 0
 
-    def reconcile_partition(
-        self, *, action_event: ActionEvent | None = None
-    ) -> None:  # noqa: C901
+    def reconcile_partition(self, *, action_event: ActionEvent | None = None) -> None:  # noqa: C901
         """If ready, lower partition to upgrade next unit.
 
         If upgrade is not in progress, set partition to 0. (If a unit receives a stop event, it may
