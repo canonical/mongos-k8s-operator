@@ -10,5 +10,7 @@ set-tls-private-key:
       type: string
       description: The content of private key for internal communications with clients. Content will be auto-generated if this option is not specified.
 
-force-upgrade:
-  description: Force Upgrade remaining units (after you manually verified that upgraded units are healthy).
+force-refresh-start:
+  description: |
+    Force upgrade of this unit.
+    Potential of data loss and downtime.

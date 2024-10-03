@@ -36,8 +36,6 @@ if TYPE_CHECKING:
 
 logger = getLogger()
 
-RESUME_ACTION_NAME = "resume-upgrade"
-
 
 class DeployedWithoutTrust(Exception):
     """Deployed without `juju deploy --trust` or `juju trust`.
@@ -101,10 +99,10 @@ class KubernetesUpgrade(AbstractUpgrade):
         version = self._unit_workload_container_versions[self._unit.name]
         if version == self._app_workload_container_version:
             return ActiveStatus(
-                f'MongoDB {self._current_versions["workload"]} running; Charmed operator {self._current_versions["charm"]}'
+                f'MongoDB {self._current_versions["workload"]} running; Charm revision {self._current_versions["charm"]}'
             )
         return ActiveStatus(
-            f'MongoDB {self._current_versions["workload"]} running (restart pending); Charmed operator {self._current_versions["charm"]}'
+            f'MongoDB {self._current_versions["workload"]} running (restart pending); Charm revision {self._current_versions["charm"]}'
         )
 
     @property
@@ -188,7 +186,9 @@ class KubernetesUpgrade(AbstractUpgrade):
                 return unit_number(unit)
         return 0
 
-    def reconcile_partition(self, *, action_event: ActionEvent | None = None) -> None:  # noqa: C901
+    def reconcile_partition(
+        self, *, action_event: ActionEvent | None = None
+    ) -> None:  # noqa: C901
         """If ready, lower partition to upgrade next unit.
 
         If upgrade is not in progress, set partition to 0. (If a unit receives a stop event, it may
@@ -228,8 +228,8 @@ class KubernetesUpgrade(AbstractUpgrade):
         if action_event:
             assert len(units) >= 2
             if self._partition > unit_number(units[1]):
-                message = "Highest number unit is unhealthy. Upgrade will not resume."
-                logger.debug(f"Resume upgrade event failed: {message}")
+                message = "Highest number unit is unhealthy. Refresh will not resume."
+                logger.debug(f"Resume refresh event failed: {message}")
                 action_event.fail(message)
                 return
             # If a unit was unhealthy and the upgrade was forced, only the next unit will
@@ -241,9 +241,9 @@ class KubernetesUpgrade(AbstractUpgrade):
             # allows it (e.g. if the charm container of a higher unit is not ready). This is
             # also applicable `if not force`, but is unlikely to happen since all units are
             # healthy `if not force`.
-            message = f"Attempting to upgrade unit {self._partition}."
+            message = f"Attempting to refresh unit {self._partition}."
             action_event.set_results({"result": message})
-            logger.debug(f"Resume upgrade event succeeded: {message}")
+            logger.debug(f"Resume refresh succeeded: {message}")
 
 
 class _PostUpgradeCheckMongoDB(EventBase):
@@ -276,18 +276,18 @@ class MongosUpgrade(GenericMongosUpgrade):
             self.post_app_upgrade_event, self.run_post_app_upgrade_task
         )
         self.framework.observe(
-            charm.on["force-upgrade"].action, self._on_force_upgrade_action
+            charm.on["force-refresh-start"].action, self._on_force_upgrade_action
         )
 
     def _on_force_upgrade_action(self, event: ActionEvent):
         if not self.charm.unit.is_leader():
-            message = f"Must run action on leader unit. (e.g. `juju run {self.charm.app.name}/leader force-upgrade`)"
-            logger.debug(f"Force upgrade event failed: {message}")
+            message = f"Must run action on leader unit. (e.g. `juju run {self.charm.app.name}/leader force-refresh-start`)"
+            logger.debug(f"Force refresh failed: {message}")
             event.fail(message)
             return
         if not self._upgrade or not self._upgrade.in_progress:
             message = "No upgrade in progress"
-            logger.debug(f"Force upgrade event failed: {message}")
+            logger.debug(f"Force refresh failed: {message}")
             event.fail(message)
             return
         self._upgrade.reconcile_partition(action_event=event)
@@ -308,15 +308,11 @@ class MongosUpgrade(GenericMongosUpgrade):
         if self._upgrade.unit_state is UnitState.RESTARTING:  # Kubernetes only
             if not self._upgrade.is_compatible:
                 logger.info(
-                    "Upgrade incompatible. If you accept potential *data loss* and *downtime*, you can continue with `force-upgrade`"
+                    "Refresh incompatible. If you accept potential *data loss* and *downtime*, you can continue with `force-refresh-start`"
                 )
                 self.charm.status.set_and_share_status(Config.Status.UNHEALTHY_UPGRADE)
                 return
-        if (
-            not self._upgrade.unit_state
-            and self.charm.db_initialised
-            and self.charm.is_db_service_ready()
-        ):
+        if self.charm.db_initialised and self.charm.is_db_service_ready():
             self._upgrade.unit_state = UnitState.HEALTHY
         if self.charm.unit.is_leader():
             self._upgrade.reconcile_partition()
@@ -331,7 +327,7 @@ class MongosUpgrade(GenericMongosUpgrade):
         if isinstance(self.charm.unit.status, ActiveStatus) or (
             isinstance(self.charm.unit.status, BlockedStatus)
             and self.charm.unit.status.message.startswith(
-                "Rollback with `juju refresh`. Pre-upgrade check failed:"
+                "Rollback with `juju refresh`. Pre-refresh check failed:"
             )
         ):
             self.charm.status.set_and_share_status(
@@ -347,6 +343,7 @@ class MongosUpgrade(GenericMongosUpgrade):
         # The mongos service cannot be considered ready until it has a config-server. Therefore
         # it is not necessary to do any sophisticated checks.
         if not self.charm.mongos_initialised:
+            logger.error("Not initialised :o :o :o")
             self._upgrade.unit_state = UnitState.HEALTHY
             return
 
@@ -355,24 +352,24 @@ class MongosUpgrade(GenericMongosUpgrade):
     def _on_pre_upgrade_check_action(self, event: ActionEvent) -> None:
         if not self.charm.unit.is_leader():
             message = f"Must run action on leader unit. (e.g. `juju run {self.charm.app.name}/leader {PRECHECK_ACTION_NAME}`)"
-            logger.debug(f"Pre-upgrade check event failed: {message}")
+            logger.debug(f"Pre-refresh check failed: {message}")
             event.fail(message)
             return
         if not self._upgrade or self._upgrade.in_progress:
             message = "Upgrade already in progress"
-            logger.debug(f"Pre-upgrade check event failed: {message}")
+            logger.debug(f"Pre-refresh check failed: {message}")
             event.fail(message)
             return
         try:
             self._upgrade.pre_upgrade_check()
         except PrecheckFailed as exception:
-            message = f"Charm is *not* ready for upgrade. Pre-upgrade check failed: {exception.message}"
-            logger.debug(f"Pre-upgrade check event failed: {message}")
+            message = f"Charm is *not* ready for refresh. Pre-refresh check failed: {exception.message}"
+            logger.debug(f"Pre-refresh check failed: {message}")
             event.fail(message)
             return
-        message = "Charm is ready for upgrade"
+        message = "Charm is ready for refresh"
         event.set_results({"result": message})
-        logger.debug(f"Pre-upgrade check event succeeded: {message}")
+        logger.debug(f"Pre-refresh check succeeded: {message}")
 
     @property
     @override

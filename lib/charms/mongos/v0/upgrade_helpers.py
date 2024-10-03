@@ -32,7 +32,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 2
+LIBPATCH = 3
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +72,7 @@ class PrecheckFailed(StatusException):
         self.message = message
         super().__init__(
             BlockedStatus(
-                f"Rollback with `juju refresh`. Pre-upgrade check failed: {self.message}"
+                f"Rollback with `juju refresh`. Pre-refresh check failed: {self.message}"
             )
         )
 
@@ -229,7 +229,7 @@ class AbstractUpgrade(abc.ABC):
             return
 
         return MaintenanceStatus(
-            "Upgrading. To rollback, `juju refresh` to the previous revision"
+            "Refreshing. To rollback, `juju refresh` to the previous revision"
         )
 
     @property

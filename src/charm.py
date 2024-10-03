@@ -179,7 +179,6 @@ class MongosCharm(ops.CharmBase):
             event.defer()
             return
 
-        self.status.set_and_share_status(ActiveStatus())
         self.upgrade._reconcile_upgrade(event)
 
     def _on_start(self, event: StartEvent) -> None:
@@ -194,12 +193,6 @@ class MongosCharm(ops.CharmBase):
             self.status.set_and_share_status(
                 BlockedStatus("Missing relation to config-server.")
             )
-            event.defer()
-            return
-
-        container = self.unit.get_container(Config.CONTAINER_NAME)
-        if not self._configure_layers(container=container):
-            logger.error("Failed to replan")
             event.defer()
             return
 
@@ -232,8 +225,9 @@ class MongosCharm(ops.CharmBase):
 
         self.status.set_and_share_status(ActiveStatus())
         self.upgrade._reconcile_upgrade(event)
-        # Emit the post app upgrade event
-        self.upgrade.post_app_upgrade_event.emit()
+        if self.upgrade._upgrade.is_compatible:
+            # Emit the post app upgrade event
+            self.upgrade.post_app_upgrade_event.emit()
 
     def _on_update_status(self, event: UpdateStatusEvent):
         """Handle the update status event."""
