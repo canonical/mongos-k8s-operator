@@ -1,0 +1,27 @@
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  mongos-k8s/1 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:834 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.5.3    unsupported  01:37:15Z
+
+App            Version  Status  Scale  Charm        Channel  Rev  Address         Exposed  Message
+config-server           active      1  mongodb-k8s  6/edge    55  10.152.183.157  no       Primary
+mongos-k8s              active      2  mongos-k8s              0  10.152.183.203  no       
+shard0                  active      1  mongodb-k8s  6/edge    55  10.152.183.251  no       Primary
+
+Unit              Workload  Agent  Address      Ports  Message
+config-server/0*  active    idle   10.1.140.77         Primary
+mongos-k8s/0*     active    idle   10.1.140.72         
+mongos-k8s/1      active    idle   10.1.140.79         
+shard0/0*         active    idle   10.1.140.78         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:840 Juju error logs:
+
+unit-config-server-0: 01:31:03 ERROR unit.config-server/0.juju-log config-server:4: Failed to add shard shard0 to the config server, error=OperationFailure("Authentication failed., full error: {'ok': 0.0, 'errmsg': 'Authentication failed.', 'code': 18, 'codeName': 'AuthenticationFailed', '$clusterTime': {'clusterTime': Timestamp(1728005461, 3), 'signature': {'hash': b'\\x98\\x98\\xb9\\x9c\\x83\\xd92\\x82}\\rB\\xa6\\x83\\xc3\\xc7\\x19\\x9f\\xd4T$', 'keyId': 7421726813455384601}}, 'operationTime': Timestamp(1728005461, 3)}")
+unit-config-server-0: 01:31:03 ERROR unit.config-server/0.juju-log config-server:4: shard0 shard does not have the same auth as the config server.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:904 Forgetting main...
