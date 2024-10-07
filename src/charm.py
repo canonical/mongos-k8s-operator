@@ -5,7 +5,6 @@
 # See LICENSE file for licensing details.
 from ops.main import main
 import json
-from datetime import datetime
 from exceptions import MissingSecretError
 
 from ops.pebble import PathError, ProtocolError, Layer
@@ -300,16 +299,7 @@ class MongosCharm(ops.CharmBase):
                 )
             )
 
-            self.tls.certs.on.certificate_expiring.emit(
-                certificate=self.tls.get_tls_secret(
-                    internal=internal, label_name=Config.TLS.SECRET_CERT_LABEL
-                ),
-                expiry=datetime.now().isoformat(),
-            )
-            # without this, it is possible that we constantly request new certificates
-            # over and over again - blocking the event queue from processing the expired
-            # certificate event.
-            self.tls.set_waiting_for_cert_to_update(waiting=True, internal=internal)
+            self.tls.request_new_certificates(internal)
 
     def get_keyfile_contents(self) -> str | None:
         """Retrieves the contents of the keyfile on host machine."""
@@ -388,7 +378,6 @@ class MongosCharm(ops.CharmBase):
         """Restart mongos service."""
         container = self.unit.get_container(Config.CONTAINER_NAME)
         container.add_layer(Config.CONTAINER_NAME, self._mongos_layer, combine=True)
-        container.replan()
         container.restart(Config.SERVICE_NAME)
 
     def set_database(self, database: str) -> None:
