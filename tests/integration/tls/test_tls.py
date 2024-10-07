@@ -23,7 +23,6 @@ from .helpers import (
 )
 from ..client_relations.helpers import get_public_k8s_ip
 
-
 MONGOS_SERVICE = "mongos.service"
 
 MONGOS_SERVICE = "snap.charmed-mongodb.mongos.service"

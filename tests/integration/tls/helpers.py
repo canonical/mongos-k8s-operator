@@ -11,6 +11,7 @@ from typing import Optional, Dict
 import json
 import ops
 import logging
+import time
 from ops.model import Unit
 from ..client_relations.helpers import get_external_uri
 from ..helpers import get_mongos_uri
@@ -30,6 +31,7 @@ CONFIG_SERVER_APP_NAME = "config-server"
 SHARD_APP_NAME = "shard0"
 CLUSTER_COMPONENTS = [CONFIG_SERVER_APP_NAME, SHARD_APP_NAME]
 MONGOS_SERVICE = "mongos.service"
+PEBBLE_TIME_UNIT = 60
 
 
 class ProcessError(Exception):
@@ -181,7 +183,7 @@ async def time_process_started(
 
     # find most recent start time. By parsing most recent logs (ie in reverse order)
     for log in reversed(logs.split("\n")):
-        if "Replan" in log:
+        if "Restart" in log:
             return process_pebble_time(log.split()[4])
 
     raise Exception("Service was never started")
@@ -364,6 +366,8 @@ async def rotate_and_verify_certs(ops_test: OpsTest, app: str, tmpdir: Path) -> 
             ops_test, unit, app_name=app, tmpdir=tmpdir
         )
 
+    time.sleep(PEBBLE_TIME_UNIT)
+
     # set external and internal key using auto-generated key for each unit
     for unit in ops_test.model.applications[app].units:
         action = await unit.run_action(action_name="set-tls-private-key")
@@ -414,7 +418,6 @@ async def rotate_and_verify_certs(ops_test: OpsTest, app: str, tmpdir: Path) -> 
 
         # Once the certificate requests are processed and updated the .service file should be
         # restarted
-
         assert (
             new_mongos_service_time > original_tls_info[unit.name]["mongos_service"]
         ), f"mongos service for {unit.name} was not restarted."
