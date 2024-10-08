@@ -12,7 +12,7 @@ import json
 import logging
 import re
 import socket
-from typing import Dict, List, Optional, Tuple
+from typing import Optional, Tuple
 
 from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateAvailableEvent,
