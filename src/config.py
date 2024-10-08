@@ -76,7 +76,10 @@ class Config:
         STATUS_READY_FOR_UPGRADE = "status-shows-ready-for-upgrade"
 
         # TODO Future PR add more status messages here as constants
-        UNHEALTHY_UPGRADE = BlockedStatus("Unhealthy after refresh.")
+        UNHEALTHY_UPGRADE = BlockedStatus("Unhealthy after upgrade.")
+        INCOMPATIBLE_UPGRADE = BlockedStatus(
+            "Refresh incompatible. Rollback to previous revision with `juju refresh`"
+        )
         INVALID_EXTERNAL_CONFIG = BlockedStatus(
             "Config option for expose-external not valid."
         )

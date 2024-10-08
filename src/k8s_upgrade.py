@@ -290,7 +290,9 @@ class MongosUpgrade(GenericMongosUpgrade):
             return
         self._upgrade.reconcile_partition(action_event=event)
 
-    def _reconcile_upgrade(self, event: EventBase) -> None:
+    def _reconcile_upgrade(
+        self, event: EventBase, during_upgrade: bool = False
+    ) -> None:
         """Handle upgrade events."""
         if not self._upgrade:
             logger.debug("Peer relation not available")
@@ -308,9 +310,15 @@ class MongosUpgrade(GenericMongosUpgrade):
                 logger.info(
                     "Refresh incompatible. If you accept potential *data loss* and *downtime*, you can continue with `force-refresh-start`"
                 )
-                self.charm.status.set_and_share_status(Config.Status.UNHEALTHY_UPGRADE)
+                self.charm.status.set_and_share_status(
+                    Config.Status.INCOMPATIBLE_UPGRADE
+                )
                 return
-        if self.charm.db_initialised and self.charm.is_db_service_ready():
+        if (
+            not during_upgrade
+            and self.charm.db_initialised
+            and self.charm.is_db_service_ready()
+        ):
             self._upgrade.unit_state = UnitState.HEALTHY
         if self.charm.unit.is_leader():
             self._upgrade.reconcile_partition()
