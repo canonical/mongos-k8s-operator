@@ -24,7 +24,7 @@ from pymongo.errors import PyMongoError
 from charms.mongodb.v0.mongo import MongoConfiguration, MongoConnection
 from charms.mongos.v0.set_status import MongosStatusHandler
 from charms.mongodb.v1.mongodb_provider import MongoDBProvider, FailedToGetHostsError
-from charms.mongodb.v0.mongodb_tls import MongoDBTLS
+from charms.mongodb.v1.mongodb_tls import MongoDBTLS
 from charms.mongodb.v0.mongodb_secrets import SecretCache
 from charms.mongodb.v0.mongodb_secrets import generate_secret_label
 from charms.mongodb.v1.helpers import get_mongos_args
