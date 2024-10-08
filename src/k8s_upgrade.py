@@ -320,6 +320,7 @@ class MongosUpgrade(GenericMongosUpgrade):
             and self.charm.is_db_service_ready()
         ):
             self._upgrade.unit_state = UnitState.HEALTHY
+            self.charm.status.set_and_share_status(ActiveStatus())
         if self.charm.unit.is_leader():
             self._upgrade.reconcile_partition()
 
@@ -349,7 +350,6 @@ class MongosUpgrade(GenericMongosUpgrade):
         # The mongos service cannot be considered ready until it has a config-server. Therefore
         # it is not necessary to do any sophisticated checks.
         if not self.charm.mongos_initialised:
-            logger.error("Not initialised :o :o :o")
             self._upgrade.unit_state = UnitState.HEALTHY
             return
 

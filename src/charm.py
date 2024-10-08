@@ -6,7 +6,7 @@
 from ops.main import main
 import json
 from charms.mongos.v0.upgrade_helpers import UnitState, unit_number
-from exceptions import MissingSecretError
+from exceptions import ContainerNotReadyError, MissingSecretError
 
 from ops.pebble import PathError, ProtocolError, Layer
 from node_port import (
@@ -140,10 +140,10 @@ class MongosCharm(ops.CharmBase):
         # TODO DPE-5235 support updating data-integrator clients to have/not have public IP
         # depending on the result of the configuration
 
-    def _configure_layers(self, container: Container) -> bool:
+    def _configure_layers(self, container: Container):
         if not container.can_connect():
             logger.debug("mongos container is not ready yet.")
-            return False
+            raise ContainerNotReadyError
         try:
             # mongos needs keyFile and TLS certificates on filesystem
             self._push_keyfile_to_workload(container)
@@ -152,7 +152,7 @@ class MongosCharm(ops.CharmBase):
 
         except (PathError, ProtocolError, MissingSecretError) as e:
             logger.error("Cannot initialize workload: %r", e)
-            return False
+            raise ContainerNotReadyError from e
 
         # Add initial Pebble config layer using the Pebble API
         current_layers = container.get_plan()
@@ -162,8 +162,6 @@ class MongosCharm(ops.CharmBase):
             container.add_layer(Config.CONTAINER_NAME, new_layer, combine=True)
             # Restart changed services and start startup-enabled services.
             container.replan()
-
-        return True
 
     def _on_mongos_pebble_ready(self, event) -> None:
         """Configure MongoDB pebble layer specification."""
@@ -175,7 +173,9 @@ class MongosCharm(ops.CharmBase):
 
         # Get a reference the container attribute
         container = self.unit.get_container(Config.CONTAINER_NAME)
-        if not self._configure_layers(container):
+        try:
+            self._configure_layers(container)
+        except ContainerNotReadyError:
             event.defer()
             return
 
@@ -218,7 +218,10 @@ class MongosCharm(ops.CharmBase):
 
     def _on_upgrade(self, event) -> None:
         container = self.unit.get_container(Config.CONTAINER_NAME)
-        if not self._configure_layers(container=container):
+        try:
+            self._configure_layers(container=container)
+        except ContainerNotReadyError:
+            self.status.set_and_share_status(Config.Status.UNHEALTHY_UPGRADE)
             logger.error("Failed to replan")
             event.defer()
             return
@@ -245,6 +248,11 @@ class MongosCharm(ops.CharmBase):
             return
 
         self.upgrade._reconcile_upgrade(event)
+        if self.unit.status in (
+            Config.Status.UNHEALTHY_UPGRADE,
+            Config.Status.INCOMPATIBLE_UPGRADE,
+        ):
+            return
 
         if tls_statuses := self.cluster.get_tls_statuses():
             self.status.set_and_share_status(tls_statuses)

@@ -30,3 +30,11 @@ class MissingSecretError(MongoSecretError):
 
 class SecretAlreadyExistsError(MongoSecretError):
     """A secret that we want to create already exists."""
+
+
+class ContainerNotReadyError(Exception):
+    """Raised when the container is not ready for a replan of services."""
+
+
+class FailedToUpdateFilesystem(Exception):
+    """Raised when the container is not ready for a replan of services."""

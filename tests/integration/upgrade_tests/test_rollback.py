@@ -66,18 +66,12 @@ async def test_rollback(ops_test: OpsTest, local_charm, faulty_upgrade_charm) ->
         with attempt:
             assert "Refresh incompatible" in get_juju_status(
                 ops_test.model.name, MONGOS_APP_NAME
-            ), "Not indicating charm incompatible"
+            ), "Not indicating charm incompatible after refresh"
 
     logger.info("Re-refresh the charm")
     await mongos_application.refresh(path=local_charm)
     # sleep to ensure that active status from before re-refresh does not affect below check
     time.sleep(15)
-    await ops_test.model.block_until(
-        lambda: all(
-            unit.workload_status == "active" for unit in mongos_application.units
-        )
-        and all(unit.agent_status == "idle" for unit in mongos_application.units)
-    )
 
     logger.info("Wait for the charm to be rolled back")
     await ops_test.model.wait_for_idle(
@@ -85,4 +79,5 @@ async def test_rollback(ops_test: OpsTest, local_charm, faulty_upgrade_charm) ->
         status="active",
         timeout=1000,
         idle_period=30,
+        raise_on_blocked=False,
     )
