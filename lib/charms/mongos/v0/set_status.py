@@ -61,6 +61,7 @@ class MongosStatusHandler(Object):
                 status_to_clear,
                 self.charm.unit.status,
             )
+            return
 
         # TODO: In the future compute the next highest priority status.
         self.charm.unit.status = ActiveStatus()
