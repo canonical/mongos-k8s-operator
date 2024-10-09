@@ -1,0 +1,40 @@
+[32mINFO    [0m juju.model:model.py:2098 Deploying ch:amd64/jammy/self-signed-certificates-155
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  self-signed-certificates-separate/0 [allocating] waiting: installing agent
+[32mINFO    [0m pytest_operator.plugin:plugin.py:834 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.5.3    unsupported  01:57:23Z
+
+App                                Version  Status   Scale  Charm                     Channel        Rev  Address         Exposed  Message
+config-server                               active       1  mongodb-k8s               6/edge          55  10.152.183.91   no       Primary
+mongos-k8s                                  waiting      1  mongos-k8s                                 0  10.152.183.92   no       installing agent
+self-signed-certificates                    active       1  self-signed-certificates  latest/edge    200  10.152.183.165  no       
+self-signed-certificates-separate           active       1  self-signed-certificates  latest/stable  155  10.152.183.123  no       
+shard0                                      active       1  mongodb-k8s               6/edge          55  10.152.183.70   no       Primary
+
+Unit                                  Workload  Agent  Address       Ports  Message
+config-server/0*                      active    idle   10.1.182.141         Primary
+mongos-k8s/0*                         waiting   idle   10.1.182.136         Waiting for MongoDB to start
+self-signed-certificates-separate/0*  active    idle   10.1.182.144         
+self-signed-certificates/0*           active    idle   10.1.182.143         
+shard0/0*                             active    idle   10.1.182.142         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:840 Juju error logs:
+
+unit-config-server-0: 01:31:18 ERROR unit.config-server/0.juju-log config-server:4: Failed to add shard shard0 to the config server, error=OperationFailure('Authentication failed., full error: {\'ok\': 0.0, \'errmsg\': \'Authentication failed.\', \'code\': 18, \'codeName\': \'AuthenticationFailed\', \'$clusterTime\': {\'clusterTime\': Timestamp(1728437478, 1), \'signature\': {\'hash\': b\'\\x18?\\x97b"\\xc8\\xf5\\xb3\\r-\\xd8\\xe60\\x0c\\x036<\\xc6\\xbe^\', \'keyId\': 7423582299456798745}}, \'operationTime\': Timestamp(1728437478, 1)}')
+unit-config-server-0: 01:31:18 ERROR unit.config-server/0.juju-log config-server:4: shard0 shard does not have the same auth as the config server.
+unit-mongos-k8s-0: 01:35:43 ERROR unit.mongos-k8s/0.juju-log certificates:6: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongos-k8s-0: 01:35:44 ERROR unit.mongos-k8s/0.juju-log certificates:6: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-config-server-0: 01:38:35 ERROR unit.config-server/0.juju-log certificates:7: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-shard0-0: 01:38:35 ERROR unit.shard0/0.juju-log certificates:8: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-shard0-0: 01:38:35 ERROR unit.shard0/0.juju-log certificates:8: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-config-server-0: 01:38:35 ERROR unit.config-server/0.juju-log certificates:7: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-mongos-k8s-0: 01:42:02 ERROR unit.mongos-k8s/0.juju-log certificates:6: An unknown certificate is available -- ignoring.
+unit-mongos-k8s-0: 01:42:02 ERROR unit.mongos-k8s/0.juju-log certificates:6: An unknown certificate is available -- ignoring.
+unit-mongos-k8s-0: 01:49:25 ERROR unit.mongos-k8s/0.juju-log certificates:9: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongos-k8s-0: 01:49:25 ERROR unit.mongos-k8s/0.juju-log certificates:9: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-mongos-k8s-0: 01:52:24 ERROR unit.mongos-k8s/0.juju-log certificates:10: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongos-k8s-0: 01:52:24 ERROR unit.mongos-k8s/0.juju-log certificates:10: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:904 Forgetting main...
