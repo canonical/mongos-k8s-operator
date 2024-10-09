@@ -155,13 +155,11 @@ class MongosCharm(ops.CharmBase):
             raise ContainerNotReadyError from e
 
         # Add initial Pebble config layer using the Pebble API
-        current_layers = container.get_plan()
         new_layer = self._mongos_layer
-        if current_layers.services != new_layer.services:
-            logger.error(f"Adding layer {Config.CONTAINER_NAME}")
-            container.add_layer(Config.CONTAINER_NAME, new_layer, combine=True)
-            # Restart changed services and start startup-enabled services.
-            container.replan()
+        logger.info(f"Adding layer {Config.CONTAINER_NAME}")
+        container.add_layer(Config.CONTAINER_NAME, new_layer, combine=True)
+        # Restart changed services and start startup-enabled services.
+        container.replan()
 
     def _on_mongos_pebble_ready(self, event) -> None:
         """Configure MongoDB pebble layer specification."""
