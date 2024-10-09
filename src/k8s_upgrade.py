@@ -271,6 +271,9 @@ class MongosUpgrade(GenericMongosUpgrade):
             self._reconcile_upgrade,
         )
         self.framework.observe(
+            charm.on[PRECHECK_ACTION_NAME].action, self._on_pre_upgrade_check_action
+        )
+        self.framework.observe(
             self.post_app_upgrade_event, self.run_post_app_upgrade_task
         )
         self.framework.observe(

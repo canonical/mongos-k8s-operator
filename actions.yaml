@@ -10,6 +10,9 @@ set-tls-private-key:
       type: string
       description: The content of private key for internal communications with clients. Content will be auto-generated if this option is not specified.
 
+pre-refresh-check:
+  description: Check if charm is ready to refresh.
+
 force-refresh-start:
   description: |
     Force upgrade of this unit.
