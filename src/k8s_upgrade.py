@@ -13,7 +13,6 @@ import lightkube.resources.apps_v1
 import lightkube.resources.core_v1
 from charms.mongos.v0.upgrade_helpers import (
     PEER_RELATION_ENDPOINT_NAME,
-    PRECHECK_ACTION_NAME,
     ROLLBACK_INSTRUCTIONS,
     AbstractUpgrade,
     GenericMongosUpgrade,
@@ -35,6 +34,8 @@ if TYPE_CHECKING:
     from charm import MongosCharm
 
 logger = getLogger()
+
+PRECHECK_ACTION_NAME = "pre-refresh-check"
 
 
 class DeployedWithoutTrust(Exception):
