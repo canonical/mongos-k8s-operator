@@ -4,14 +4,17 @@
 
 from pathlib import Path
 from pytest_operator.plugin import OpsTest
-from ..helpers import get_application_relation_data, get_secret_data
+from ..helpers import get_application_relation_data
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_exponential
 from datetime import datetime
 from typing import Optional, Dict
 import json
 import ops
 import logging
-
+import time
+from ops.model import Unit
+from ..client_relations.helpers import get_external_uri
+from ..helpers import get_mongos_uri
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +22,7 @@ logger = logging.getLogger(__name__)
 EXTERNAL_PEM_PATH = "/etc/mongod/external-cert.pem"
 EXTERNAL_CERT_PATH = "/etc/mongod/external-ca.crt"
 INTERNAL_CERT_PATH = "/etc/mongod/internal-ca.crt"
-MONGO_SHELL = "charmed-mongodb.mongosh"
+MONGO_SHELL = "/usr/bin/mongosh"
 MONGOS_APP_NAME = "mongos-k8s"
 CERT_REL_NAME = "certificates"
 CERTS_APP_NAME = "self-signed-certificates"
@@ -28,6 +31,7 @@ CONFIG_SERVER_APP_NAME = "config-server"
 SHARD_APP_NAME = "shard0"
 CLUSTER_COMPONENTS = [CONFIG_SERVER_APP_NAME, SHARD_APP_NAME]
 MONGOS_SERVICE = "mongos.service"
+PEBBLE_TIME_UNIT = 60
 
 
 class ProcessError(Exception):
@@ -76,10 +80,10 @@ async def check_mongos_tls_disabled(ops_test: OpsTest) -> None:
         await check_tls(ops_test, unit, enabled=False)
 
 
-async def check_mongos_tls_enabled(ops_test: OpsTest) -> None:
+async def check_mongos_tls_enabled(ops_test: OpsTest, internal=True) -> None:
     # check each replica set is running with TLS enabled
     for unit in ops_test.model.applications[MONGOS_APP_NAME].units:
-        await check_tls(ops_test, unit, enabled=True)
+        await check_tls(ops_test, unit, enabled=True, internal=internal)
 
 
 async def toggle_tls_mongos(
@@ -97,24 +101,25 @@ async def toggle_tls_mongos(
             f"{certs_app_name}:{CERT_REL_NAME}",
         )
 
+    await ops_test.model.wait_for_idle(apps=[MONGOS_APP_NAME], idle_period=30)
 
-async def mongos_tls_command(ops_test: OpsTest) -> str:
+
+async def mongos_tls_command(ops_test: OpsTest, unit, internal=True) -> str:
     """Generates a command which verifies TLS status."""
-    secret_uri = await get_application_relation_data(
-        ops_test, MONGOS_APP_NAME, "mongos", "secret-user"
-    )
-
-    secret_data = await get_secret_data(ops_test, secret_uri)
-    client_uri = secret_data.get("uris")
+    unit_id = unit.name.split("/")[1]
+    if not internal:
+        client_uri = await get_external_uri(ops_test, unit_id=unit_id)
+    else:
+        client_uri = await get_mongos_uri(ops_test, unit_id=unit_id)
 
     return (
-        f"{MONGO_SHELL} '{client_uri}'  --eval 'sh.status()'"
+        f"{MONGO_SHELL} '{client_uri}'  --eval 'db.getUsers()'"
         f" --tls --tlsCAFile {EXTERNAL_CERT_PATH}"
         f" --tlsCertificateKeyFile {EXTERNAL_PEM_PATH}"
     )
 
 
-async def check_tls(ops_test, unit, enabled) -> None:
+async def check_tls(ops_test, unit, enabled, internal=True) -> None:
     """Returns True if TLS matches the expected state "enabled"."""
     try:
         for attempt in Retrying(
@@ -122,18 +127,34 @@ async def check_tls(ops_test, unit, enabled) -> None:
             wait=wait_exponential(multiplier=1, min=2, max=30),
         ):
             with attempt:
-                mongod_tls_check = await mongos_tls_command(ops_test)
-                check_tls_cmd = f"exec --unit {unit.name} -- {mongod_tls_check}"
-                return_code, _, _ = await ops_test.juju(*check_tls_cmd.split())
+                mongos_tls_check = await mongos_tls_command(
+                    ops_test, unit=unit, internal=internal
+                )
+                complete_command = (
+                    f"ssh --container mongos {unit.name} {mongos_tls_check}"
+                )
+                return_code, _, stderr = await ops_test.juju(*complete_command.split())
 
                 tls_enabled = return_code == 0
                 if enabled != tls_enabled:
+                    logger.error(stderr)
                     raise ValueError(
                         f"TLS is{' not' if not tls_enabled else ''} enabled on {unit.name}"
                     )
                 return True
     except RetryError:
         return False
+
+
+async def get_sans_ips(ops_test: OpsTest, unit: Unit, internal: bool) -> str:
+    """Retrieves the sans for the for mongos on the provided unit."""
+    cert_name = "internal" if internal else "external"
+    get_sans_cmd = (
+        f"openssl x509 -noout -ext subjectAltName -in /etc/mongod/{cert_name}-cert.pem"
+    )
+    complete_command = f"ssh --container mongos {unit.name} {get_sans_cmd}"
+    _, result, _ = await ops_test.juju(*complete_command.split())
+    return result
 
 
 async def time_file_created(ops_test: OpsTest, unit_name: str, path: str) -> int:
@@ -162,7 +183,7 @@ async def time_process_started(
 
     # find most recent start time. By parsing most recent logs (ie in reverse order)
     for log in reversed(logs.split("\n")):
-        if "Replan" in log:
+        if "Restart" in log:
             return process_pebble_time(log.split()[4])
 
     raise Exception("Service was never started")
@@ -345,6 +366,8 @@ async def rotate_and_verify_certs(ops_test: OpsTest, app: str, tmpdir: Path) -> 
             ops_test, unit, app_name=app, tmpdir=tmpdir
         )
 
+    time.sleep(PEBBLE_TIME_UNIT)
+
     # set external and internal key using auto-generated key for each unit
     for unit in ops_test.model.applications[app].units:
         action = await unit.run_action(action_name="set-tls-private-key")
@@ -395,7 +418,6 @@ async def rotate_and_verify_certs(ops_test: OpsTest, app: str, tmpdir: Path) -> 
 
         # Once the certificate requests are processed and updated the .service file should be
         # restarted
-
         assert (
             new_mongos_service_time > original_tls_info[unit.name]["mongos_service"]
         ), f"mongos service for {unit.name} was not restarted."

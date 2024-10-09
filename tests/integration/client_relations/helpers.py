@@ -121,6 +121,18 @@ async def assert_all_unit_node_ports_available(ops_test: OpsTest):
         ), "client is not reachable"
 
 
+async def get_external_uri(
+    ops_test: OpsTest, unit_id, exposed_node_port: str = None
+) -> str:
+    exposed_node_port = exposed_node_port or get_port_from_node_port(
+        ops_test, node_port_name=f"{MONGOS_APP_NAME}-{unit_id}-external"
+    )
+
+    public_k8s_ip = get_public_k8s_ip()
+    username, password = await get_mongos_user_password(ops_test, MONGOS_APP_NAME)
+    return f"mongodb://{username}:{password}@{public_k8s_ip}:{exposed_node_port}"
+
+
 async def is_external_mongos_client_reachable(
     ops_test: OpsTest, exposed_node_port: str
 ) -> bool:

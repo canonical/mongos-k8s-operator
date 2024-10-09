@@ -122,6 +122,7 @@ class MongosCharm(ops.CharmBase):
         self.status.clear_status(Config.Status.INVALID_EXTERNAL_CONFIG)
         self.update_external_services()
 
+        self.update_tls_sans()
         # toggling of external connectivity means we have to update integrated hosts
         self._update_client_related_hosts(event)
 
@@ -224,11 +225,14 @@ class MongosCharm(ops.CharmBase):
             )
             return
 
+        # in the case external connectivity it is possible for public K8s endpoint to be updated
+        # in that case we must update our sans in TLS. K8s endpoints is not tracked by Juju.
+        self.update_tls_sans()
+
         self.status.set_and_share_status(ActiveStatus())
 
     # END: hook functions
 
-    # BEGIN: helper functions
     def is_user_external_config_valid(self) -> bool:
         """Returns True if the user set external config is valid."""
         return (
@@ -261,6 +265,41 @@ class MongosCharm(ops.CharmBase):
             self.node_port_manager.delete_unit_service()
 
         self.expose_external = self.model.config["expose-external"]
+
+    def update_tls_sans(self) -> None:
+        """Emits a certificate expiring event when sans in current certificates are out of date.
+
+        This can occur for a variety of reasons:
+        1. Node port has been toggled on
+        2. Node port has been toggled off
+        3. The public K8s IP has changed
+        """
+
+        for internal in [True, False]:
+            # if the certificate has already been requested, we do not want to re-request
+            # another one and lead to an infinite chain of certificate events.
+            if self.tls.is_set_waiting_for_cert_to_update(internal):
+                continue
+
+            current_sans = self.tls.get_current_sans(internal)
+            current_sans_ip = set(current_sans["sans_ips"]) if current_sans else set()
+            expected_sans_ip = (
+                set(self.tls.get_new_sans()["sans_ips"]) if current_sans else set()
+            )
+            sans_ip_changed = current_sans_ip ^ expected_sans_ip
+
+            if not sans_ip_changed:
+                continue
+
+            logger.info(
+                (
+                    f'Mongos {self.unit.name.split("/")[1]} updating certificate SANs - '
+                    f"OLD SANs = {current_sans_ip - expected_sans_ip}, "
+                    f"NEW SANs = {expected_sans_ip - current_sans_ip}"
+                )
+            )
+
+            self.tls.request_new_certificates(internal)
 
     def get_keyfile_contents(self) -> str | None:
         """Retrieves the contents of the keyfile on host machine."""
@@ -338,10 +377,8 @@ class MongosCharm(ops.CharmBase):
     def restart_charm_services(self):
         """Restart mongos service."""
         container = self.unit.get_container(Config.CONTAINER_NAME)
-        container.stop(Config.SERVICE_NAME)
-
         container.add_layer(Config.CONTAINER_NAME, self._mongos_layer, combine=True)
-        container.replan()
+        container.restart(Config.SERVICE_NAME)
 
     def set_database(self, database: str) -> None:
         """Updates the database requested for the mongos user."""
@@ -419,36 +456,18 @@ class MongosCharm(ops.CharmBase):
         The host for mongos can be either the Unix Domain Socket or an IP address depending on how
         the client wishes to connect to mongos (inside Juju or outside).
         """
-        return self.unit_host(self.unit)
+        unit_id = self.unit.name.split("/")[1]
+        return f"{self.app.name}-{unit_id}.{self.app.name}-endpoints"
 
     def get_ext_mongos_hosts(self) -> Set:
-        """Returns the K8s hosts for mongos.
+        """Returns the ext hosts for mongos.
 
         Note: for external connections it is not enough to know the external ip, but also the
         port that is associated with the client.
         """
         hosts = set()
-
-        if not self.is_external_client:
-            return hosts
-
-        try:
-            for unit in self.get_units():
-                unit_ip = self.node_port_manager.get_node_ip(unit.name)
-                unit_port = self.node_port_manager.get_node_port(
-                    port_to_match=Config.MONGOS_PORT, unit_name=unit.name
-                )
-                if unit_ip and unit_port:
-                    hosts.add(f"{unit_ip}:{unit_port}")
-                else:
-                    raise NoExternalHostError(f"No external host for unit {unit.name}")
-        except (
-            ApiError,
-            NoExternalHostError,
-            FailedToFindNodePortError,
-            FailedToFindServiceError,
-        ) as e:
-            raise FailedToGetHostsError(f"Failed to retrieve external hosts due to {e}")
+        for unit in self.get_units():
+            hosts.add(self.get_ext_mongos_host(unit))
 
         return hosts
 
@@ -456,9 +475,36 @@ class MongosCharm(ops.CharmBase):
         """Returns the K8s hosts for mongos"""
         hosts = set()
         for unit in self.get_units():
-            hosts.add(self.unit_host(unit))
+            unit_id = unit.name.split("/")[1]
+            hosts.add(f"{self.app.name}-{unit_id}.{self.app.name}-endpoints")
 
         return hosts
+
+    def get_ext_mongos_host(self, unit: Unit, incl_port=True) -> str | None:
+        """Returns the ext hosts for mongos on the provided unit."""
+        if not self.is_external_client:
+            return None
+
+        try:
+            unit_ip = self.node_port_manager.get_node_ip(unit.name)
+            if not incl_port:
+                return unit_ip
+
+            unit_port = self.node_port_manager.get_node_port(
+                port_to_match=Config.MONGOS_PORT, unit_name=unit.name
+            )
+            if unit_ip and unit_port:
+                return f"{unit_ip}:{unit_port}"
+            else:
+                raise NoExternalHostError(f"No external host for unit {unit.name}")
+        except (
+            NoExternalHostError,
+            FailedToFindNodePortError,
+            FailedToFindServiceError,
+        ) as e:
+            raise FailedToGetHostsError(
+                "Failed to retrieve external hosts due to %s", e
+            )
 
     def get_mongos_hosts_for_client(self) -> Set:
         """Returns the hosts for mongos as a str.
@@ -618,18 +664,6 @@ class MongosCharm(ops.CharmBase):
             except PathError as err:
                 logger.debug("Path unavailable: %s (%s)", file, str(err))
 
-    def unit_host(self, unit: Unit) -> str:
-        """Create a DNS name for a MongoDB unit.
-
-        Args:
-            unit_name: the juju unit name, e.g. "mongodb/1".
-
-        Returns:
-            A string representing the hostname of the MongoDB unit.
-        """
-        unit_id = unit.name.split("/")[1]
-        return f"{self.app.name}-{unit_id}.{self.app.name}-endpoints"
-
     def get_config_server_name(self) -> Optional[str]:
         """Returns the name of the Juju Application that mongos is using as a config server."""
         return self.cluster.get_config_server_name()
@@ -669,13 +703,22 @@ class MongosCharm(ops.CharmBase):
     @property
     def expose_external(self) -> Optional[str]:
         """Returns mode of exposure for external connections."""
-        if (
-            self.app_peer_data.get("expose-external", Config.ExternalConnections.NONE)
-            == Config.ExternalConnections.NONE
-        ):
+        # don't let an incorrect configuration
+        if not self.is_user_external_config_valid():
+            if (
+                self.app_peer_data.get(
+                    "expose-external", Config.ExternalConnections.NONE
+                )
+                == Config.ExternalConnections.NONE
+            ):
+                return None
+
+            return self.app_peer_data["expose-external"]
+
+        if self.model.config["expose-external"] == Config.ExternalConnections.NONE:
             return None
 
-        return self.app_peer_data["expose-external"]
+        return self.model.config["expose-external"]
 
     @expose_external.setter
     def expose_external(self, expose_external: str) -> None:
@@ -711,7 +754,7 @@ class MongosCharm(ops.CharmBase):
             )
 
     @property
-    def peers_units(self) -> list[Unit]:
+    def peers_units(self) -> List[Unit]:
         """Get peers units in a safe way."""
         if not self._peers:
             return []
