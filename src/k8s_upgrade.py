@@ -13,10 +13,12 @@ import lightkube.resources.apps_v1
 import lightkube.resources.core_v1
 from charms.mongos.v0.upgrade_helpers import (
     PEER_RELATION_ENDPOINT_NAME,
+    PRECHECK_ACTION_NAME,
     ROLLBACK_INSTRUCTIONS,
     AbstractUpgrade,
     GenericMongosUpgrade,
     PeerRelationNotReady,
+    PrecheckFailed,
     UnitState,
     unit_number,
 )
@@ -353,6 +355,28 @@ class MongosUpgrade(GenericMongosUpgrade):
 
         self.run_post_upgrade_checks(event)
 
+    def _on_pre_upgrade_check_action(self, event: ActionEvent) -> None:
+        if not self.charm.unit.is_leader():
+            message = f"Must run action on leader unit. (e.g. `juju run {self.charm.app.name}/leader {PRECHECK_ACTION_NAME}`)"
+            logger.debug(f"Pre-refresh check failed: {message}")
+            event.fail(message)
+            return
+        if not self._upgrade or self._upgrade.in_progress:
+            message = "Upgrade already in progress"
+            logger.debug(f"Pre-refresh check failed: {message}")
+            event.fail(message)
+            return
+        try:
+            self._upgrade.pre_upgrade_check()
+        except PrecheckFailed as exception:
+            message = f"Charm is *not* ready for refresh. Pre-refresh check failed: {exception.message}"
+            logger.debug(f"Pre-refresh check failed: {message}")
+            event.fail(message)
+            return
+        message = "Charm is ready for refresh"
+        event.set_results({"result": message})
+        logger.debug(f"Pre-refresh check succeeded: {message}")
+
     @property
     @override
     def _upgrade(self) -> KubernetesUpgrade | None:
@@ -363,17 +387,17 @@ class MongosUpgrade(GenericMongosUpgrade):
 
     def run_post_upgrade_checks(self, event: EventBase) -> None:
         """Runs post-upgrade checks for after a shard/config-server/replset/cluster upgrade."""
-        logger.debug("Checking mongos is running after refresh.")
+        logger.debug("-----\nchecking mongos running\n----")
         if not self.charm.cluster.is_mongos_running():
             logger.debug(
-                "Waiting for mongos router to be ready before finalising refresh."
+                "Waiting for mongos router to be ready before finalising upgrade."
             )
             event.defer()
             return
 
-        logger.debug("Checking that mongos is able to read/write after refresh.")
+        logger.debug("-----\nchecking is_mongos_able_to_read_write\n----")
         if not self.is_mongos_able_to_read_write():
-            logger.error("mongos is not able to read/write after refresh.")
+            logger.error("mongos is not able to read/write after upgrade.")
             logger.info(ROLLBACK_INSTRUCTIONS)
             self.charm.status.set_and_share_status(Config.Status.UNHEALTHY_UPGRADE)
             event.defer()
@@ -382,7 +406,7 @@ class MongosUpgrade(GenericMongosUpgrade):
         if self.charm.unit.status == Config.Status.UNHEALTHY_UPGRADE:
             self.charm.status.set_and_share_status(ActiveStatus())
 
-        logger.debug("refresh of unit succeeded.")
+        logger.debug("upgrade of unit succeeded.")
         self._upgrade.unit_state = UnitState.HEALTHY
 
 
