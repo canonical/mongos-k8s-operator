@@ -450,6 +450,15 @@ class MongosCharm(ops.CharmBase):
         units.extend(self.peers_units)
         return units
 
+    def get_mongos_port(self) -> int:
+        """Returns the port for this unit"""
+        if self.is_external_client:
+            self.node_port_manager.get_node_port(
+                port_to_match=Config.MONGOS_PORT, unit_name=self.unit.name
+            )
+
+        return Config.MONGOS_PORT
+
     def get_mongos_host(self) -> str:
         """Returns the host for mongos as a str.
 
@@ -459,7 +468,7 @@ class MongosCharm(ops.CharmBase):
         unit_id = self.unit.name.split("/")[1]
         return f"{self.app.name}-{unit_id}.{self.app.name}-endpoints"
 
-    def get_ext_mongos_hosts(self) -> Set:
+    def get_ext_mongos_hosts(self, incl_port: bool = True) -> Set:
         """Returns the ext hosts for mongos.
 
         Note: for external connections it is not enough to know the external ip, but also the
@@ -467,7 +476,7 @@ class MongosCharm(ops.CharmBase):
         """
         hosts = set()
         for unit in self.get_units():
-            hosts.add(self.get_ext_mongos_host(unit))
+            hosts.add(self.get_ext_mongos_host(unit, incl_port=incl_port))
 
         return hosts
 
@@ -513,7 +522,7 @@ class MongosCharm(ops.CharmBase):
         the app has been configured.
         """
         if self.is_external_client:
-            return self.get_ext_mongos_hosts()
+            return self.get_ext_mongos_hosts(incl_port=False)
 
         return self.get_k8s_mongos_hosts()
 
