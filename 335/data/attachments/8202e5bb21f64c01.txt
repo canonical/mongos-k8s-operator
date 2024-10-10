@@ -1,0 +1,30 @@
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  mongos-k8s/1 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  mongos-k8s/1 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:834 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.5.3    unsupported  01:39:28Z
+
+App            Version  Status  Scale  Charm        Channel  Rev  Address         Exposed  Message
+config-server           active      1  mongodb-k8s  6/edge    56  10.152.183.88   no       
+mongos-k8s              active      2  mongos-k8s              0  10.152.183.163  no       
+shard0                  active      1  mongodb-k8s  6/edge    56  10.152.183.94   no       Primary
+
+Unit              Workload  Agent  Address       Ports  Message
+config-server/0*  active    idle   10.1.236.205         
+mongos-k8s/0*     active    idle   10.1.236.200         
+mongos-k8s/1      active    idle   10.1.236.207         
+shard0/0*         active    idle   10.1.236.206         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:840 Juju error logs:
+
+unit-config-server-0: 01:32:15 ERROR unit.config-server/0.juju-log config-server:4: Failed to add shard shard0 to the config server, error=OperationFailure("Authentication failed., full error: {'ok': 0.0, 'errmsg': 'Authentication failed.', 'code': 18, 'codeName': 'AuthenticationFailed', '$clusterTime': {'clusterTime': Timestamp(1728523935, 1), 'signature': {'hash': b'k\\x9cx\\x19r\\xe8\\x96\\x9f\\xe6$\\xb1\\xd2P\\x0b\\x13\\xdbV\\x0f$\\xeb', 'keyId': 7423953547839930393}}, 'operationTime': Timestamp(1728523935, 1)}")
+unit-config-server-0: 01:32:15 ERROR unit.config-server/0.juju-log config-server:4: shard0 shard does not have the same auth as the config server.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:904 Forgetting main...
