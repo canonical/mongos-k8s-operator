@@ -391,17 +391,17 @@ class MongosUpgrade(GenericMongosUpgrade):
 
     def run_post_upgrade_checks(self, event: EventBase) -> None:
         """Runs post-upgrade checks for after a shard/config-server/replset/cluster upgrade."""
-        logger.debug("-----\nchecking mongos running\n----")
+        logger.debug("Checking mongos running after refresh.")
         if not self.charm.cluster.is_mongos_running():
             logger.debug(
-                "Waiting for mongos router to be ready before finalising upgrade."
+                "Waiting for mongos router to be ready before finalising refresh."
             )
             event.defer()
             return
 
-        logger.debug("-----\nchecking is_mongos_able_to_read_write\n----")
+        logger.debug("Checking mongos is able to read/write after refresh.")
         if not self.is_mongos_able_to_read_write():
-            logger.error("mongos is not able to read/write after upgrade.")
+            logger.error("mongos is not able to read/write after refresh.")
             logger.info(ROLLBACK_INSTRUCTIONS)
             self.charm.status.set_and_share_status(Config.Status.UNHEALTHY_UPGRADE)
             event.defer()
@@ -410,7 +410,7 @@ class MongosUpgrade(GenericMongosUpgrade):
         if self.charm.unit.status == Config.Status.UNHEALTHY_UPGRADE:
             self.charm.status.set_and_share_status(ActiveStatus())
 
-        logger.debug("upgrade of unit succeeded.")
+        logger.debug("Refresh of unit succeeded.")
         self._upgrade.unit_state = UnitState.HEALTHY
 
 
