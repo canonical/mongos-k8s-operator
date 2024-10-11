@@ -14,6 +14,7 @@ from ..helpers import (
     MONGOS_APP_NAME,
     build_cluster,
     deploy_cluster_components,
+    get_direct_mongos_client,
     get_juju_status,
     get_workload_version,
 )
@@ -90,3 +91,6 @@ async def test_rollback(ops_test: OpsTest, local_charm, faulty_upgrade_charm) ->
     for unit in mongos_application.units:
         workload_version = await get_workload_version(ops_test, unit.name)
         assert workload_version == initial_version
+        number = unit.name.split("/")[-1]
+        client = await get_direct_mongos_client(ops_test, int(number))
+        client["test_db"]["test_collection"].insert_one({f"{number}": number})
