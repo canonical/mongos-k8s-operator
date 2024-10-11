@@ -396,3 +396,17 @@ def get_juju_status(model_name: str, app_name: str) -> str:
     return subprocess.check_output(
         f"juju status --model {model_name} {app_name}".split()
     ).decode("utf-8")
+
+
+async def get_workload_version(ops_test: OpsTest, unit_name: str) -> str:
+    """Get the workload version of the deployed router charm."""
+    return_code, output, _ = await ops_test.juju(
+        "ssh",
+        unit_name,
+        "sudo",
+        "cat",
+        f"/var/lib/juju/agents/unit-{unit_name.replace('/', '-')}/charm/workload_version",
+    )
+
+    assert return_code == 0
+    return output.strip()

@@ -15,10 +15,12 @@ from ..helpers import (
     build_cluster,
     deploy_cluster_components,
     get_juju_status,
+    get_workload_version,
 )
 
 logger = logging.getLogger(__name__)
 UPGRADE_TIMEOUT = 15 * 60
+WAIT_RE_REFRESH = 15
 
 
 @pytest_asyncio.fixture
@@ -55,6 +57,9 @@ async def test_build_and_deploy(ops_test: OpsTest):
 @pytest.mark.abort_on_fail
 async def test_rollback(ops_test: OpsTest, local_charm, faulty_upgrade_charm) -> None:
     mongos_application = ops_test.model.applications[MONGOS_APP_NAME]
+
+    initial_version = Path("workload_version").read_text().strip()
+
     await mongos_application.refresh(path=faulty_upgrade_charm)
     logger.info("Wait for upgrade to fail")
 
@@ -71,7 +76,7 @@ async def test_rollback(ops_test: OpsTest, local_charm, faulty_upgrade_charm) ->
     logger.info("Re-refresh the charm")
     await mongos_application.refresh(path=local_charm)
     # sleep to ensure that active status from before re-refresh does not affect below check
-    time.sleep(15)
+    time.sleep(WAIT_RE_REFRESH)
 
     logger.info("Wait for the charm to be rolled back")
     await ops_test.model.wait_for_idle(
@@ -81,3 +86,7 @@ async def test_rollback(ops_test: OpsTest, local_charm, faulty_upgrade_charm) ->
         idle_period=30,
         raise_on_blocked=False,
     )
+
+    for unit in mongos_application.units:
+        workload_version = await get_workload_version(ops_test, unit.name)
+        assert workload_version == initial_version

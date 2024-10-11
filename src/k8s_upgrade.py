@@ -335,11 +335,15 @@ class MongosUpgrade(GenericMongosUpgrade):
             self.charm.app.status = self._upgrade.app_status or ActiveStatus()
         # Set/clear upgrade unit status if no other unit status - upgrade status for units should
         # have the lowest priority.
-        if isinstance(self.charm.unit.status, ActiveStatus) or (
-            isinstance(self.charm.unit.status, BlockedStatus)
-            and self.charm.unit.status.message.startswith(
-                "Rollback with `juju refresh`. Pre-refresh check failed:"
+        if (
+            isinstance(self.charm.unit.status, ActiveStatus)
+            or (
+                isinstance(self.charm.unit.status, BlockedStatus)
+                and self.charm.unit.status.message.startswith(
+                    "Rollback with `juju refresh`. Pre-refresh check failed:"
+                )
             )
+            or self.charm.unit.status == Config.Status.WAITING_POST_UPGRADE_STATUS
         ):
             self.charm.status.set_and_share_status(
                 self._upgrade.get_unit_juju_status() or ActiveStatus()

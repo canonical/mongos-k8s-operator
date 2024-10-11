@@ -4,7 +4,7 @@
 # See LICENSE file for licensing details.
 
 from typing import Literal
-from ops.model import BlockedStatus
+from ops.model import BlockedStatus, WaitingStatus
 
 
 class Config:
@@ -80,6 +80,7 @@ class Config:
         INCOMPATIBLE_UPGRADE = BlockedStatus(
             "Refresh incompatible. Rollback to previous revision with `juju refresh`"
         )
+        WAITING_POST_UPGRADE_STATUS = WaitingStatus("Waiting for post upgrade checks")
         INVALID_EXTERNAL_CONFIG = BlockedStatus(
             "Config option for expose-external not valid."
         )

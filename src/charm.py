@@ -140,7 +140,7 @@ class MongosCharm(ops.CharmBase):
         # TODO DPE-5235 support updating data-integrator clients to have/not have public IP
         # depending on the result of the configuration
 
-    def _configure_layers(self, container: Container):
+    def __configure_layers(self, container: Container) -> None:
         if not container.can_connect():
             logger.debug("mongos container is not ready yet.")
             raise ContainerNotReadyError
@@ -172,7 +172,7 @@ class MongosCharm(ops.CharmBase):
         # Get a reference the container attribute
         container = self.unit.get_container(Config.CONTAINER_NAME)
         try:
-            self._configure_layers(container)
+            self.__configure_layers(container)
         except ContainerNotReadyError:
             event.defer()
             return
@@ -217,14 +217,15 @@ class MongosCharm(ops.CharmBase):
     def _on_upgrade(self, event) -> None:
         container = self.unit.get_container(Config.CONTAINER_NAME)
         try:
-            self._configure_layers(container=container)
+            self.__configure_layers(container=container)
         except ContainerNotReadyError:
             self.status.set_and_share_status(Config.Status.UNHEALTHY_UPGRADE)
-            logger.error("Failed to replan")
+            self.upgrade._reconcile_upgrade(event, during_upgrade=True)
+            logger.error("Failed to replan mongos service on refresh, will try again")
             event.defer()
             return
 
-        self.status.set_and_share_status(ActiveStatus())
+        self.status.set_and_share_status(Config.Status.WAITING_POST_UPGRADE_STATUS)
         self.upgrade._reconcile_upgrade(event, during_upgrade=True)
         if self.upgrade._upgrade.is_compatible:
             # Emit the post app upgrade event
@@ -245,13 +246,6 @@ class MongosCharm(ops.CharmBase):
             )
             return
 
-        self.upgrade._reconcile_upgrade(event)
-        if self.unit.status in (
-            Config.Status.UNHEALTHY_UPGRADE,
-            Config.Status.INCOMPATIBLE_UPGRADE,
-        ):
-            return
-
         if tls_statuses := self.cluster.get_tls_statuses():
             self.status.set_and_share_status(tls_statuses)
             return
@@ -267,6 +261,13 @@ class MongosCharm(ops.CharmBase):
         # in the case external connectivity it is possible for public K8s endpoint to be updated
         # in that case we must update our sans in TLS. K8s endpoints is not tracked by Juju.
         self.update_tls_sans()
+
+        self.upgrade._reconcile_upgrade(event)
+        if self.unit.status in (
+            Config.Status.UNHEALTHY_UPGRADE,
+            Config.Status.INCOMPATIBLE_UPGRADE,
+        ):
+            return
 
         self.status.set_and_share_status(ActiveStatus())
 
