@@ -1,0 +1,29 @@
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  data-integrator/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:834 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.5.3    unsupported  01:38:19Z
+
+App              Version  Status  Scale  Charm            Channel        Rev  Address         Exposed  Message
+application               active      1  application                       0                  no       
+config-server             active      1  mongodb-k8s      6/edge          56  10.152.183.54   no       
+data-integrator           active      1  data-integrator  latest/stable   41  10.152.183.134  no       
+mongos-k8s                active      1  mongos-k8s                        0  10.152.183.172  no       
+shard0                    active      1  mongodb-k8s      6/edge          56  10.152.183.84   no       Primary
+
+Unit                Workload  Agent  Address      Ports  Message
+application/0*      active    idle                       
+config-server/0*    active    idle   10.1.36.205         
+data-integrator/0*  active    idle   10.1.36.209         
+mongos-k8s/0*       active    idle   10.1.36.200         
+shard0/0*           active    idle   10.1.36.206         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:840 Juju error logs:
+
+unit-config-server-0: 01:31:11 ERROR unit.config-server/0.juju-log config-server:4: Failed to add shard shard0 to the config server, error=OperationFailure("Authentication failed., full error: {'ok': 0.0, 'errmsg': 'Authentication failed.', 'code': 18, 'codeName': 'AuthenticationFailed', '$clusterTime': {'clusterTime': Timestamp(1728696671, 1), 'signature': {'hash': b'gU\\xe27\\x1d|\\x11\\xc6O\\xb7]\\x07u\\x03y\\x7f\\x9d>\\xb6\\xdb', 'keyId': 7424695443310772249}}, 'operationTime': Timestamp(1728696671, 1)}")
+unit-config-server-0: 01:31:11 ERROR unit.config-server/0.juju-log config-server:4: shard0 shard does not have the same auth as the config server.
+unit-mongos-k8s-0: 01:37:02 ERROR unit.mongos-k8s/0.juju-log External configuration: nonsensical-setting for expose-external is not valid, should be one of: ['none', 'nodeport']
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:904 Forgetting main...
