@@ -15,7 +15,7 @@ from node_port import (
     FailedToFindNodePortError,
     FailedToFindServiceError,
 )
-import k8s_upgrade
+from upgrades import kubernetes_upgrades
 
 from typing import Set, Optional, Dict, List
 from charms.mongodb.v0.config_server_interface import ClusterRequirer
@@ -32,7 +32,7 @@ from charms.mongodb.v0.mongodb_secrets import generate_secret_label
 from charms.mongodb.v1.helpers import get_mongos_args
 
 from config import Config
-from k8s_upgrade import MongosUpgrade
+from upgrades.mongos_upgrades import MongosUpgrade
 
 import ops
 from ops.model import (
@@ -275,8 +275,13 @@ class MongosCharm(ops.CharmBase):
         current_unit_number = unit_number(self.unit)
         # Raise partition to prevent other units from restarting if an upgrade is in progress.
         # If an upgrade is not in progress, the leader unit will reset the partition to 0.
-        if k8s_upgrade.partition.get(app_name=self.app.name) < current_unit_number:
-            k8s_upgrade.partition.set(app_name=self.app.name, value=current_unit_number)
+        if (
+            kubernetes_upgrades.partition.get(app_name=self.app.name)
+            < current_unit_number
+        ):
+            kubernetes_upgrades.partition.set(
+                app_name=self.app.name, value=current_unit_number
+            )
             logger.debug(f"Partition set to {current_unit_number} during stop event")
         if not self.upgrade._upgrade:
             logger.debug("Peer relation missing during stop event")
