@@ -140,7 +140,7 @@ class MongosCharm(ops.CharmBase):
         # TODO DPE-5235 support updating data-integrator clients to have/not have public IP
         # depending on the result of the configuration
 
-    def __configure_layers(self, container: Container) -> None:
+    def _configure_layers(self, container: Container) -> None:
         if not container.can_connect():
             logger.debug("mongos container is not ready yet.")
             raise ContainerNotReadyError
@@ -172,7 +172,7 @@ class MongosCharm(ops.CharmBase):
         # Get a reference the container attribute
         container = self.unit.get_container(Config.CONTAINER_NAME)
         try:
-            self.__configure_layers(container)
+            self._configure_layers(container)
         except ContainerNotReadyError:
             event.defer()
             return
@@ -217,7 +217,7 @@ class MongosCharm(ops.CharmBase):
     def _on_upgrade(self, event) -> None:
         container = self.unit.get_container(Config.CONTAINER_NAME)
         try:
-            self.__configure_layers(container=container)
+            self._configure_layers(container=container)
         except ContainerNotReadyError:
             self.status.set_and_share_status(Config.Status.UNHEALTHY_UPGRADE)
             self.upgrade._reconcile_upgrade(event, during_upgrade=True)
