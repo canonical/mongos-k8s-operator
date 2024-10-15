@@ -1,0 +1,42 @@
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  config-server/0 [idle] active: Primary
+  shard0/0 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  config-server/0 [idle] active: 
+  shard0/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] blocked: mongos has TLS enabled, but config-server does not.
+  mongos-k8s/1 [idle] blocked: mongos has TLS enabled, but config-server does not.
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] blocked: mongos has TLS enabled, but config-server does not.
+  mongos-k8s/1 [idle] blocked: mongos has TLS enabled, but config-server does not.
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] blocked: mongos has TLS enabled, but config-server does not.
+  mongos-k8s/1 [idle] blocked: mongos has TLS enabled, but config-server does not.
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] blocked: mongos has TLS enabled, but config-server does not.
+  mongos-k8s/1 [idle] blocked: mongos has TLS enabled, but config-server does not.
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] blocked: mongos has TLS enabled, but config-server does not.
+  mongos-k8s/1 [idle] blocked: mongos has TLS enabled, but config-server does not.
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] blocked: mongos has TLS enabled, but config-server does not.
+  mongos-k8s/1 [idle] blocked: mongos has TLS enabled, but config-server does not.
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] blocked: mongos has TLS enabled, but config-server does not.
+  mongos-k8s/1 [idle] blocked: mongos has TLS enabled, but config-server does not.
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  mongos-k8s/1 [idle] blocked: mongos has TLS enabled, but config-server does not.
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  mongos-k8s/1 [idle] blocked: mongos has TLS enabled, but config-server does not.
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  mongos-k8s/1 [idle] blocked: mongos has TLS enabled, but config-server does not.
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  mongos-k8s/1 [idle] blocked: mongos has TLS enabled, but config-server does not.
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  mongos-k8s/1 [idle] active:
