@@ -5,6 +5,7 @@ display-name: mongos-k8s
 description: |
   mongos is a router/proxy used for sharded MongoDB clusters. This charm
   deploys and operates mongos as a charm on K8s.
+docs: https://discourse.charmhub.io/t/charmed-mongos-k8s-documentation/15817
 source: https://github.com/canonical/mongos-k8s-operator
 issues: https://github.com/canonical/mongos-k8s-operator/issues
 website:
