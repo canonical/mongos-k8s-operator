@@ -1,9 +1,10 @@
 """Configuration for Mongos Charm."""
+
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 from typing import Literal
-from ops.model import BlockedStatus
+from ops.model import BlockedStatus, WaitingStatus
 
 
 class Config:
@@ -76,6 +77,10 @@ class Config:
 
         # TODO Future PR add more status messages here as constants
         UNHEALTHY_UPGRADE = BlockedStatus("Unhealthy after upgrade.")
+        INCOMPATIBLE_UPGRADE = BlockedStatus(
+            "Refresh incompatible. Rollback to previous revision with `juju refresh`"
+        )
+        WAITING_POST_UPGRADE_STATUS = WaitingStatus("Waiting for post upgrade checks")
         INVALID_EXTERNAL_CONFIG = BlockedStatus(
             "Config option for expose-external not valid."
         )
