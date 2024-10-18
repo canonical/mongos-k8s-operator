@@ -524,6 +524,17 @@ class MongoDBProvider(Object):
             self.database_provides.delete_relation_data(relation.id, fields=list(fields))
 
             # unforatunately the above doesn't work to remove secrets, so we forcibly remove the rest
+            # manually remove the secret before clearing the databag
+            for unit in relation.units:
+                secret_id = json.loads(relation.data[unit]["data"])["secret-user"]
+                # secret id is the same on all units for `secret-user`
+                break
+
+            user_secrets = self.charm.model.get_secret(id=secret_id)
+            user_secrets.remove_all_revisions()
+            user_secrets.get_content(refresh=True)
+            relation.data[self.charm.app].clear()
+            1 / 0
 
     @staticmethod
     def _get_database_from_relation(relation: Relation) -> Optional[str]:
