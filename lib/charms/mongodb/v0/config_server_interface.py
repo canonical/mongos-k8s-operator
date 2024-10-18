@@ -8,6 +8,7 @@ shards.
 """
 import logging
 from typing import Optional
+from charms.mongodb.v0.mongo import MongoConnection
 
 from pymongo.errors import PyMongoError
 from charms.data_platform_libs.v0.data_interfaces import (
@@ -358,17 +359,18 @@ class ClusterRequirer(Object):
             logger.info("Skipping relation broken event, broken event due to scale down")
             return
 
-        # remove all mongos_users
+        # remove all client mongos users
         if self.charm.unit.is_leader():
             try:
                 self.charm.client_relations.remove_all_relational_users()
+
+                # now that the client mongos users have been removed we can remove ourself
+                with MongoConnection(self.charm.mongo_config) as mongo:
+                    mongo.drop_user(self.charm.mongo_config.username)
             except PyMongoError:
                 logger.debug("Trouble removing router users, will defer and try again")
                 event.defer()
                 return
-
-        # then remove current user
-        # TODO
 
         self.charm.stop_mongos_service()
         logger.info("Stopped mongos daemon")
