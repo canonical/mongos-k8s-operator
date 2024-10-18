@@ -1,0 +1,27 @@
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:834 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.5.3    unsupported  01:36:55Z
+
+App            Version  Status  Scale  Charm        Channel  Rev  Address         Exposed  Message
+application             active      1  application             0                  no       
+config-server           active      1  mongodb-k8s  6/edge    59  10.152.183.40   no       
+mongos-k8s              active      1  mongos-k8s              0  10.152.183.224  no       
+shard0                  active      1  mongodb-k8s  6/edge    59  10.152.183.113  no       
+
+Unit              Workload  Agent  Address      Ports  Message
+application/0*    active    idle                       
+config-server/0*  active    idle   10.1.141.79         Primary
+mongos-k8s/0*     active    idle   10.1.141.74         
+shard0/0*         active    idle   10.1.141.80         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:840 Juju error logs:
+
+unit-config-server-0: 01:32:11 ERROR unit.config-server/0.juju-log config-server:6: Failed to add shard shard0 to the config server, error=OperationFailure("Authentication failed., full error: {'ok': 0.0, 'errmsg': 'Authentication failed.', 'code': 18, 'codeName': 'AuthenticationFailed', '$clusterTime': {'clusterTime': Timestamp(1729215130, 1), 'signature': {'hash': b'&\\xaa~\\xe0\\t\\xe5\\xffI\\\\\\xc0R\\xb5\\xe7[W\\xd9\\x0c\\xa1\\xf5\\xe6', 'keyId': 7426922194875187225}}, 'operationTime': Timestamp(1729215130, 1)}")
+unit-config-server-0: 01:32:11 ERROR unit.config-server/0.juju-log config-server:6: shard0 shard does not have the same auth as the config server.
+unit-mongos-k8s-0: 01:33:52 ERROR unit.mongos-k8s/0.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-0: 01:34:55 ERROR unit.mongos-k8s/0.juju-log cluster:7: mongos service is not ready yet.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:904 Forgetting main...
