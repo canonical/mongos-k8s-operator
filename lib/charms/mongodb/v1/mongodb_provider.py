@@ -523,6 +523,9 @@ class MongoDBProvider(Object):
             fields = self.database_provides.fetch_my_relation_data([relation.id])[relation.id]
             self.database_provides.delete_relation_data(relation.id, fields=list(fields))
 
+            # unforatunately the above doesn't work to remove secrets, so we forcibly remove the rest
+            relation.data[self.charm.app].clear()
+
     @staticmethod
     def _get_database_from_relation(relation: Relation) -> Optional[str]:
         """Return database name from relation."""
