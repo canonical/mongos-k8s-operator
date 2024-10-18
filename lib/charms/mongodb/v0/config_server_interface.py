@@ -9,6 +9,7 @@ shards.
 import logging
 from typing import Optional
 
+from pymongo.errors import PyMongoError
 from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProvides,
     DatabaseRequestedEvent,
@@ -185,7 +186,7 @@ class ClusterProvider(Object):
             logger.info("Skipping relation broken event, broken event due to scale down")
             return
 
-        self.charm.client_relations.oversee_users(departed_relation_id, event)
+        # self.charm.client_relations.oversee_users(departed_relation_id, event)
 
     def update_config_server_db(self, event):
         """Provides related mongos applications with new config server db."""
@@ -344,6 +345,16 @@ class ClusterRequirer(Object):
         if not self.charm.proceed_on_broken_event(event):
             logger.info("Skipping relation broken event, broken event due to scale down")
             return
+
+        # remove all mongos_users
+        try:
+            self.charm.client_relations.remove_all_relational_users()
+        except PyMongoError:
+            event.defer()
+            return
+
+        # then remove current user
+        # TODO
 
         self.charm.stop_mongos_service()
         logger.info("Stopped mongos daemon")

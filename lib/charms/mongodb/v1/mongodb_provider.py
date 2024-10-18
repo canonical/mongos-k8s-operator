@@ -201,6 +201,7 @@ class MongoDBProvider(Object):
         Raises:
             PyMongoError
         """
+
         with MongoConnection(self.charm.mongo_config) as mongo:
             for username in users_being_managed - expected_current_users:
                 logger.info("Remove relation user: %s", username)
@@ -209,6 +210,15 @@ class MongoDBProvider(Object):
                     and username == self.charm.mongo_config.username
                 ):
                     continue
+
+                # for user removal of mongos-k8s router, we let the router remove itself
+                if (
+                    self.charm.is_role(Config.Role.CONFIG_SERVER)
+                    and self.substrate == Config.Substrate.K8S
+                ):
+                    logger.info("K8s routers will remove themselves.")
+                    self._remove_from_relational_users_to_manage(username)
+                    return
 
                 mongo.drop_user(username)
                 self._remove_from_relational_users_to_manage(username)
@@ -496,6 +506,17 @@ class MongoDBProvider(Object):
         current_users = self._get_relational_users_to_manage()
         current_users.add(user_to_add)
         self._update_relational_users_to_manage(current_users)
+
+    def remove_all_relational_users(self):
+        """Removes all users from DB.
+
+        Raises: PyMongoError.
+        """
+        with MongoConnection(self.charm.mongo_config) as mongo:
+            database_users = mongo.get_users()
+
+        users_being_managed = database_users.intersection(self._get_relational_users_to_manage())
+        self.remove_users(users_being_managed, expected_current_users=set())
 
     @staticmethod
     def _get_database_from_relation(relation: Relation) -> Optional[str]:
