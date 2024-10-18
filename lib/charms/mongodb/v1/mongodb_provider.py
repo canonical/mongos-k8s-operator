@@ -518,6 +518,11 @@ class MongoDBProvider(Object):
         users_being_managed = database_users.intersection(self._get_relational_users_to_manage())
         self.remove_users(users_being_managed, expected_current_users=set())
 
+        # now we must remove all of their connection info
+        for relation in self._get_relations():
+            fields = self.database_provides.fetch_my_relation_data([relation.id])[relation.id]
+            self.database_provides.delete_relation_data(relation.id, fields=list(fields))
+
     @staticmethod
     def _get_database_from_relation(relation: Relation) -> Optional[str]:
         """Return database name from relation."""

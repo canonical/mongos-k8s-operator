@@ -315,6 +315,7 @@ class ClusterRequirer(Object):
 
         # avoid restarting mongos when possible
         if not updated_keyfile and not updated_config and self.is_mongos_running():
+            self._update_k8s_users(event)
             return
 
         # mongos is not available until it is using new secrets
@@ -333,6 +334,17 @@ class ClusterRequirer(Object):
         if self.charm.unit.is_leader():
             self.charm.mongos_initialised = True
 
+        self._update_k8s_users(event)
+
+    def _update_k8s_users(self, event) -> None:
+        # K8s can handle its 1:Many users after being initialized
+        try:
+            if self.substrate == Config.Substrate.K8S:
+                self.charm.client_relations.oversee_users(None, None)
+        except PyMongoError:
+            event.defer()
+            logger.debug("failed to add users, will try again")
+
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         # Only relation_deparated events can check if scaling down
         if not self.charm.has_departed_run(event.relation.id):
@@ -347,11 +359,13 @@ class ClusterRequirer(Object):
             return
 
         # remove all mongos_users
-        try:
-            self.charm.client_relations.remove_all_relational_users()
-        except PyMongoError:
-            event.defer()
-            return
+        if self.charm.unit.is_leader():
+            try:
+                self.charm.client_relations.remove_all_relational_users()
+            except PyMongoError:
+                logger.debug("Trouble removing router users, will defer and try again")
+                event.defer()
+                return
 
         # then remove current user
         # TODO
@@ -370,7 +384,7 @@ class ClusterRequirer(Object):
         if self.substrate == Config.Substrate.VM:
             self.charm.remove_connection_info()
         else:
-            self.db_initialised = False
+            self.charm.db_initialised = False
 
     # BEGIN: helper functions
     def pass_hook_checks(self, event):
