@@ -187,8 +187,6 @@ class ClusterProvider(Object):
             logger.info("Skipping relation broken event, broken event due to scale down")
             return
 
-        # self.charm.client_relations.oversee_users(departed_relation_id, event)
-
     def update_config_server_db(self, event):
         """Provides related mongos applications with new config server db."""
         if not self.pass_hook_checks(event):
@@ -316,6 +314,7 @@ class ClusterRequirer(Object):
 
         # avoid restarting mongos when possible
         if not updated_keyfile and not updated_config and self.is_mongos_running():
+            # mongos-k8s router must update its users on start
             self._update_k8s_users(event)
             return
 
@@ -335,6 +334,7 @@ class ClusterRequirer(Object):
         if self.charm.unit.is_leader():
             self.charm.mongos_initialised = True
 
+        # mongos-k8s router must update its users on start
         self._update_k8s_users(event)
 
     def _update_k8s_users(self, event) -> None:
@@ -344,7 +344,7 @@ class ClusterRequirer(Object):
                 self.charm.client_relations.oversee_users(None, None)
         except PyMongoError:
             event.defer()
-            logger.debug("failed to add users, will try again")
+            logger.debug("failed to add users on mongos-k8s router, will defer and try again.")
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         # Only relation_deparated events can check if scaling down
@@ -359,8 +359,11 @@ class ClusterRequirer(Object):
             logger.info("Skipping relation broken event, broken event due to scale down")
             return
 
-        # remove all client mongos users
-        if self.charm.unit.is_leader():
+        # remove all client mongos-k8s users
+        if (
+            self.charm.unit.is_leader()
+            and self.charm.client_relations.remove_all_relational_users()
+        ):
             try:
                 self.charm.client_relations.remove_all_relational_users()
 
