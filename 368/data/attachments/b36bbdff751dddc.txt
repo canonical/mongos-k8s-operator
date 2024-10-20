@@ -1,0 +1,65 @@
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  mongos-k8s/1 [idle] active: 
+  mongos-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [executing] active: MongoDB 6.0.6 running (restart pending); Charm revision 1
+  mongos-k8s/1 [executing] active: 
+  mongos-k8s/2 [executing] active: MongoDB 6.1.6+testupgrade running; Charm revision 1
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: MongoDB 6.0.6 running (restart pending); Charm revision 1
+  mongos-k8s/1 [executing] maintenance: 
+  mongos-k8s/2 [idle] active: MongoDB 6.1.6+testupgrade running; Charm revision 1
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: MongoDB 6.0.6 running (restart pending); Charm revision 1
+  mongos-k8s/1 [idle] active: MongoDB 6.1.6+testupgrade running; Charm revision 1
+  mongos-k8s/2 [idle] active: MongoDB 6.1.6+testupgrade running; Charm revision 1
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [executing] maintenance: 
+  mongos-k8s/1 [idle] active: MongoDB 6.1.6+testupgrade running; Charm revision 1
+  mongos-k8s/2 [idle] active: MongoDB 6.1.6+testupgrade running; Charm revision 1
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  mongos-k8s/1 [idle] active: 
+  mongos-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  mongos-k8s/1 [idle] active: 
+  mongos-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  mongos-k8s/1 [idle] active: 
+  mongos-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  mongos-k8s/1 [idle] active: 
+  mongos-k8s/2 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:834 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.5.3    unsupported  01:40:07Z
+
+App            Version  Status  Scale  Charm        Channel  Rev  Address         Exposed  Message
+config-server           active      1  mongodb-k8s  6/edge    59  10.152.183.17   no       
+mongos-k8s              active      3  mongos-k8s              1  10.152.183.115  no       
+shard0                  active      1  mongodb-k8s  6/edge    59  10.152.183.195  no       
+
+Unit              Workload  Agent  Address       Ports  Message
+config-server/0*  active    idle   10.1.228.143         Primary
+mongos-k8s/0      active    idle   10.1.228.147         
+mongos-k8s/1*     active    idle   10.1.228.146         
+mongos-k8s/2      active    idle   10.1.228.145         
+shard0/0*         active    idle   10.1.228.144         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:840 Juju error logs:
+
+unit-config-server-0: 01:32:03 ERROR unit.config-server/0.juju-log config-server:6: Failed to add shard shard0 to the config server, error=OperationFailure("Authentication failed., full error: {'ok': 0.0, 'errmsg': 'Authentication failed.', 'code': 18, 'codeName': 'AuthenticationFailed', '$clusterTime': {'clusterTime': Timestamp(1729387921, 2), 'signature': {'hash': b'\\xa8Vf\\xd8\\xa0\\xdd\\xce\\x96e\\\\\\x96\\xec*j\\x07\\xd6\\x00\\x07\\xf9\\xac', 'keyId': 7427664335159164953}}, 'operationTime': Timestamp(1729387921, 2)}")
+unit-config-server-0: 01:32:03 ERROR unit.config-server/0.juju-log config-server:6: shard0 shard does not have the same auth as the config server.
+unit-mongos-k8s-2: 01:33:44 ERROR unit.mongos-k8s/2.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-0: 01:33:44 ERROR unit.mongos-k8s/0.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-1: 01:33:44 ERROR unit.mongos-k8s/1.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-0: 01:34:47 ERROR unit.mongos-k8s/0.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-2: 01:34:47 ERROR unit.mongos-k8s/2.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-1: 01:34:47 ERROR unit.mongos-k8s/1.juju-log cluster:7: mongos service is not ready yet.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:904 Forgetting main...
