@@ -49,7 +49,8 @@ juju run data-integrator/leader get-credentials
 
 You will find the URI under the field `uris` in the output.
 <!--TODO: Uncomment when sharding tutorial is up.
-> For more information about accessing the database, see the Charmed MongoDB documentation for [accessing a client database](https://charmhub.io/mongodb/docs/t-integrate-sharding#heading--access-integrated-database).-->
+> For more information about accessing the database, see the Charmed MongoDB documentation for [accessing a client database](https://charmhub.io/mongodb/docs/t-integrate-sharding#heading--access-integrated-database).
+-->
 
 ### Enable TLS
 If the sharded MongoDB cluster has TLS enabled, `mongos-k8s` must also enable TLS. Enable it by integrating `mongos-k8s` with a TLS application:
