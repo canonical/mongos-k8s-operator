@@ -58,6 +58,29 @@ juju integrate mongos-k8s <tls-application>
 ```
 > For more information about TLS in sharded clusters, see the Charmed MongoDB documentation for [enabling security in sharded clusters](https://charmhub.io/mongodb/docs/t-enable-tls-sharding)
 
+### External connections
+
+If you would like to connect the sharded MongoDB K8s cluster *outside* of Juju, this is possible with the configuration `expose-external` in the mongos-k8s charm.
+
+Simply configure the charm to use `nodeport`:
+```shell
+ juju config mongos-k8s expose-external=nodeport
+```
+
+This will make the mongos router accessible outside of Juju and will provide you access to the cluster. You will now see that all of your client URIs have been updated. 
+
+For example run:
+```
+juju run data-integrator get-credentials
+```
+
+You will see that the URI has changed.
+
+To reconfigure the charm to have internal access only, run:
+```shell
+ juju config mongos-k8s expose-external=none
+```
+
 ### Remove `mongos`
 To remove a `mongos` connection to the sharded cluster, run:
 ```none
