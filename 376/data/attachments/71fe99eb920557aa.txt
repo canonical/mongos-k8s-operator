@@ -1,0 +1,124 @@
+[32mINFO    [0m integration.upgrade_tests.test_rollback:test_rollback.py:65 Wait for upgrade to fail
+[32mINFO    [0m integration.upgrade_tests.test_rollback:test_rollback.py:77 Re-refresh the charm
+[32mINFO    [0m integration.upgrade_tests.test_rollback:test_rollback.py:82 Wait for the charm to be rolled back
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: MongoDB 6.0.6 running (restart pending); Charm revision 1
+  mongos-k8s/1 [idle] active: MongoDB 6.0.6 running (restart pending); Charm revision 1
+  mongos-k8s/2 [executing] maintenance: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: MongoDB 6.0.6 running (restart pending); Charm revision 1
+  mongos-k8s/1 [idle] active: MongoDB 6.0.6 running (restart pending); Charm revision 1
+  mongos-k8s/2 [idle] active: MongoDB 6.0.6 running; Charm revision 1
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: MongoDB 6.0.6 running (restart pending); Charm revision 1
+  mongos-k8s/1 [executing] active: MongoDB 6.0.6 running; Charm revision 1
+  mongos-k8s/2 [idle] active: MongoDB 6.0.6 running; Charm revision 1
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [executing] maintenance: 
+  mongos-k8s/1 [idle] active: MongoDB 6.0.6 running; Charm revision 1
+  mongos-k8s/2 [idle] active: MongoDB 6.0.6 running; Charm revision 1
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  mongos-k8s/1 [idle] active: 
+  mongos-k8s/2 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:834 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.5.3    unsupported  01:39:17Z
+
+App            Version  Status  Scale  Charm        Channel  Rev  Address         Exposed  Message
+config-server           active      1  mongodb-k8s  6/edge    60  10.152.183.57   no       
+mongos-k8s              active      3  mongos-k8s              2  10.152.183.162  no       
+shard0                  active      1  mongodb-k8s  6/edge    60  10.152.183.216  no       
+
+Unit              Workload  Agent  Address      Ports  Message
+config-server/0*  active    idle   10.1.48.207         Primary
+mongos-k8s/0*     active    idle   10.1.48.212         
+mongos-k8s/1      active    idle   10.1.48.211         
+mongos-k8s/2      active    idle   10.1.48.210         
+shard0/0*         active    idle   10.1.48.208         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:840 Juju error logs:
+
+unit-config-server-0: 01:31:52 ERROR unit.config-server/0.juju-log config-server:6: Failed to add shard shard0 to the config server, error=OperationFailure("Authentication failed., full error: {'ok': 0.0, 'errmsg': 'Authentication failed.', 'code': 18, 'codeName': 'AuthenticationFailed', '$clusterTime': {'clusterTime': Timestamp(1729560712, 1), 'signature': {'hash': b'hO\\x19QIb\\xd3(\\x9c4i\\xc9\\xa8D\\xb6Wvj\\xc9\\xe3', 'keyId': 7428406458263273497}}, 'operationTime': Timestamp(1729560712, 1)}")
+unit-config-server-0: 01:31:52 ERROR unit.config-server/0.juju-log config-server:6: shard0 shard does not have the same auth as the config server.
+unit-mongos-k8s-1: 01:33:33 ERROR unit.mongos-k8s/1.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-0: 01:33:33 ERROR unit.mongos-k8s/0.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-2: 01:33:33 ERROR unit.mongos-k8s/2.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-1: 01:34:35 ERROR unit.mongos-k8s/1.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-0: 01:34:36 ERROR unit.mongos-k8s/0.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-2: 01:34:36 ERROR unit.mongos-k8s/2.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-1: 01:34:42 ERROR unit.mongos-k8s/1.juju-log cluster:7: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongos-k8s-1/charm/./src/charm.py", line 977, in <module>
+    main(MongosCharm)
+  File "/var/lib/juju/agents/unit-mongos-k8s-1/charm/venv/ops/main.py", line 553, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-mongos-k8s-1/charm/venv/ops/main.py", line 529, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-mongos-k8s-1/charm/venv/ops/main.py", line 518, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name, self._juju_context)
+  File "/var/lib/juju/agents/unit-mongos-k8s-1/charm/venv/ops/main.py", line 139, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mongos-k8s-1/charm/venv/ops/framework.py", line 347, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mongos-k8s-1/charm/venv/ops/framework.py", line 853, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mongos-k8s-1/charm/venv/ops/framework.py", line 943, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mongos-k8s-1/charm/lib/charms/mongodb/v0/config_server_interface.py", line 346, in _on_relation_changed
+    self._update_k8s_users(event)
+  File "/var/lib/juju/agents/unit-mongos-k8s-1/charm/lib/charms/mongodb/v0/config_server_interface.py", line 354, in _update_k8s_users
+    self.charm.client_relations.oversee_users(None, None)
+  File "/var/lib/juju/agents/unit-mongos-k8s-1/charm/lib/charms/mongodb/v1/mongodb_provider.py", line 197, in oversee_users
+    with MongoConnection(self.charm.mongo_config) as mongo:
+  File "/var/lib/juju/agents/unit-mongos-k8s-1/charm/lib/charms/mongodb/v0/mongo.py", line 174, in __init__
+    uri = config.uri
+  File "/var/lib/juju/agents/unit-mongos-k8s-1/charm/lib/charms/mongodb/v0/mongo.py", line 121, in uri
+    f"mongodb://{quote_plus(self.username)}:"
+  File "/usr/lib/python3.10/urllib/parse.py", line 897, in quote_plus
+    string = quote(string, safe + space, encoding, errors)
+  File "/usr/lib/python3.10/urllib/parse.py", line 881, in quote
+    return quote_from_bytes(string, safe)
+  File "/usr/lib/python3.10/urllib/parse.py", line 906, in quote_from_bytes
+    raise TypeError("quote_from_bytes() expected bytes")
+TypeError: quote_from_bytes() expected bytes
+unit-mongos-k8s-2: 01:34:42 ERROR unit.mongos-k8s/2.juju-log cluster:7: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongos-k8s-2/charm/./src/charm.py", line 977, in <module>
+    main(MongosCharm)
+  File "/var/lib/juju/agents/unit-mongos-k8s-2/charm/venv/ops/main.py", line 553, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-mongos-k8s-2/charm/venv/ops/main.py", line 529, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-mongos-k8s-2/charm/venv/ops/main.py", line 518, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name, self._juju_context)
+  File "/var/lib/juju/agents/unit-mongos-k8s-2/charm/venv/ops/main.py", line 139, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mongos-k8s-2/charm/venv/ops/framework.py", line 347, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mongos-k8s-2/charm/venv/ops/framework.py", line 853, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mongos-k8s-2/charm/venv/ops/framework.py", line 943, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mongos-k8s-2/charm/lib/charms/mongodb/v0/config_server_interface.py", line 346, in _on_relation_changed
+    self._update_k8s_users(event)
+  File "/var/lib/juju/agents/unit-mongos-k8s-2/charm/lib/charms/mongodb/v0/config_server_interface.py", line 354, in _update_k8s_users
+    self.charm.client_relations.oversee_users(None, None)
+  File "/var/lib/juju/agents/unit-mongos-k8s-2/charm/lib/charms/mongodb/v1/mongodb_provider.py", line 197, in oversee_users
+    with MongoConnection(self.charm.mongo_config) as mongo:
+  File "/var/lib/juju/agents/unit-mongos-k8s-2/charm/lib/charms/mongodb/v0/mongo.py", line 174, in __init__
+    uri = config.uri
+  File "/var/lib/juju/agents/unit-mongos-k8s-2/charm/lib/charms/mongodb/v0/mongo.py", line 121, in uri
+    f"mongodb://{quote_plus(self.username)}:"
+  File "/usr/lib/python3.10/urllib/parse.py", line 897, in quote_plus
+    string = quote(string, safe + space, encoding, errors)
+  File "/usr/lib/python3.10/urllib/parse.py", line 881, in quote
+    return quote_from_bytes(string, safe)
+  File "/usr/lib/python3.10/urllib/parse.py", line 906, in quote_from_bytes
+    raise TypeError("quote_from_bytes() expected bytes")
+TypeError: quote_from_bytes() expected bytes
+unit-mongos-k8s-1: 01:34:42 ERROR juju.worker.uniter.operation hook "cluster-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongos-k8s-2: 01:34:43 ERROR juju.worker.uniter.operation hook "cluster-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:904 Forgetting main...
