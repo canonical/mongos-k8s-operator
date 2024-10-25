@@ -1,0 +1,69 @@
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  data-integrator/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:834 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.5.3    unsupported  01:41:01Z
+
+App              Version  Status  Scale  Charm            Channel        Rev  Address         Exposed  Message
+application               active      1  application                       0                  no       
+config-server             active      1  mongodb-k8s      6/edge          60  10.152.183.187  no       
+data-integrator           active      1  data-integrator  latest/stable   41  10.152.183.24   no       
+mongos-k8s                active      1  mongos-k8s                        0  10.152.183.148  no       
+shard0                    active      1  mongodb-k8s      6/edge          60  10.152.183.118  no       
+
+Unit                Workload  Agent  Address      Ports  Message
+application/0*      active    idle                       
+config-server/0*    active    idle   10.1.32.205         Primary
+data-integrator/0*  active    idle   10.1.32.209         
+mongos-k8s/0*       active    idle   10.1.32.200         
+shard0/0*           active    idle   10.1.32.206         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:840 Juju error logs:
+
+unit-config-server-0: 01:32:42 ERROR unit.config-server/0.juju-log Deferring _on_relation_event for shards interface since: error=ServerSelectionTimeoutError("config-server-0.config-server-endpoints:27018: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms), Timeout: 1.0s, Topology Description: <TopologyDescription id: 671af5381e23699497303482, topology_type: Unknown, servers: [<ServerDescription ('config-server-0.config-server-endpoints', 27018) server_type: Unknown, rtt: None, error=AutoReconnect('config-server-0.config-server-endpoints:27018: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>]>")
+unit-config-server-0: 01:32:42 ERROR unit.config-server/0.juju-log Failed to add shard shard0 to the config server, error=OperationFailure("Authentication failed., full error: {'ok': 0.0, 'errmsg': 'Authentication failed.', 'code': 18, 'codeName': 'AuthenticationFailed', '$clusterTime': {'clusterTime': Timestamp(1729819961, 2), 'signature': {'hash': b'\\xe6\\x8fUl>\\xf1\\xf7\\x19\\x9c]\\xc1m\\x13\\t\\xf2\\x00\\xe8+\\xb6\\n', 'keyId': 7429520151873060889}}, 'operationTime': Timestamp(1729819961, 2)}")
+unit-config-server-0: 01:32:42 ERROR unit.config-server/0.juju-log shard0 shard does not have the same auth as the config server.
+unit-config-server-0: 01:32:49 ERROR unit.config-server/0.juju-log Failed to add shard shard0 to the config server, error=OperationFailure("Authentication failed., full error: {'ok': 0.0, 'errmsg': 'Authentication failed.', 'code': 18, 'codeName': 'AuthenticationFailed', '$clusterTime': {'clusterTime': Timestamp(1729819968, 1), 'signature': {'hash': b'\\xf4\\xc3;5\\xa1r\\xc7\\x8f\\xc7e\\x13\\x89\\xd6\\xcf\\x8eW\\x08\\x8a\\xf6\\x7f', 'keyId': 7429520151873060889}}, 'operationTime': Timestamp(1729819968, 1)}")
+unit-config-server-0: 01:32:49 ERROR unit.config-server/0.juju-log shard0 shard does not have the same auth as the config server.
+unit-config-server-0: 01:32:49 ERROR unit.config-server/0.juju-log Failed to add shard shard0 to the config server, error=OperationFailure("Authentication failed., full error: {'ok': 0.0, 'errmsg': 'Authentication failed.', 'code': 18, 'codeName': 'AuthenticationFailed', '$clusterTime': {'clusterTime': Timestamp(1729819968, 1), 'signature': {'hash': b'\\xf4\\xc3;5\\xa1r\\xc7\\x8f\\xc7e\\x13\\x89\\xd6\\xcf\\x8eW\\x08\\x8a\\xf6\\x7f', 'keyId': 7429520151873060889}}, 'operationTime': Timestamp(1729819968, 1)}")
+unit-config-server-0: 01:32:49 ERROR unit.config-server/0.juju-log shard0 shard does not have the same auth as the config server.
+unit-mongos-k8s-0: 01:34:28 ERROR unit.mongos-k8s/0.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-0: 01:35:30 ERROR unit.mongos-k8s/0.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-0: 01:35:31 ERROR unit.mongos-k8s/0.juju-log cluster:7: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongos-k8s-0/charm/./src/charm.py", line 977, in <module>
+    main(MongosCharm)
+  File "/var/lib/juju/agents/unit-mongos-k8s-0/charm/venv/ops/main.py", line 553, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-mongos-k8s-0/charm/venv/ops/main.py", line 529, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-mongos-k8s-0/charm/venv/ops/main.py", line 518, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name, self._juju_context)
+  File "/var/lib/juju/agents/unit-mongos-k8s-0/charm/venv/ops/main.py", line 139, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mongos-k8s-0/charm/venv/ops/framework.py", line 347, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mongos-k8s-0/charm/venv/ops/framework.py", line 853, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mongos-k8s-0/charm/venv/ops/framework.py", line 943, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mongos-k8s-0/charm/lib/charms/mongodb/v0/config_server_interface.py", line 320, in _on_relation_changed
+    updated_keyfile = self.update_keyfile(key_file_contents=key_file_contents)
+  File "/var/lib/juju/agents/unit-mongos-k8s-0/charm/lib/charms/mongodb/v0/config_server_interface.py", line 472, in update_keyfile
+    current_key_file = self.charm.get_keyfile_contents()
+  File "/var/lib/juju/agents/unit-mongos-k8s-0/charm/./src/charm.py", line 370, in get_keyfile_contents
+    key = container.pull(f"{Config.MONGOD_CONF_DIR}/{Config.TLS.KEY_FILE_NAME}")
+  File "/var/lib/juju/agents/unit-mongos-k8s-0/charm/venv/ops/model.py", line 2418, in pull
+    return self._pebble.pull(str(path), encoding=encoding)
+  File "/var/lib/juju/agents/unit-mongos-k8s-0/charm/venv/ops/pebble.py", line 2398, in pull
+    response = self._request_raw('GET', '/v1/files', query, headers)
+  File "/var/lib/juju/agents/unit-mongos-k8s-0/charm/venv/ops/pebble.py", line 2050, in _request_raw
+    raise ConnectionError(
+ops.pebble.ConnectionError: Could not connect to Pebble: socket not found at '/charm/containers/mongos/pebble.socket' (container restarted?)
+unit-mongos-k8s-0: 01:35:31 ERROR juju.worker.uniter.operation hook "cluster-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongos-k8s-0: 01:36:38 ERROR unit.mongos-k8s/0.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-0: 01:39:43 ERROR unit.mongos-k8s/0.juju-log External configuration: nonsensical-setting for expose-external is not valid, should be one of: ['none', 'nodeport']
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:904 Forgetting main...
