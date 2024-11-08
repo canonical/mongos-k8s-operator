@@ -63,7 +63,6 @@ jobs:
           - .
           - tests/integration/application
     with:
-      cache: true
       path-to-charm-directory: ${{ matrix.path }}
 
   integration-test:
