@@ -32,7 +32,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 5
+LIBPATCH = 6
 
 logger = logging.getLogger(__name__)
 
@@ -229,7 +229,7 @@ class AbstractUpgrade(abc.ABC):
             return
 
         return MaintenanceStatus(
-            "Refresing. To rollback, `juju refresh` to the previous revision"
+            "Refreshing. To rollback, `juju refresh` to the previous revision"
         )
 
     @property
