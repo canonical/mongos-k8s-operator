@@ -1,0 +1,88 @@
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  mongos-k8s/1 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  mongos-k8s/1 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2098 Deploying ch:amd64/jammy/self-signed-certificates-155
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  self-signed-certificates-separate/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] blocked: mongos requires TLS to be enabled.
+  mongos-k8s/1 [idle] blocked: mongos requires TLS to be enabled.
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [executing] maintenance: enabling TLS
+  mongos-k8s/1 [executing] maintenance: enabling TLS
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [executing] maintenance: enabling TLS
+  mongos-k8s/1 [executing] maintenance: enabling TLS
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [executing] maintenance: enabling TLS
+  mongos-k8s/1 [executing] maintenance: enabling TLS
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [executing] maintenance: enabling TLS
+  mongos-k8s/1 [executing] maintenance: enabling TLS
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] waiting: Waiting for MongoDB to start
+  mongos-k8s/1 [idle] waiting: Waiting for MongoDB to start
+[32mINFO    [0m pytest_operator.plugin:plugin.py:834 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.5.3    unsupported  02:18:19Z
+
+App                                Version  Status   Scale  Charm                     Channel        Rev  Address         Exposed  Message
+config-server                               active       1  mongodb-k8s               6/edge          61  10.152.183.61   no       
+mongos-k8s                                  waiting      2  mongos-k8s                                 0  10.152.183.67   no       installing agent
+self-signed-certificates                    active       1  self-signed-certificates  latest/edge    206  10.152.183.168  no       
+self-signed-certificates-separate           active       1  self-signed-certificates  latest/stable  155  10.152.183.70   no       
+shard0                                      active       1  mongodb-k8s               6/edge          61  10.152.183.151  no       
+
+Unit                                  Workload  Agent      Address      Ports  Message
+config-server/0*                      active    idle       10.1.109.13         Primary
+mongos-k8s/0*                         blocked   executing  10.1.109.8          mongos CA and Config-Server CA don't match.
+mongos-k8s/1                          blocked   idle       10.1.109.15         mongos CA and Config-Server CA don't match.
+self-signed-certificates-separate/0*  active    idle       10.1.109.17         
+self-signed-certificates/0*           active    idle       10.1.109.16         
+shard0/0*                             active    idle       10.1.109.14         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:840 Juju error logs:
+
+unit-config-server-0: 01:38:33 ERROR unit.config-server/0.juju-log config-server:6: Failed to add shard shard0 to the config server, error=OperationFailure("Authentication failed., full error: {'ok': 0.0, 'errmsg': 'Authentication failed.', 'code': 18, 'codeName': 'AuthenticationFailed', '$clusterTime': {'clusterTime': Timestamp(1731807513, 1), 'signature': {'hash': b'\\xebk\\xf0\\x13h\\xca\\x15$U^\\x19\\x9d\\xb0\\x18\\xa9r\\xbf\\x1d\\x01\\xa0', 'keyId': 7438056382193991705}}, 'operationTime': Timestamp(1731807513, 1)}")
+unit-config-server-0: 01:38:33 ERROR unit.config-server/0.juju-log config-server:6: shard0 shard does not have the same auth as the config server.
+unit-mongos-k8s-0: 01:40:12 ERROR unit.mongos-k8s/0.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-1: 01:40:12 ERROR unit.mongos-k8s/1.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-0: 01:41:14 ERROR unit.mongos-k8s/0.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-1: 01:41:15 ERROR unit.mongos-k8s/1.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-0: 01:42:50 ERROR unit.mongos-k8s/0.juju-log certificates:8: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongos-k8s-1: 01:42:50 ERROR unit.mongos-k8s/1.juju-log certificates:8: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongos-k8s-0: 01:42:50 ERROR unit.mongos-k8s/0.juju-log certificates:8: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-mongos-k8s-1: 01:42:50 ERROR unit.mongos-k8s/1.juju-log certificates:8: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-shard0-0: 01:46:18 ERROR unit.shard0/0.juju-log certificates:10: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-config-server-0: 01:46:18 ERROR unit.config-server/0.juju-log certificates:9: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-shard0-0: 01:46:18 ERROR unit.shard0/0.juju-log certificates:10: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-config-server-0: 01:46:19 ERROR unit.config-server/0.juju-log certificates:9: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-self-signed-certificates-0: 01:58:31 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "bfe0b352-7447-49f7-8632-bc45ed0ec7c9:r#8#mongos-k8s": settings bfe0b352-7447-49f7-8632-bc45ed0ec7c9:r#8#mongos-k8s not found (not found)
+unit-mongos-k8s-0: 01:58:32 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "bfe0b352-7447-49f7-8632-bc45ed0ec7c9:r#8#self-signed-certificates": settings bfe0b352-7447-49f7-8632-bc45ed0ec7c9:r#8#self-signed-certificates not found (not found)
+unit-mongos-k8s-0: 01:59:38 ERROR unit.mongos-k8s/0.juju-log mongos service is not ready yet.
+unit-mongos-k8s-0: 02:00:40 ERROR unit.mongos-k8s/0.juju-log mongos service is not ready yet.
+unit-mongos-k8s-0: 02:02:46 ERROR unit.mongos-k8s/0.juju-log mongos service is not ready yet.
+unit-mongos-k8s-0: 02:03:49 ERROR unit.mongos-k8s/0.juju-log mongos service is not ready yet.
+unit-mongos-k8s-0: 02:04:51 ERROR unit.mongos-k8s/0.juju-log mongos service is not ready yet.
+unit-mongos-k8s-1: 02:04:57 ERROR unit.mongos-k8s/1.juju-log certificates:11: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongos-k8s-1: 02:04:58 ERROR unit.mongos-k8s/1.juju-log certificates:11: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-mongos-k8s-0: 02:05:54 ERROR unit.mongos-k8s/0.juju-log mongos service is not ready yet.
+unit-mongos-k8s-0: 02:06:56 ERROR unit.mongos-k8s/0.juju-log certificates:11: mongos service is not ready yet.
+unit-mongos-k8s-0: 02:07:58 ERROR unit.mongos-k8s/0.juju-log router-peers:1: mongos service is not ready yet.
+unit-mongos-k8s-0: 02:09:01 ERROR unit.mongos-k8s/0.juju-log certificates:11: mongos service is not ready yet.
+unit-mongos-k8s-0: 02:10:03 ERROR unit.mongos-k8s/0.juju-log certificates:11: mongos service is not ready yet.
+unit-mongos-k8s-0: 02:10:04 ERROR unit.mongos-k8s/0.juju-log certificates:11: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongos-k8s-0: 02:10:04 ERROR unit.mongos-k8s/0.juju-log certificates:11: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-mongos-k8s-0: 02:11:06 ERROR unit.mongos-k8s/0.juju-log certificates:11: mongos service is not ready yet.
+unit-mongos-k8s-0: 02:14:14 ERROR unit.mongos-k8s/0.juju-log certificates:12: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongos-k8s-1: 02:14:14 ERROR unit.mongos-k8s/1.juju-log certificates:12: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongos-k8s-0: 02:14:14 ERROR unit.mongos-k8s/0.juju-log certificates:12: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-mongos-k8s-1: 02:14:14 ERROR unit.mongos-k8s/1.juju-log certificates:12: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-mongos-k8s-1: 02:18:02 ERROR unit.mongos-k8s/1.juju-log mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-mongos-k8s-0: 02:18:18 ERROR unit.mongos-k8s/0.juju-log mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:904 Forgetting main...
