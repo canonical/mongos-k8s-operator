@@ -1,0 +1,8 @@
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] blocked: mongos requires TLS to be enabled.
+  mongos-k8s/1 [idle] blocked: mongos requires TLS to be enabled.
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  mongos-k8s/1 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/1 [idle] active:
