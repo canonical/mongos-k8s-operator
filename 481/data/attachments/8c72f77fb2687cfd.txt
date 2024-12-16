@@ -1,0 +1,65 @@
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  mongos-k8s/1 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [executing] active: 
+  mongos-k8s/1 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  mongos-k8s/1 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  mongos-k8s/1 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:834 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.5.3    unsupported  02:12:15Z
+
+App                       Version  Status   Scale  Charm                     Channel      Rev  Address         Exposed  Message
+config-server                      active       1  mongodb-k8s               6/edge        61  10.152.183.62   no       
+mongos-k8s                         waiting      2  mongos-k8s                               0  10.152.183.120  no       installing agent
+self-signed-certificates           active       1  self-signed-certificates  latest/edge  224  10.152.183.119  no       
+shard0                             active       1  mongodb-k8s               6/edge        61  10.152.183.93   no       
+
+Unit                         Workload  Agent      Address       Ports  Message
+config-server/0*             active    idle       10.1.141.141         Primary
+mongos-k8s/0*                blocked   executing  10.1.141.136         mongos requires TLS to be enabled.
+mongos-k8s/1                 active    executing  10.1.141.143         
+self-signed-certificates/0*  active    idle       10.1.141.144         
+shard0/0*                    active    idle       10.1.141.142         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:840 Juju error logs:
+
+unit-config-server-0: 01:43:32 ERROR unit.config-server/0.juju-log config-server:6: Failed to add shard shard0 to the config server, error=OperationFailure("Authentication failed., full error: {'ok': 0.0, 'errmsg': 'Authentication failed.', 'code': 18, 'codeName': 'AuthenticationFailed', '$clusterTime': {'clusterTime': Timestamp(1734313412, 1), 'signature': {'hash': b'\\r\\x98\\xffl\\x89\\xa0a^\\xa9\\xa9\\x83\\xec\\x13\\x17\\x08\\xf0\\xf9\\x87\\x9b\\x9d', 'keyId': 7448819136446070808}}, 'operationTime': Timestamp(1734313412, 1)}")
+unit-config-server-0: 01:43:32 ERROR unit.config-server/0.juju-log config-server:6: shard0 shard does not have the same auth as the config server.
+unit-mongos-k8s-1: 01:45:10 ERROR unit.mongos-k8s/1.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-0: 01:45:10 ERROR unit.mongos-k8s/0.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-1: 01:46:12 ERROR unit.mongos-k8s/1.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-0: 01:46:13 ERROR unit.mongos-k8s/0.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-0: 01:47:46 ERROR unit.mongos-k8s/0.juju-log certificates:8: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongos-k8s-1: 01:47:46 ERROR unit.mongos-k8s/1.juju-log certificates:8: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongos-k8s-0: 01:47:46 ERROR unit.mongos-k8s/0.juju-log certificates:8: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-mongos-k8s-1: 01:47:47 ERROR unit.mongos-k8s/1.juju-log certificates:8: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-config-server-0: 01:50:57 ERROR unit.config-server/0.juju-log certificates:9: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-shard0-0: 01:50:57 ERROR unit.shard0/0.juju-log certificates:10: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-config-server-0: 01:50:57 ERROR unit.config-server/0.juju-log certificates:9: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-shard0-0: 01:50:57 ERROR unit.shard0/0.juju-log certificates:10: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-mongos-k8s-0: 02:04:21 ERROR unit.mongos-k8s/0.juju-log certificates:11: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongos-k8s-1: 02:04:21 ERROR unit.mongos-k8s/1.juju-log certificates:11: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongos-k8s-0: 02:04:22 ERROR unit.mongos-k8s/0.juju-log certificates:11: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-mongos-k8s-1: 02:04:22 ERROR unit.mongos-k8s/1.juju-log certificates:11: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-self-signed-certificates-0: 02:05:30 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "10855ace-33cc-4937-840a-4e81c18cc22e:r#11#mongos-k8s": settings 10855ace-33cc-4937-840a-4e81c18cc22e:r#11#mongos-k8s not found (not found)
+unit-mongos-k8s-1: 02:05:31 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "10855ace-33cc-4937-840a-4e81c18cc22e:r#11#self-signed-certificates": settings 10855ace-33cc-4937-840a-4e81c18cc22e:r#11#self-signed-certificates not found (not found)
+unit-mongos-k8s-0: 02:05:31 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "10855ace-33cc-4937-840a-4e81c18cc22e:r#11#self-signed-certificates": settings 10855ace-33cc-4937-840a-4e81c18cc22e:r#11#self-signed-certificates not found (not found)
+unit-mongos-k8s-0: 02:06:37 ERROR unit.mongos-k8s/0.juju-log mongos service is not ready yet.
+unit-mongos-k8s-1: 02:06:37 ERROR unit.mongos-k8s/1.juju-log mongos service is not ready yet.
+unit-mongos-k8s-1: 02:07:39 ERROR unit.mongos-k8s/1.juju-log mongos service is not ready yet.
+unit-mongos-k8s-0: 02:07:39 ERROR unit.mongos-k8s/0.juju-log mongos service is not ready yet.
+unit-mongos-k8s-1: 02:08:41 ERROR unit.mongos-k8s/1.juju-log mongos service is not ready yet.
+unit-mongos-k8s-0: 02:09:45 ERROR unit.mongos-k8s/0.juju-log mongos service is not ready yet.
+unit-mongos-k8s-1: 02:10:47 ERROR unit.mongos-k8s/1.juju-log mongos service is not ready yet.
+unit-mongos-k8s-0: 02:10:48 ERROR unit.mongos-k8s/0.juju-log mongos service is not ready yet.
+unit-mongos-k8s-1: 02:11:49 ERROR unit.mongos-k8s/1.juju-log mongos service is not ready yet.
+unit-mongos-k8s-0: 02:11:50 ERROR unit.mongos-k8s/0.juju-log mongos service is not ready yet.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:904 Forgetting main...
