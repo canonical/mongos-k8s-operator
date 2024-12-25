@@ -1,0 +1,84 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:834 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.5.3    unsupported  02:05:56Z
+
+App                       Version  Status   Scale  Charm                     Channel      Rev  Address         Exposed  Message
+config-server                      active       1  mongodb-k8s               6/edge        61  10.152.183.129  no       
+mongos-k8s                         waiting      2  mongos-k8s                               0  10.152.183.34   no       installing agent
+self-signed-certificates           active       1  self-signed-certificates  latest/edge  228  10.152.183.248  no       
+shard0                             active       1  mongodb-k8s               6/edge        61  10.152.183.139  no       
+
+Unit                         Workload  Agent      Address     Ports  Message
+config-server/0*             active    idle       10.1.7.205         Primary
+mongos-k8s/0*                blocked   executing  10.1.7.200         mongos requires TLS to be enabled.
+mongos-k8s/1                 active    executing  10.1.7.207         
+self-signed-certificates/0*  active    idle       10.1.7.208         
+shard0/0*                    active    idle       10.1.7.206         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:840 Juju error logs:
+
+unit-config-server-0: 01:39:43 ERROR unit.config-server/0.juju-log config-server:6: Failed to add shard shard0 to the config server, error=OperationFailure("Authentication failed., full error: {'ok': 0.0, 'errmsg': 'Authentication failed.', 'code': 18, 'codeName': 'AuthenticationFailed', '$clusterTime': {'clusterTime': Timestamp(1735090782, 1), 'signature': {'hash': b'X\\xf1\\xc6\\xf98/6\\x83\\xe4<\\xdc\\x87.\\x89\\n\\x03M\\xaa_\\x1e', 'keyId': 7452157928057864217}}, 'operationTime': Timestamp(1735090782, 1)}")
+unit-config-server-0: 01:39:43 ERROR unit.config-server/0.juju-log config-server:6: shard0 shard does not have the same auth as the config server.
+unit-mongos-k8s-0: 01:41:27 ERROR unit.mongos-k8s/0.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-1: 01:41:27 ERROR unit.mongos-k8s/1.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-0: 01:42:30 ERROR unit.mongos-k8s/0.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-1: 01:42:30 ERROR unit.mongos-k8s/1.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-1: 01:42:32 ERROR unit.mongos-k8s/1.juju-log cluster:7: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongos-k8s-1/charm/./src/charm.py", line 977, in <module>
+    main(MongosCharm)
+  File "/var/lib/juju/agents/unit-mongos-k8s-1/charm/venv/ops/main.py", line 553, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-mongos-k8s-1/charm/venv/ops/main.py", line 529, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-mongos-k8s-1/charm/venv/ops/main.py", line 518, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name, self._juju_context)
+  File "/var/lib/juju/agents/unit-mongos-k8s-1/charm/venv/ops/main.py", line 139, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mongos-k8s-1/charm/venv/ops/framework.py", line 347, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mongos-k8s-1/charm/venv/ops/framework.py", line 853, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mongos-k8s-1/charm/venv/ops/framework.py", line 943, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mongos-k8s-1/charm/lib/charms/mongodb/v0/config_server_interface.py", line 346, in _on_relation_changed
+    self._update_k8s_users(event)
+  File "/var/lib/juju/agents/unit-mongos-k8s-1/charm/lib/charms/mongodb/v0/config_server_interface.py", line 354, in _update_k8s_users
+    self.charm.client_relations.oversee_users(None, None)
+  File "/var/lib/juju/agents/unit-mongos-k8s-1/charm/lib/charms/mongodb/v1/mongodb_provider.py", line 197, in oversee_users
+    with MongoConnection(self.charm.mongo_config) as mongo:
+  File "/var/lib/juju/agents/unit-mongos-k8s-1/charm/lib/charms/mongodb/v0/mongo.py", line 174, in __init__
+    uri = config.uri
+  File "/var/lib/juju/agents/unit-mongos-k8s-1/charm/lib/charms/mongodb/v0/mongo.py", line 121, in uri
+    f"mongodb://{quote_plus(self.username)}:"
+  File "/usr/lib/python3.10/urllib/parse.py", line 897, in quote_plus
+    string = quote(string, safe + space, encoding, errors)
+  File "/usr/lib/python3.10/urllib/parse.py", line 881, in quote
+    return quote_from_bytes(string, safe)
+  File "/usr/lib/python3.10/urllib/parse.py", line 906, in quote_from_bytes
+    raise TypeError("quote_from_bytes() expected bytes")
+TypeError: quote_from_bytes() expected bytes
+unit-mongos-k8s-1: 01:42:33 ERROR juju.worker.uniter.operation hook "cluster-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongos-k8s-1: 01:44:25 ERROR unit.mongos-k8s/1.juju-log certificates:8: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongos-k8s-0: 01:44:25 ERROR unit.mongos-k8s/0.juju-log certificates:8: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongos-k8s-1: 01:44:25 ERROR unit.mongos-k8s/1.juju-log certificates:8: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-mongos-k8s-0: 01:44:25 ERROR unit.mongos-k8s/0.juju-log certificates:8: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-shard0-0: 01:47:15 ERROR unit.shard0/0.juju-log certificates:10: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-shard0-0: 01:47:16 ERROR unit.shard0/0.juju-log certificates:10: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-config-server-0: 01:47:16 ERROR unit.config-server/0.juju-log certificates:9: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-config-server-0: 01:47:16 ERROR unit.config-server/0.juju-log certificates:9: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-mongos-k8s-0: 01:59:08 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "15c9fd6f-5615-4650-88c9-8a11fedaa918:r#8#self-signed-certificates": settings 15c9fd6f-5615-4650-88c9-8a11fedaa918:r#8#self-signed-certificates not found (not found)
+unit-mongos-k8s-1: 01:59:08 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "15c9fd6f-5615-4650-88c9-8a11fedaa918:r#8#self-signed-certificates": settings 15c9fd6f-5615-4650-88c9-8a11fedaa918:r#8#self-signed-certificates not found (not found)
+unit-mongos-k8s-0: 02:00:14 ERROR unit.mongos-k8s/0.juju-log mongos service is not ready yet.
+unit-mongos-k8s-1: 02:00:14 ERROR unit.mongos-k8s/1.juju-log mongos service is not ready yet.
+unit-mongos-k8s-0: 02:01:16 ERROR unit.mongos-k8s/0.juju-log mongos service is not ready yet.
+unit-mongos-k8s-1: 02:01:16 ERROR unit.mongos-k8s/1.juju-log mongos service is not ready yet.
+unit-mongos-k8s-1: 02:02:19 ERROR unit.mongos-k8s/1.juju-log mongos service is not ready yet.
+unit-mongos-k8s-0: 02:03:22 ERROR unit.mongos-k8s/0.juju-log mongos service is not ready yet.
+unit-mongos-k8s-1: 02:04:24 ERROR unit.mongos-k8s/1.juju-log mongos service is not ready yet.
+unit-mongos-k8s-0: 02:04:25 ERROR unit.mongos-k8s/0.juju-log mongos service is not ready yet.
+unit-mongos-k8s-1: 02:05:27 ERROR unit.mongos-k8s/1.juju-log mongos service is not ready yet.
+unit-mongos-k8s-0: 02:05:27 ERROR unit.mongos-k8s/0.juju-log mongos service is not ready yet.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:904 Forgetting main...
