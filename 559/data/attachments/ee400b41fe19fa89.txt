@@ -1,0 +1,328 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:834 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.6.1    unsupported  01:41:43Z
+
+App            Version  Status   Scale  Charm        Channel  Rev  Address         Exposed  Message
+config-server           waiting      1  mongodb-k8s  6/edge    61  10.152.183.97   no       installing agent
+mongos-k8s              waiting      3  mongos-k8s              0  10.152.183.196  no       installing agent
+shard0                  active       1  mongodb-k8s  6/edge    61  10.152.183.192  no       
+
+Unit              Workload  Agent  Address       Ports  Message
+config-server/0*  error     idle   10.1.141.208         hook failed: "cluster-relation-changed"
+mongos-k8s/0      waiting   idle   10.1.141.200         Waiting for mongos to start.
+mongos-k8s/1*     waiting   idle   10.1.141.202         Waiting for mongos to start.
+mongos-k8s/2      waiting   idle   10.1.141.201         Waiting for mongos to start.
+shard0/0*         active    idle   10.1.141.207         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:840 Juju error logs:
+
+unit-config-server-0: 01:31:07 ERROR unit.config-server/0.juju-log config-server:6: Failed to add shard shard0 to the config server, error=OperationFailure('Authentication failed., full error: {\'ok\': 0.0, \'errmsg\': \'Authentication failed.\', \'code\': 18, \'codeName\': \'AuthenticationFailed\', \'$clusterTime\': {\'clusterTime\': Timestamp(1736991067, 2), \'signature\': {\'hash\': b"?\'>\\xe53\\x7fs\\x9dW\\xb3\\x1c!B\\xfc\\xe1\\x9f\\xc23\\xa2\\xd4", \'keyId\': 7460319594280910873}}, \'operationTime\': Timestamp(1736991067, 2)}')
+unit-config-server-0: 01:31:07 ERROR unit.config-server/0.juju-log config-server:6: shard0 shard does not have the same auth as the config server.
+unit-mongos-k8s-1: 01:32:44 ERROR unit.mongos-k8s/1.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-2: 01:32:44 ERROR unit.mongos-k8s/2.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-0: 01:32:44 ERROR unit.mongos-k8s/0.juju-log cluster:7: mongos service is not ready yet.
+unit-config-server-0: 01:32:50 ERROR unit.config-server/0.juju-log cluster:7: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/./src/charm.py", line 1870, in <module>
+    main(MongoDBCharm)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/main.py", line 551, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/main.py", line 530, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/main.py", line 519, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/main.py", line 147, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 2886, in _on_relation_changed_event
+    getattr(self.on, "database_requested").emit(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/mongodb/v0/config_server_interface.py", line 143, in _on_database_requested
+    self.charm.client_relations.oversee_users(None, None)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/mongodb/v1/mongodb_provider.py", line 198, in oversee_users
+    database_users = mongo.get_users()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/mongodb/v0/mongo.py", line 270, in get_users
+    users_info = self.client.admin.command("usersInfo")
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/_csot.py", line 119, in csot_wrapper
+    return func(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/database.py", line 926, in command
+    with self._client._conn_for_reads(read_preference, session, operation=command_name) as (
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/mongo_client.py", line 1701, in _conn_for_reads
+    server = self._select_server(read_preference, session, operation)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/mongo_client.py", line 1649, in _select_server
+    server = topology.select_server(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/topology.py", line 398, in select_server
+    server = self._select_server(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/topology.py", line 376, in _select_server
+    servers = self.select_servers(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/topology.py", line 283, in select_servers
+    server_descriptions = self._select_servers_loop(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/topology.py", line 333, in _select_servers_loop
+    raise ServerSelectionTimeoutError(
+pymongo.errors.ServerSelectionTimeoutError: No replica set members found yet, Timeout: 1.0s, Topology Description: <TopologyDescription id: 678861bf8b6522a5f894fdbb, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('config-server-0.config-server-endpoints', 27017) server_type: Unknown, rtt: None>]>
+unit-config-server-0: 01:32:51 ERROR juju.worker.uniter.operation hook "cluster-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-config-server-0: 01:32:57 ERROR unit.config-server/0.juju-log cluster:7: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/./src/charm.py", line 1870, in <module>
+    main(MongoDBCharm)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/main.py", line 551, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/main.py", line 530, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/main.py", line 516, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/framework.py", line 870, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/mongodb/v0/config_server_interface.py", line 169, in _on_relation_changed
+    self._on_database_requested(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/mongodb/v0/config_server_interface.py", line 143, in _on_database_requested
+    self.charm.client_relations.oversee_users(None, None)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/mongodb/v1/mongodb_provider.py", line 204, in oversee_users
+    self.add_users(users_being_managed, expected_current_users)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/mongodb/v1/mongodb_provider.py", line 257, in add_users
+    mongo.create_user(config)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/mongodb/v0/mongo.py", line 218, in create_user
+    self.client.admin.command(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/_csot.py", line 119, in csot_wrapper
+    return func(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/database.py", line 930, in command
+    return self._command(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/database.py", line 770, in _command
+    return conn.command(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/helpers.py", line 45, in inner
+    return func(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/pool.py", line 538, in command
+    return command(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/network.py", line 218, in command
+    helpers_shared._check_command_response(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/helpers_shared.py", line 247, in _check_command_response
+    raise OperationFailure(errmsg, code, response, max_wire_version)
+pymongo.errors.OperationFailure: User "relation-7@admin" already exists, full error: {'ok': 0.0, 'errmsg': 'User "relation-7@admin" already exists', 'code': 51003, 'codeName': 'Location51003', 'lastCommittedOpTime': Timestamp(1736991177, 2), '$clusterTime': {'clusterTime': Timestamp(1736991177, 3), 'signature': {'hash': b'w\xd7\x17\r|\xe59\xfe\x9e\xc5\x8e{9\x1f\x12\xb4\xf9\x1d\t\x87', 'keyId': 7460319594280910873}}, 'operationTime': Timestamp(1736991177, 2)}
+unit-config-server-0: 01:32:58 ERROR juju.worker.uniter.operation hook "cluster-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-config-server-0: 01:33:09 ERROR unit.config-server/0.juju-log cluster:7: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/./src/charm.py", line 1870, in <module>
+    main(MongoDBCharm)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/main.py", line 551, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/main.py", line 530, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/main.py", line 516, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/framework.py", line 870, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/mongodb/v0/config_server_interface.py", line 169, in _on_relation_changed
+    self._on_database_requested(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/mongodb/v0/config_server_interface.py", line 143, in _on_database_requested
+    self.charm.client_relations.oversee_users(None, None)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/mongodb/v1/mongodb_provider.py", line 204, in oversee_users
+    self.add_users(users_being_managed, expected_current_users)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/mongodb/v1/mongodb_provider.py", line 257, in add_users
+    mongo.create_user(config)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/mongodb/v0/mongo.py", line 218, in create_user
+    self.client.admin.command(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/_csot.py", line 119, in csot_wrapper
+    return func(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/database.py", line 930, in command
+    return self._command(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/database.py", line 770, in _command
+    return conn.command(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/helpers.py", line 45, in inner
+    return func(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/pool.py", line 538, in command
+    return command(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/network.py", line 218, in command
+    helpers_shared._check_command_response(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/helpers_shared.py", line 247, in _check_command_response
+    raise OperationFailure(errmsg, code, response, max_wire_version)
+pymongo.errors.OperationFailure: User "relation-7@admin" already exists, full error: {'ok': 0.0, 'errmsg': 'User "relation-7@admin" already exists', 'code': 51003, 'codeName': 'Location51003', 'lastCommittedOpTime': Timestamp(1736991189, 1), '$clusterTime': {'clusterTime': Timestamp(1736991189, 2), 'signature': {'hash': b'\xb5\x00\x1d,\xc5beQ\xed_\xb0<L\x0cI\xdd\xbaUo\xee', 'keyId': 7460319594280910873}}, 'operationTime': Timestamp(1736991189, 1)}
+unit-config-server-0: 01:33:10 ERROR juju.worker.uniter.operation hook "cluster-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-config-server-0: 01:33:31 ERROR unit.config-server/0.juju-log cluster:7: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/./src/charm.py", line 1870, in <module>
+    main(MongoDBCharm)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/main.py", line 551, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/main.py", line 530, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/main.py", line 516, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/framework.py", line 870, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/mongodb/v0/config_server_interface.py", line 169, in _on_relation_changed
+    self._on_database_requested(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/mongodb/v0/config_server_interface.py", line 143, in _on_database_requested
+    self.charm.client_relations.oversee_users(None, None)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/mongodb/v1/mongodb_provider.py", line 204, in oversee_users
+    self.add_users(users_being_managed, expected_current_users)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/mongodb/v1/mongodb_provider.py", line 257, in add_users
+    mongo.create_user(config)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/mongodb/v0/mongo.py", line 218, in create_user
+    self.client.admin.command(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/_csot.py", line 119, in csot_wrapper
+    return func(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/database.py", line 930, in command
+    return self._command(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/database.py", line 770, in _command
+    return conn.command(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/helpers.py", line 45, in inner
+    return func(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/pool.py", line 538, in command
+    return command(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/network.py", line 218, in command
+    helpers_shared._check_command_response(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/helpers_shared.py", line 247, in _check_command_response
+    raise OperationFailure(errmsg, code, response, max_wire_version)
+pymongo.errors.OperationFailure: User "relation-7@admin" already exists, full error: {'ok': 0.0, 'errmsg': 'User "relation-7@admin" already exists', 'code': 51003, 'codeName': 'Location51003', 'lastCommittedOpTime': Timestamp(1736991210, 3), '$clusterTime': {'clusterTime': Timestamp(1736991211, 1), 'signature': {'hash': b'\x07\xf6m\xf6\xa1\x08\xc5\x1c\xa7\x8f\xd80\x88\xec74\xfe`f\x9f', 'keyId': 7460319594280910873}}, 'operationTime': Timestamp(1736991210, 3)}
+unit-config-server-0: 01:33:32 ERROR juju.worker.uniter.operation hook "cluster-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongos-k8s-1: 01:33:47 ERROR unit.mongos-k8s/1.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-0: 01:33:47 ERROR unit.mongos-k8s/0.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-2: 01:33:47 ERROR unit.mongos-k8s/2.juju-log cluster:7: mongos service is not ready yet.
+unit-config-server-0: 01:34:13 ERROR unit.config-server/0.juju-log cluster:7: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/./src/charm.py", line 1870, in <module>
+    main(MongoDBCharm)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/main.py", line 551, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/main.py", line 530, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/main.py", line 516, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/framework.py", line 870, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/mongodb/v0/config_server_interface.py", line 169, in _on_relation_changed
+    self._on_database_requested(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/mongodb/v0/config_server_interface.py", line 143, in _on_database_requested
+    self.charm.client_relations.oversee_users(None, None)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/mongodb/v1/mongodb_provider.py", line 204, in oversee_users
+    self.add_users(users_being_managed, expected_current_users)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/mongodb/v1/mongodb_provider.py", line 257, in add_users
+    mongo.create_user(config)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/mongodb/v0/mongo.py", line 218, in create_user
+    self.client.admin.command(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/_csot.py", line 119, in csot_wrapper
+    return func(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/database.py", line 930, in command
+    return self._command(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/database.py", line 770, in _command
+    return conn.command(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/helpers.py", line 45, in inner
+    return func(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/pool.py", line 538, in command
+    return command(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/network.py", line 218, in command
+    helpers_shared._check_command_response(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/helpers_shared.py", line 247, in _check_command_response
+    raise OperationFailure(errmsg, code, response, max_wire_version)
+pymongo.errors.OperationFailure: User "relation-7@admin" already exists, full error: {'ok': 0.0, 'errmsg': 'User "relation-7@admin" already exists', 'code': 51003, 'codeName': 'Location51003', 'lastCommittedOpTime': Timestamp(1736991253, 1), '$clusterTime': {'clusterTime': Timestamp(1736991253, 2), 'signature': {'hash': b'\xda%Z\xc7\x18N,\xe8\xda\xc7\x07Pl\xeeV\x10\x0cg\xc9\x9e', 'keyId': 7460319594280910873}}, 'operationTime': Timestamp(1736991253, 1)}
+unit-config-server-0: 01:34:14 ERROR juju.worker.uniter.operation hook "cluster-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongos-k8s-1: 01:34:50 ERROR unit.mongos-k8s/1.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-2: 01:34:50 ERROR unit.mongos-k8s/2.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-0: 01:34:50 ERROR unit.mongos-k8s/0.juju-log cluster:7: mongos service is not ready yet.
+unit-config-server-0: 01:35:37 ERROR unit.config-server/0.juju-log cluster:7: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/./src/charm.py", line 1870, in <module>
+    main(MongoDBCharm)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/main.py", line 551, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/main.py", line 530, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/main.py", line 516, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/framework.py", line 870, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/mongodb/v0/config_server_interface.py", line 169, in _on_relation_changed
+    self._on_database_requested(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/mongodb/v0/config_server_interface.py", line 143, in _on_database_requested
+    self.charm.client_relations.oversee_users(None, None)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/mongodb/v1/mongodb_provider.py", line 204, in oversee_users
+    self.add_users(users_being_managed, expected_current_users)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/mongodb/v1/mongodb_provider.py", line 257, in add_users
+    mongo.create_user(config)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/mongodb/v0/mongo.py", line 218, in create_user
+    self.client.admin.command(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/_csot.py", line 119, in csot_wrapper
+    return func(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/database.py", line 930, in command
+    return self._command(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/database.py", line 770, in _command
+    return conn.command(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/helpers.py", line 45, in inner
+    return func(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/pool.py", line 538, in command
+    return command(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/network.py", line 218, in command
+    helpers_shared._check_command_response(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/helpers_shared.py", line 247, in _check_command_response
+    raise OperationFailure(errmsg, code, response, max_wire_version)
+pymongo.errors.OperationFailure: User "relation-7@admin" already exists, full error: {'ok': 0.0, 'errmsg': 'User "relation-7@admin" already exists', 'code': 51003, 'codeName': 'Location51003', 'lastCommittedOpTime': Timestamp(1736991337, 4), '$clusterTime': {'clusterTime': Timestamp(1736991337, 5), 'signature': {'hash': b'B\x87AN\x8a\xa0\x1bO\x07\x9a\x94n\xd8{\xb1\xc8\xe3\xce\xf5g', 'keyId': 7460319594280910873}}, 'operationTime': Timestamp(1736991337, 4)}
+unit-config-server-0: 01:35:38 ERROR juju.worker.uniter.operation hook "cluster-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongos-k8s-0: 01:35:52 ERROR unit.mongos-k8s/0.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-1: 01:35:52 ERROR unit.mongos-k8s/1.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-2: 01:35:53 ERROR unit.mongos-k8s/2.juju-log cluster:7: mongos service is not ready yet.
+unit-config-server-0: 01:38:27 ERROR unit.config-server/0.juju-log cluster:7: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/./src/charm.py", line 1870, in <module>
+    main(MongoDBCharm)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/main.py", line 551, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/main.py", line 530, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/main.py", line 516, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/framework.py", line 870, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/mongodb/v0/config_server_interface.py", line 169, in _on_relation_changed
+    self._on_database_requested(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/mongodb/v0/config_server_interface.py", line 143, in _on_database_requested
+    self.charm.client_relations.oversee_users(None, None)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/mongodb/v1/mongodb_provider.py", line 204, in oversee_users
+    self.add_users(users_being_managed, expected_current_users)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/mongodb/v1/mongodb_provider.py", line 257, in add_users
+    mongo.create_user(config)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/lib/charms/mongodb/v0/mongo.py", line 218, in create_user
+    self.client.admin.command(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/_csot.py", line 119, in csot_wrapper
+    return func(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/database.py", line 930, in command
+    return self._command(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/database.py", line 770, in _command
+    return conn.command(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/helpers.py", line 45, in inner
+    return func(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/pool.py", line 538, in command
+    return command(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/synchronous/network.py", line 218, in command
+    helpers_shared._check_command_response(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/pymongo/helpers_shared.py", line 247, in _check_command_response
+    raise OperationFailure(errmsg, code, response, max_wire_version)
+pymongo.errors.OperationFailure: User "relation-7@admin" already exists, full error: {'ok': 0.0, 'errmsg': 'User "relation-7@admin" already exists', 'code': 51003, 'codeName': 'Location51003', 'lastCommittedOpTime': Timestamp(1736991507, 2), '$clusterTime': {'clusterTime': Timestamp(1736991507, 3), 'signature': {'hash': b'\xe9\xfb0x\x19\xd0=5\x12.\x8d\x82\r\x1f\xef\x17\xf9\xe2\r\xe8', 'keyId': 7460319594280910873}}, 'operationTime': Timestamp(1736991507, 2)}
+unit-config-server-0: 01:38:27 ERROR juju.worker.uniter.operation hook "cluster-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongos-k8s-1: 01:39:50 ERROR unit.mongos-k8s/1.juju-log mongos service is not ready yet.
+unit-mongos-k8s-2: 01:39:50 ERROR unit.mongos-k8s/2.juju-log mongos service is not ready yet.
+unit-mongos-k8s-0: 01:39:50 ERROR unit.mongos-k8s/0.juju-log mongos service is not ready yet.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:904 Forgetting main...
