@@ -1,0 +1,84 @@
+[32mINFO    [0m integration.upgrade_tests.test_rollback:test_rollback.py:65 Wait for upgrade to fail
+[32mINFO    [0m integration.upgrade_tests.test_rollback:test_rollback.py:77 Re-refresh the charm
+[32mINFO    [0m integration.upgrade_tests.test_rollback:test_rollback.py:82 Wait for the charm to be rolled back
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: MongoDB 6.0.6 running (restart pending); Charm revision 1
+  mongos-k8s/1 [idle] active: MongoDB 6.0.6 running (restart pending); Charm revision 1
+  mongos-k8s/2 [executing] maintenance: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: MongoDB 6.0.6 running (restart pending); Charm revision 1
+  mongos-k8s/1 [idle] maintenance: 
+  mongos-k8s/2 [idle] active: MongoDB 6.0.6 running; Charm revision 1
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  mongos-k8s/1 [idle] active: MongoDB 6.0.6 running; Charm revision 1
+  mongos-k8s/2 [idle] active: MongoDB 6.0.6 running; Charm revision 1
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  mongos-k8s/1 [idle] active: 
+  mongos-k8s/2 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:834 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.6.1    unsupported  01:36:50Z
+
+App            Version  Status  Scale  Charm        Channel  Rev  Address         Exposed  Message
+config-server           active      1  mongodb-k8s  6/edge    61  10.152.183.243  no       
+mongos-k8s              active      3  mongos-k8s              2  10.152.183.247  no       
+shard0                  active      1  mongodb-k8s  6/edge    61  10.152.183.168  no       
+
+Unit              Workload  Agent  Address      Ports  Message
+config-server/0*  active    idle   10.1.145.16         Primary
+mongos-k8s/0      active    idle   10.1.145.20         
+mongos-k8s/1      active    idle   10.1.145.19         
+mongos-k8s/2*     active    idle   10.1.145.18         
+shard0/0*         active    idle   10.1.145.15         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:840 Juju error logs:
+
+unit-config-server-0: 01:30:41 ERROR unit.config-server/0.juju-log config-server:6: Failed to add shard shard0 to the config server, error=OperationFailure("Authentication failed., full error: {'ok': 0.0, 'errmsg': 'Authentication failed.', 'code': 18, 'codeName': 'AuthenticationFailed', '$clusterTime': {'clusterTime': Timestamp(1737509440, 1), 'signature': {'hash': b'\\xb1-y\\xa80\\x04\\xd4\\xf3T\\x80\\xc0-CC!W\\x1a\\xacH\\xbb', 'keyId': 7462545985068072985}}, 'operationTime': Timestamp(1737509440, 1)}")
+unit-config-server-0: 01:30:41 ERROR unit.config-server/0.juju-log config-server:6: shard0 shard does not have the same auth as the config server.
+unit-mongos-k8s-1: 01:32:17 ERROR unit.mongos-k8s/1.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-2: 01:32:17 ERROR unit.mongos-k8s/2.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-0: 01:32:17 ERROR unit.mongos-k8s/0.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-1: 01:33:20 ERROR unit.mongos-k8s/1.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-2: 01:33:20 ERROR unit.mongos-k8s/2.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-0: 01:33:20 ERROR unit.mongos-k8s/0.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-2: 01:34:52 ERROR juju.worker.uniter pebble poll failed for container "mongos": failed to send pebble-ready event: terminated
+unit-mongos-k8s-2: 01:34:54 ERROR unit.mongos-k8s/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongos-k8s-2/charm/src/charm.py", line 977, in <module>
+    main(MongosCharm)
+  File "/var/lib/juju/agents/unit-mongos-k8s-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 553, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-mongos-k8s-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 529, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-mongos-k8s-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 518, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name, self._juju_context)
+  File "/var/lib/juju/agents/unit-mongos-k8s-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 139, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mongos-k8s-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 347, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mongos-k8s-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 853, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mongos-k8s-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 943, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mongos-k8s-2/charm/src/charm.py", line 175, in _on_mongos_pebble_ready
+    self._configure_layers(container)
+  File "/var/lib/juju/agents/unit-mongos-k8s-2/charm/src/charm.py", line 162, in _configure_layers
+    container.replan()
+  File "/var/lib/juju/agents/unit-mongos-k8s-2/charm/venv/lib/python3.10/site-packages/ops/model.py", line 2278, in replan
+    self._pebble.replan_services()
+  File "/var/lib/juju/agents/unit-mongos-k8s-2/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2131, in replan_services
+    return self._services_action('replan', [], timeout, delay)
+  File "/var/lib/juju/agents/unit-mongos-k8s-2/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2228, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongos" (cannot start service while terminating)
+----- Logs from task 1 -----
+2025-01-22T01:34:53Z ERROR cannot start service while terminating
+-----
+unit-mongos-k8s-2: 01:34:55 ERROR juju.worker.uniter.operation hook "mongos-pebble-ready" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongos-k8s-2: 01:34:55 ERROR juju.worker.uniter pebble poll failed for container "mongos": failed to send pebble-ready event: hook failed
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:904 Forgetting main...
