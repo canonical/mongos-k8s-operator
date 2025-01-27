@@ -5,8 +5,17 @@
 import unittest
 
 from ops.testing import Harness
+import pytest
 
 from charm import MongosCharm
+
+
+@pytest.fixture(autouse=True)
+def patch_upgrades(monkeypatch):
+    monkeypatch.setattr(
+        "single_kernel_mongo.managers.k8s.K8sManager.get_pod",
+        lambda *args, **kwargs: 0,
+    )
 
 
 class TestCharm(unittest.TestCase):

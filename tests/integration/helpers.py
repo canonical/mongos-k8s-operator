@@ -192,12 +192,14 @@ async def deploy_cluster_components(
         application_name=CONFIG_SERVER_APP_NAME,
         channel="6/edge",
         config={"role": "config-server"},
+        trust=True,
     )
     await ops_test.model.deploy(
         MONGODB_CHARM_NAME,
         application_name=SHARD_APP_NAME,
         channel="6/edge",
         config={"role": "shard"},
+        trust=True,
     )
 
     await ops_test.model.wait_for_idle(
@@ -305,7 +307,7 @@ async def get_application_relation_data(
     unit = ops_test.model.applications[application_name].units[0]
     raw_data = (await ops_test.juju("show-unit", unit.name))[1]
     if not raw_data:
-        raise ValueError(f"no unit info could be grabbed for { unit.name}")
+        raise ValueError(f"no unit info could be grabbed for {unit.name}")
     data = yaml.safe_load(raw_data)
     # Filter the data based on the relation name.
     relation_data = [
