@@ -1,0 +1,37 @@
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:834 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.6.1    unsupported  01:42:17Z
+
+App            Version  Status  Scale  Charm        Channel  Rev  Address         Exposed  Message
+application             active      1  application             0                  no       
+config-server           active      1  mongodb-k8s  6/edge    61  10.152.183.216  no       
+mongos-k8s              active      1  mongos-k8s              0  10.152.183.125  no       
+shard0                  active      1  mongodb-k8s  6/edge    61  10.152.183.169  no       
+
+Unit              Workload  Agent  Address     Ports  Message
+application/0*    active    idle                      
+config-server/0*  active    idle   10.1.33.15         Primary
+mongos-k8s/0*     active    idle   10.1.33.10         
+shard0/0*         active    idle   10.1.33.16         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:840 Juju error logs:
+
+controller-0: 01:31:30 ERROR juju.worker.caasapplicationprovisioner.runner exited "config-server": more than 20 retries ensuring scale: setting scale to 1 for "config-server": statefulset "config-server" not found
+controller-0: 01:31:36 ERROR juju.worker.caasapplicationprovisioner.runner exited "shard0": more than 20 retries ensuring trust: updating application "shard0" to desired trust false: getting service account role "shard0": k8s: roles.rbac.authorization.k8s.io "shard0" not found
+controller-0: 01:32:30 ERROR juju.worker.caasapplicationprovisioner.runner exited "config-server": more than 20 retries ensuring scale: setting scale to 1 for "config-server": statefulset "config-server" not found
+controller-0: 01:32:39 ERROR juju.worker.caasapplicationprovisioner.runner exited "shard0": more than 20 retries ensuring trust: updating application "shard0" to desired trust false: getting service account role "shard0": k8s: roles.rbac.authorization.k8s.io "shard0" not found
+controller-0: 01:33:33 ERROR juju.worker.caasapplicationprovisioner.runner exited "config-server": more than 20 retries ensuring scale: setting scale to 1 for "config-server": statefulset "config-server" not found
+controller-0: 01:33:42 ERROR juju.worker.caasapplicationprovisioner.runner exited "shard0": more than 20 retries ensuring scale: setting scale to 1 for "shard0": statefulset "shard0" not found
+controller-0: 01:34:33 ERROR juju.worker.caasapplicationprovisioner.runner exited "config-server": more than 20 retries ensuring scale: setting scale to 1 for "config-server": statefulset "config-server" not found
+controller-0: 01:34:42 ERROR juju.worker.caasapplicationprovisioner.runner exited "shard0": more than 20 retries ensuring scale: setting scale to 1 for "shard0": statefulset "shard0" not found
+controller-0: 01:35:37 ERROR juju.worker.caasapplicationprovisioner.runner exited "config-server": more than 20 retries ensuring scale: setting scale to 1 for "config-server": statefulset "config-server" not found
+controller-0: 01:35:42 ERROR juju.worker.caasapplicationprovisioner.runner exited "shard0": more than 20 retries ensuring scale: setting scale to 1 for "shard0": statefulset "shard0" not found
+unit-config-server-0: 01:37:38 ERROR unit.config-server/0.juju-log config-server:6: Failed to add shard shard0 to the config server, error=OperationFailure("Authentication failed., full error: {'ok': 0.0, 'errmsg': 'Authentication failed.', 'code': 18, 'codeName': 'AuthenticationFailed', '$clusterTime': {'clusterTime': Timestamp(1738460257, 3), 'signature': {'hash': b'\\xcc\\x8baT\\xb6\\xb1\\xad\\xf4a.[\\xe4\\xcaE\\xe6Y@\\x9ajq', 'keyId': 7466629700102651929}}, 'operationTime': Timestamp(1738460257, 3)}")
+unit-config-server-0: 01:37:38 ERROR unit.config-server/0.juju-log config-server:6: shard0 shard does not have the same auth as the config server.
+unit-mongos-k8s-0: 01:39:13 ERROR unit.mongos-k8s/0.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-0: 01:40:15 ERROR unit.mongos-k8s/0.juju-log cluster:7: mongos service is not ready yet.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:904 Forgetting main...

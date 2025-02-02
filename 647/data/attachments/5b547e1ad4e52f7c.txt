@@ -1,0 +1,45 @@
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mongos-k8s/0 [executing] active: 
+  data-integrator/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:834 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.6.1    unsupported  01:45:41Z
+
+App              Version  Status  Scale  Charm            Channel        Rev  Address         Exposed  Message
+application               active      1  application                       0                  no       
+config-server             active      1  mongodb-k8s      6/edge          61  10.152.183.19   no       
+data-integrator           active      1  data-integrator  latest/stable   78  10.152.183.158  no       
+mongos-k8s                active      1  mongos-k8s                        0  10.152.183.85   no       
+shard0                    active      1  mongodb-k8s      6/edge          61  10.152.183.143  no       
+
+Unit                Workload  Agent  Address     Ports  Message
+application/0*      active    idle                      
+config-server/0*    active    idle   10.1.33.13         Primary
+data-integrator/0*  active    idle   10.1.33.17         
+mongos-k8s/0*       active    idle   10.1.33.8          
+shard0/0*           active    idle   10.1.33.14         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:840 Juju error logs:
+
+controller-0: 01:30:48 ERROR juju.worker.caasapplicationprovisioner.runner exited "config-server": more than 20 retries ensuring trust: updating application "config-server" to desired trust false: getting service account role "config-server": k8s: roles.rbac.authorization.k8s.io "config-server" not found
+controller-0: 01:30:49 ERROR juju.worker.caasapplicationprovisioner.runner exited "shard0": more than 20 retries ensuring scale: setting scale to 1 for "shard0": statefulset "shard0" not found
+controller-0: 01:31:51 ERROR juju.worker.caasapplicationprovisioner.runner exited "config-server": more than 20 retries ensuring trust: updating application "config-server" to desired trust false: getting service account role "config-server": k8s: roles.rbac.authorization.k8s.io "config-server" not found
+controller-0: 01:31:52 ERROR juju.worker.caasapplicationprovisioner.runner exited "shard0": more than 20 retries ensuring trust: updating application "shard0" to desired trust false: getting service account role "shard0": k8s: roles.rbac.authorization.k8s.io "shard0" not found
+controller-0: 01:32:54 ERROR juju.worker.caasapplicationprovisioner.runner exited "config-server": more than 20 retries ensuring trust: updating application "config-server" to desired trust false: getting service account role "config-server": k8s: roles.rbac.authorization.k8s.io "config-server" not found
+controller-0: 01:32:56 ERROR juju.worker.caasapplicationprovisioner.runner exited "shard0": more than 20 retries ensuring scale: setting scale to 1 for "shard0": statefulset "shard0" not found
+controller-0: 01:33:54 ERROR juju.worker.caasapplicationprovisioner.runner exited "config-server": more than 20 retries ensuring scale: setting scale to 1 for "config-server": statefulset "config-server" not found
+controller-0: 01:33:56 ERROR juju.worker.caasapplicationprovisioner.runner exited "shard0": more than 20 retries ensuring scale: setting scale to 1 for "shard0": statefulset "shard0" not found
+controller-0: 01:34:55 ERROR juju.worker.caasapplicationprovisioner.runner exited "config-server": more than 20 retries ensuring scale: setting scale to 1 for "config-server": statefulset "config-server" not found
+controller-0: 01:34:59 ERROR juju.worker.caasapplicationprovisioner.runner exited "shard0": more than 20 retries ensuring trust: updating application "shard0" to desired trust false: getting service account role "shard0": k8s: roles.rbac.authorization.k8s.io "shard0" not found
+controller-0: 01:35:55 ERROR juju.worker.caasapplicationprovisioner.runner exited "config-server": more than 20 retries ensuring scale: setting scale to 1 for "config-server": statefulset "config-server" not found
+controller-0: 01:36:02 ERROR juju.worker.caasapplicationprovisioner.runner exited "shard0": more than 20 retries ensuring scale: setting scale to 1 for "shard0": statefulset "shard0" not found
+controller-0: 01:36:58 ERROR juju.worker.caasapplicationprovisioner.runner exited "config-server": more than 20 retries ensuring trust: updating application "config-server" to desired trust false: getting service account role "config-server": k8s: roles.rbac.authorization.k8s.io "config-server" not found
+controller-0: 01:37:03 ERROR juju.worker.caasapplicationprovisioner.runner exited "shard0": more than 20 retries ensuring scale: setting scale to 1 for "shard0": statefulset "shard0" not found
+unit-config-server-0: 01:38:41 ERROR unit.config-server/0.juju-log config-server:6: Failed to add shard shard0 to the config server, error=OperationFailure("Authentication failed., full error: {'ok': 0.0, 'errmsg': 'Authentication failed.', 'code': 18, 'codeName': 'AuthenticationFailed', '$clusterTime': {'clusterTime': Timestamp(1738460320, 1), 'signature': {'hash': b'Q\\x82z\\xb2\\xb7\\x12\\xff\\xd0\\x19\\x1f\\xb6\\x14\\x83\\nx\\x1d\\x9a-Tl', 'keyId': 7466629974980558873}}, 'operationTime': Timestamp(1738460320, 1)}")
+unit-config-server-0: 01:38:41 ERROR unit.config-server/0.juju-log config-server:6: shard0 shard does not have the same auth as the config server.
+unit-mongos-k8s-0: 01:40:15 ERROR unit.mongos-k8s/0.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-0: 01:41:18 ERROR unit.mongos-k8s/0.juju-log cluster:7: mongos service is not ready yet.
+unit-mongos-k8s-0: 01:44:25 ERROR unit.mongos-k8s/0.juju-log External configuration: nonsensical-setting for expose-external is not valid, should be one of: ['none', 'nodeport']
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:904 Forgetting main...
