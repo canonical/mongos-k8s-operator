@@ -3,7 +3,7 @@
 
 output "app_name" {
   description = "Name of the deployed application."
-  value       = juju_application.mongos.name
+  value       = juju_application.mongos-k8s.name
 }
 
 # Provided integration endpoints
