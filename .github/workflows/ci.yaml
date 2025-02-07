@@ -87,14 +87,14 @@ jobs:
       - name: microk8s setup
         run: |
           sudo snap install microk8s --channel=1.27-strict
-          sudo usermod -a -G snap_microk8s $(whoami)
-          mkdir ~/.kube
-          sudo chown -R $(whoami) ~/.kube
+          sudo usermod -a -G snap_microk8s "$(whoami)"
+          mkdir -p ~/.kube
+          sudo chown -R "$(whoami)" ~/.kube
           newgrp snap_microk8s
           sudo microk8s enable dns storage ingress
-      - name: microk9s setup
+      - name: juju model
         run: |
-          sg 'lxd' -c "juju bootstrap 'microk8s' --config model-logs-size=10G"
+          sudo --user "$USER" juju bootstrap 'microk8s' --config model-logs-size=10G
           juju model-defaults logging-config='<root>=INFO; unit=DEBUG'
       - name: Terraform deploy
         working-directory: terraform/tests
