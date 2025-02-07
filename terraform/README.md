@@ -1,6 +1,6 @@
 # Terraform module for mongos-k8s-operator
 
-This is a Terraform module facilitating the deployment of the MongoDB charm with [Terraform juju provider](https://github.com/juju/terraform-provider-juju/). For more information, refer to the provider [documentation](https://registry.terraform.io/providers/juju/juju/latest/docs). 
+This is a Terraform module facilitating the deployment of the Mongos charm with [Terraform juju provider](https://github.com/juju/terraform-provider-juju/). For more information, refer to the provider [documentation](https://registry.terraform.io/providers/juju/juju/latest/docs). 
 
 ## Requirements
 This module requires a `juju` model to be available. Refer to the [usage section](#usage) below for more details.
