@@ -12,7 +12,7 @@ from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import
     DatabaseRequiresEvents,
 )
 from single_kernel_mongo.exceptions import DeployedWithoutTrustError
-from charm import MongosCharm
+from charm import MongosK8sCharm
 
 from lightkube.core.exceptions import ApiError
 
@@ -49,7 +49,7 @@ class TestNodePort(unittest.TestCase):
             # Ignore the events not existing before the first test.
             pass
 
-        self.harness = Harness(MongosCharm)
+        self.harness = Harness(MongosK8sCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
 

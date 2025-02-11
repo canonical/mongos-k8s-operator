@@ -12,7 +12,7 @@ from single_kernel_mongo.managers.mongos_operator import MongosOperator
 
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
-class MongosCharm(AbstractMongoCharm[MongosCharmConfig, MongosOperator]):
+class MongosK8sCharm(AbstractMongoCharm[MongosCharmConfig, MongosOperator]):
     """Charm the service."""
 
     config_type = MongosCharmConfig
@@ -23,4 +23,4 @@ class MongosCharm(AbstractMongoCharm[MongosCharmConfig, MongosOperator]):
 
 
 if __name__ == "__main__":
-    main(MongosCharm)
+    main(MongosK8sCharm)
