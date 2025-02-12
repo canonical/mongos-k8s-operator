@@ -2,15 +2,19 @@
 # See LICENSE file for licensing details.
 import logging
 import unittest
+import pytest
+
 from unittest import mock
 from unittest.mock import patch, PropertyMock
 import httpx
-from ops.model import BlockedStatus
 from ops.testing import Harness
-from node_port import ApiError
-from charms.data_platform_libs.v0.data_interfaces import DatabaseRequiresEvents
-from charm import MongosCharm
+from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
+    DatabaseRequiresEvents,
+)
+from single_kernel_mongo.exceptions import DeployedWithoutTrustError
+from charm import MongosK8sCharm
 
+from lightkube.core.exceptions import ApiError
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +23,14 @@ STATUS_JUJU_TRUST = (
     "Insufficient permissions, try: `juju trust mongos-k8s --scope=cluster`"
 )
 CLUSTER_ALIAS = "cluster"
+
+
+@pytest.fixture(autouse=True)
+def patch_upgrades(monkeypatch):
+    monkeypatch.setattr(
+        "single_kernel_mongo.managers.k8s.K8sManager.get_pod",
+        lambda *args, **kwargs: 0,
+    )
 
 
 class TestNodePort(unittest.TestCase):
@@ -37,11 +49,11 @@ class TestNodePort(unittest.TestCase):
             # Ignore the events not existing before the first test.
             pass
 
-        self.harness = Harness(MongosCharm)
+        self.harness = Harness(MongosK8sCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
 
-    @patch("charm.NodePortManager.get_service")
+    @patch("single_kernel_mongo.managers.k8s.K8sManager.get_service")
     def test_delete_unit_service_has_no_metadata(self, get_service):
         """Verify that when no metadata is present, the charm raises an error."""
         service = mock.Mock()
@@ -49,10 +61,14 @@ class TestNodePort(unittest.TestCase):
         get_service.return_value = service
 
         with self.assertRaises(Exception):
-            self.harness.charm.node_port_manager.delete_unit_service()
+            self.harness.charm.operator.k8s.delete_service()
 
-    @patch("charm.NodePortManager.get_service")
-    def test_delete_unit_service_raises_ApiError(self, get_service):
+    @patch(
+        "single_kernel_mongo.managers.k8s.K8sManager.client",
+        new_callable=PropertyMock(),
+    )
+    @patch("single_kernel_mongo.managers.k8s.K8sManager.get_service")
+    def test_delete_unit_service_raises_ApiError(self, get_service, mock_client):
         """Verify that when charm needs juju trust a status is logged."""
         metadata_mock = mock.Mock()
         metadata_mock.name = "service-name"
@@ -66,19 +82,19 @@ class TestNodePort(unittest.TestCase):
             response=httpx.Response(409, json={"message": "bad call"}),
         )
 
-        mocked_client = PropertyMock()
         delete_mock = mock.Mock()
         delete_mock.side_effect = api_error
-        mocked_client.delete = delete_mock
-
-        # Patch the actual client here
-        self.harness.charm.node_port_manager.client = mocked_client
+        mock_client.delete = delete_mock
 
         with self.assertRaises(ApiError):
-            self.harness.charm.node_port_manager.delete_unit_service()
+            self.harness.charm.operator.k8s.delete_service()
 
-    @patch("charm.NodePortManager.get_service")
-    def test_delete_unit_service_needs_juju_trust(self, get_service):
+    @patch(
+        "single_kernel_mongo.managers.k8s.K8sManager.client",
+        new_callable=PropertyMock(),
+    )
+    @patch("single_kernel_mongo.managers.k8s.K8sManager.get_service")
+    def test_delete_unit_service_needs_juju_trust(self, get_service, mock_client):
         """Verify that when charm needs juju trust a status is logged."""
         metadata_mock = mock.Mock()
         metadata_mock.name = "service-name"
@@ -92,16 +108,9 @@ class TestNodePort(unittest.TestCase):
             response=httpx.Response(409, json={"message": "bad call", "code": 403}),
         )
 
-        mocked_client = PropertyMock()
         delete_mock = mock.Mock()
         delete_mock.side_effect = api_error
-        mocked_client.delete = delete_mock
+        mock_client.delete = delete_mock
 
-        # Patch the actual client here
-        self.harness.charm.node_port_manager.client = mocked_client
-
-        self.harness.charm.node_port_manager.delete_unit_service()
-
-        self.assertTrue(
-            self.harness.charm.unit.status == BlockedStatus(STATUS_JUJU_TRUST)
-        )
+        with self.assertRaises(DeployedWithoutTrustError):
+            self.harness.charm.operator.k8s.delete_service()

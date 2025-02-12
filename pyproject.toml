@@ -9,6 +9,8 @@ requires-poetry = ">=2.0.0"
 [tool.poetry.dependencies]
 lightkube = "^0.15.3"
 python = "^3.10"
+mongo-charms-single-kernel = "~0.0.1"
+dacite = "==1.8.0"
 ops = "^2.15.0"
 pymongo = "^4.7.3"
 tenacity = "^8.2.3"
@@ -23,10 +25,10 @@ overrides = "^7.7.0"
 [tool.poetry.group.charm-libs.dependencies]
 # data_platform_libs/v0/data_interfaces.py
 ops = "^2.15.0"
-pydantic = "^1.10.7"  # cos_agent lib
+pydantic = "*"  # cos_agent lib
 cryptography = "^42.0.5"  # tls_certificates lib v3
 jsonschema = "^4.22.0"  # tls_certificates lib v3
-cosl = "^0.0.16"  # loki_push_api
+cosl = "*"  # loki_push_api
 
 
 [tool.poetry.requires-plugins]
@@ -47,11 +49,15 @@ codespell = "^2.2.6"
 shellcheck-py = "^0.10.0.1"
 
 [tool.poetry.group.unit.dependencies]
+mongo-charms-single-kernel = "~0.0.1"
+dacite = "==1.8.0"
 coverage = {extras = ["toml"], version = "^7.5.0"}
 pytest = "^8.1.1"
 parameterized = "^0.9.0"
 
 [tool.poetry.group.integration.dependencies]
+mongo-charms-single-kernel = "~0.0.1"
+dacite = "==1.8.0"
 ops = "^2.15.0"
 allure-pytest = "^2.13.5"
 tenacity = "^8.2.3"

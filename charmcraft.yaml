@@ -52,6 +52,7 @@ parts:
       - poetry-deps
     poetry-export-extra-args: ['--only', 'main,charm-libs']
     build-packages:
+      - git
       - libffi-dev  # Needed to build Python dependencies with Rust from source
       - libssl-dev  # Needed to build Python dependencies with Rust from source
       - pkg-config  # Needed to build Python dependencies with Rust from source
