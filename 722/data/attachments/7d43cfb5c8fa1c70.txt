@@ -1,0 +1,29 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos-k8s/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:834 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.6.1    unsupported  01:46:01Z
+
+App            Version  Status  Scale  Charm        Channel  Rev  Address         Exposed  Message
+application             active      1  application             0                  no       
+config-server  6.0.6    active      1  mongodb-k8s  6/edge    62  10.152.183.99   no       
+mongos-k8s     6.0.6    active      1  mongos-k8s              0  10.152.183.155  no       
+shard0         6.0.6    active      1  mongodb-k8s  6/edge    62  10.152.183.58   no       
+
+Unit              Workload  Agent  Address     Ports  Message
+application/0*    active    idle                      
+config-server/0*  active    idle   10.1.50.16         
+mongos-k8s/0*     active    idle   10.1.50.10         
+shard0/0*         active    idle   10.1.50.15         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:840 Juju error logs:
+
+unit-shard0-0: 01:42:12 ERROR unit.shard0/0.juju-log Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:42:13 ERROR unit.config-server/0.juju-log Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-shard0-0: 01:42:14 ERROR unit.shard0/0.juju-log upgrade-version-a:5: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:42:14 ERROR unit.config-server/0.juju-log database-peers:2: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-shard0-0: 01:42:15 ERROR unit.shard0/0.juju-log database-peers:4: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:42:16 ERROR unit.config-server/0.juju-log upgrade-version-a:3: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:904 Forgetting main...
