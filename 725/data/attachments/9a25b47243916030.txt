@@ -1,0 +1,85 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  mongos-k8s/1 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  mongos-k8s/1 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/self-signed-certificates-155
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates-separate/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos-k8s/0 [idle] blocked: mongos requires TLS to be enabled.
+  mongos-k8s/1 [idle] blocked: mongos requires TLS to be enabled.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos-k8s/0 [executing] blocked: mongos requires TLS to be enabled.
+  mongos-k8s/1 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  mongos-k8s/1 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:834 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.6.1    unsupported  02:00:12Z
+
+App                                Version  Status  Scale  Charm                     Channel        Rev  Address         Exposed  Message
+config-server                      6.0.6    active      1  mongodb-k8s               6/edge          62  10.152.183.96   no       
+mongos-k8s                         6.0.6    active      2  mongos-k8s                                 0  10.152.183.237  no       
+self-signed-certificates                    active      1  self-signed-certificates  latest/edge    242  10.152.183.22   no       
+self-signed-certificates-separate           active      1  self-signed-certificates  latest/stable  155  10.152.183.91   no       
+shard0                             6.0.6    active      1  mongodb-k8s               6/edge          62  10.152.183.221  no       
+
+Unit                                  Workload  Agent  Address      Ports  Message
+config-server/0*                      active    idle   10.1.72.141         Primary
+mongos-k8s/0*                         blocked   idle   10.1.72.136         mongos CA and Config-Server CA don't match.
+mongos-k8s/1                          blocked   idle   10.1.72.143         mongos CA and Config-Server CA don't match.
+self-signed-certificates-separate/0*  active    idle   10.1.72.145         
+self-signed-certificates/0*           active    idle   10.1.72.144         
+shard0/0*                             active    idle   10.1.72.142         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:840 Juju error logs:
+
+unit-mongos-k8s-0: 01:29:53 ERROR unit.mongos-k8s/0.juju-log Deferring because of ContainerNotReadyError 
+unit-config-server-0: 01:30:12 ERROR unit.config-server/0.juju-log Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:30:14 ERROR unit.config-server/0.juju-log database-peers:2: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:30:15 ERROR unit.config-server/0.juju-log upgrade-version-a:3: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-shard0-0: 01:30:15 ERROR unit.shard0/0.juju-log Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-shard0-0: 01:30:16 ERROR unit.shard0/0.juju-log upgrade-version-a:5: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-shard0-0: 01:30:18 ERROR unit.shard0/0.juju-log database-peers:4: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-shard0-0: 01:31:01 ERROR unit.shard0/0.juju-log sharding:6: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:31:01 ERROR unit.config-server/0.juju-log config-server:6: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:31:02 ERROR unit.config-server/0.juju-log config-server:6: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-shard0-0: 01:31:02 ERROR unit.shard0/0.juju-log sharding:6: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-shard0-0: 01:31:04 ERROR unit.shard0/0.juju-log sharding:6: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:31:04 ERROR unit.config-server/0.juju-log config-server:6: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-shard0-0: 01:31:05 ERROR unit.shard0/0.juju-log sharding:6: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:31:05 ERROR unit.config-server/0.juju-log config-server:6: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-shard0-0: 01:31:06 ERROR unit.shard0/0.juju-log sharding:6: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:31:28 ERROR unit.config-server/0.juju-log cluster:7: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:31:30 ERROR unit.config-server/0.juju-log cluster:7: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:31:31 ERROR unit.config-server/0.juju-log cluster:7: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:31:33 ERROR unit.config-server/0.juju-log cluster:7: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:31:34 ERROR unit.config-server/0.juju-log cluster:7: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:31:35 ERROR unit.config-server/0.juju-log cluster:7: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-mongos-k8s-0: 01:34:13 ERROR unit.mongos-k8s/0.juju-log certificates:8: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongos-k8s-1: 01:34:14 ERROR unit.mongos-k8s/1.juju-log certificates:8: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongos-k8s-0: 01:34:14 ERROR unit.mongos-k8s/0.juju-log certificates:8: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-mongos-k8s-1: 01:34:14 ERROR unit.mongos-k8s/1.juju-log certificates:8: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-config-server-0: 01:36:21 ERROR unit.config-server/0.juju-log certificates:9: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-shard0-0: 01:36:21 ERROR unit.shard0/0.juju-log certificates:10: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-shard0-0: 01:36:21 ERROR unit.shard0/0.juju-log certificates:10: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-config-server-0: 01:36:21 ERROR unit.config-server/0.juju-log certificates:9: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-mongos-k8s-1: 01:48:23 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "edd20e0f-138b-4670-8210-a0f87866a3b4:r#8#self-signed-certificates": settings edd20e0f-138b-4670-8210-a0f87866a3b4:r#8#self-signed-certificates not found (not found)
+unit-mongos-k8s-1: 01:52:27 ERROR unit.mongos-k8s/1.juju-log certificates:11: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongos-k8s-0: 01:52:27 ERROR unit.mongos-k8s/0.juju-log certificates:11: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongos-k8s-0: 01:52:27 ERROR unit.mongos-k8s/0.juju-log certificates:11: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-mongos-k8s-1: 01:52:27 ERROR unit.mongos-k8s/1.juju-log certificates:11: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-mongos-k8s-1: 01:56:52 ERROR unit.mongos-k8s/1.juju-log certificates:12: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongos-k8s-1: 01:56:52 ERROR unit.mongos-k8s/1.juju-log certificates:12: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-mongos-k8s-0: 01:57:18 ERROR unit.mongos-k8s/0.juju-log certificates:12: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongos-k8s-0: 01:57:18 ERROR unit.mongos-k8s/0.juju-log certificates:12: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-mongos-k8s-0: 01:59:04 ERROR unit.mongos-k8s/0.juju-log mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-mongos-k8s-1: 01:59:08 ERROR unit.mongos-k8s/1.juju-log mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-mongos-k8s-0: 02:00:07 ERROR unit.mongos-k8s/0.juju-log mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-mongos-k8s-1: 02:00:11 ERROR unit.mongos-k8s/1.juju-log mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:904 Forgetting main...
