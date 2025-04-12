@@ -1,0 +1,29 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:834 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.6.1    unsupported  01:36:23Z
+
+App            Version  Status  Scale  Charm        Channel  Rev  Address         Exposed  Message
+config-server  6.0.6    active      1  mongodb-k8s  6/edge    63  10.152.183.242  no       
+mongos-k8s     6.0.6    active      2  mongos-k8s              0  10.152.183.150  no       
+shard0         6.0.6    active      1  mongodb-k8s  6/edge    63  10.152.183.196  no       
+
+Unit              Workload  Agent  Address      Ports  Message
+config-server/0*  active    idle   10.1.131.13         
+mongos-k8s/0*     active    idle   10.1.131.8          
+mongos-k8s/1      active    idle   10.1.131.15         
+shard0/0*         active    idle   10.1.131.14         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:840 Juju error logs:
+
+controller-0: 01:30:30 ERROR juju.worker.caasapplicationprovisioner.runner exited "config-server": more than 20 retries ensuring trust: updating application "config-server" to desired trust true: getting service account role "config-server": k8s: roles.rbac.authorization.k8s.io "config-server" not found
+controller-0: 01:30:32 ERROR juju.worker.caasapplicationprovisioner.runner exited "shard0": more than 20 retries ensuring trust: updating application "shard0" to desired trust true: getting service account role "shard0": k8s: roles.rbac.authorization.k8s.io "shard0" not found
+controller-0: 01:31:31 ERROR juju.worker.caasapplicationprovisioner.runner exited "config-server": more than 20 retries ensuring scale: setting scale to 1 for "config-server": statefulset "config-server" not found
+controller-0: 01:31:32 ERROR juju.worker.caasapplicationprovisioner.runner exited "shard0": more than 20 retries ensuring scale: setting scale to 1 for "shard0": statefulset "shard0" not found
+controller-0: 01:32:31 ERROR juju.worker.caasapplicationprovisioner.runner exited "config-server": more than 20 retries ensuring scale: setting scale to 1 for "config-server": statefulset "config-server" not found
+controller-0: 01:32:35 ERROR juju.worker.caasapplicationprovisioner.runner exited "shard0": more than 20 retries ensuring scale: setting scale to 1 for "shard0": statefulset "shard0" not found
+unit-config-server-0: 01:33:41 ERROR unit.config-server/0.juju-log Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:33:43 ERROR unit.config-server/0.juju-log database-peers:3: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:33:44 ERROR unit.config-server/0.juju-log upgrade-version-a:2: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:904 Forgetting main...
