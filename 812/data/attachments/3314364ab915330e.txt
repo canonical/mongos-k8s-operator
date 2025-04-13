@@ -1,0 +1,48 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  mongos-k8s/1 [executing] waiting: Connecting to config-server
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  mongos-k8s/1 [executing] waiting: Connecting to config-server
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  mongos-k8s/1 [executing] waiting: Connecting to config-server
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  mongos-k8s/1 [executing] waiting: Connecting to config-server
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos-k8s/0 [idle] active: 
+  mongos-k8s/1 [executing] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:834 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.6.1    unsupported  02:36:54Z
+
+App            Version  Status  Scale  Charm        Channel  Rev  Address         Exposed  Message
+config-server  6.0.6    active      1  mongodb-k8s  6/edge    63  10.152.183.106  no       
+mongos-k8s     6.0.6    active      2  mongos-k8s              0  10.152.183.99   no       
+shard0         6.0.6    active      1  mongodb-k8s  6/edge    63  10.152.183.188  no       
+
+Unit              Workload  Agent  Address       Ports  Message
+config-server/0*  active    idle   10.1.211.141         
+mongos-k8s/0*     active    idle   10.1.211.136         
+mongos-k8s/1      active    idle   10.1.211.143         
+shard0/0*         active    idle   10.1.211.142         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:840 Juju error logs:
+
+controller-0: 02:27:23 ERROR juju.worker.caasapplicationprovisioner.runner exited "config-server": more than 20 retries ensuring scale: setting scale to 1 for "config-server": statefulset "config-server" not found
+controller-0: 02:27:24 ERROR juju.worker.caasapplicationprovisioner.runner exited "shard0": more than 20 retries ensuring trust: updating application "shard0" to desired trust true: getting service account role "shard0": k8s: roles.rbac.authorization.k8s.io "shard0" not found
+controller-0: 02:28:25 ERROR juju.worker.caasapplicationprovisioner.runner exited "shard0": more than 20 retries ensuring scale: setting scale to 1 for "shard0": statefulset "shard0" not found
+controller-0: 02:28:26 ERROR juju.worker.caasapplicationprovisioner.runner exited "config-server": more than 20 retries ensuring trust: updating application "config-server" to desired trust true: getting service account role "config-server": k8s: roles.rbac.authorization.k8s.io "config-server" not found
+controller-0: 02:29:27 ERROR juju.worker.caasapplicationprovisioner.runner exited "config-server": more than 20 retries ensuring scale: setting scale to 1 for "config-server": statefulset "config-server" not found
+controller-0: 02:29:29 ERROR juju.worker.caasapplicationprovisioner.runner exited "shard0": more than 20 retries ensuring trust: updating application "shard0" to desired trust true: getting service account role "shard0": k8s: roles.rbac.authorization.k8s.io "shard0" not found
+controller-0: 02:30:27 ERROR juju.worker.caasapplicationprovisioner.runner exited "config-server": more than 20 retries ensuring scale: setting scale to 1 for "config-server": statefulset "config-server" not found
+controller-0: 02:30:32 ERROR juju.worker.caasapplicationprovisioner.runner exited "shard0": more than 20 retries ensuring scale: setting scale to 1 for "shard0": statefulset "shard0" not found
+unit-config-server-0: 02:31:25 ERROR unit.config-server/0.juju-log Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 02:31:26 ERROR unit.config-server/0.juju-log database-peers:2: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 02:31:28 ERROR unit.config-server/0.juju-log upgrade-version-a:3: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:904 Forgetting main...
