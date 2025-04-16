@@ -162,7 +162,10 @@ async def test_mongos_tls_ca_mismatch(ops_test: OpsTest) -> None:
     )
 
     await ops_test.model.deploy(
-        CERTS_APP_NAME, application_name=DIFFERENT_CERTS_APP_NAME, channel="stable"
+        CERTS_APP_NAME,
+        application_name=DIFFERENT_CERTS_APP_NAME,
+        channel="latest/stable",
+        base="ubuntu@22.04",
     )
     await ops_test.model.wait_for_idle(
         apps=[DIFFERENT_CERTS_APP_NAME],
