@@ -19,7 +19,7 @@ class MongosK8sCharm(AbstractMongoCharm[MongosCharmConfig, MongosOperator]):
     operator_type = MongosOperator
     substrate = Substrates.K8S
     peer_rel_name = PeerRelationNames.ROUTER_PEERS
-    name = "mongos"
+    name = "mongos-k8s"
 
 
 if __name__ == "__main__":
