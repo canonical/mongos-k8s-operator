@@ -1,0 +1,44 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos-k8s/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:834 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.6.1    unsupported  01:34:02Z
+
+App            Version  Status  Scale  Charm        Channel  Rev  Address         Exposed  Message
+application             active      1  application             0                  no       
+config-server  6.0.6    active      1  mongodb-k8s  6/edge    63  10.152.183.206  no       
+mongos-k8s     6.0.6    active      1  mongos-k8s              0  10.152.183.185  no       
+shard0         6.0.6    active      1  mongodb-k8s  6/edge    63  10.152.183.174  no       
+
+Unit              Workload  Agent  Address      Ports  Message
+application/0*    active    idle                       
+config-server/0*  active    idle   10.1.148.16         
+mongos-k8s/0*     active    idle   10.1.148.10         
+shard0/0*         active    idle   10.1.148.15         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:840 Juju error logs:
+
+unit-mongos-k8s-0: 01:29:59 ERROR unit.mongos-k8s/0.juju-log Deferring because of ContainerNotReadyError 
+unit-shard0-0: 01:30:24 ERROR unit.shard0/0.juju-log Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:30:25 ERROR unit.config-server/0.juju-log Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-shard0-0: 01:30:25 ERROR unit.shard0/0.juju-log upgrade-version-a:5: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:30:26 ERROR unit.config-server/0.juju-log database-peers:2: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-shard0-0: 01:30:27 ERROR unit.shard0/0.juju-log database-peers:4: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:30:27 ERROR unit.config-server/0.juju-log upgrade-version-a:3: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:31:10 ERROR unit.config-server/0.juju-log config-server:6: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-shard0-0: 01:31:10 ERROR unit.shard0/0.juju-log sharding:6: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:31:11 ERROR unit.config-server/0.juju-log config-server:6: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-shard0-0: 01:31:11 ERROR unit.shard0/0.juju-log sharding:6: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:31:12 ERROR unit.config-server/0.juju-log config-server:6: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-shard0-0: 01:31:12 ERROR unit.shard0/0.juju-log sharding:6: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:31:13 ERROR unit.config-server/0.juju-log config-server:6: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-shard0-0: 01:31:13 ERROR unit.shard0/0.juju-log sharding:6: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:31:15 ERROR unit.config-server/0.juju-log config-server:6: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-shard0-0: 01:31:15 ERROR unit.shard0/0.juju-log sharding:6: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:31:37 ERROR unit.config-server/0.juju-log cluster:7: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:31:38 ERROR unit.config-server/0.juju-log cluster:7: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:31:39 ERROR unit.config-server/0.juju-log cluster:7: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:31:41 ERROR unit.config-server/0.juju-log cluster:7: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:904 Forgetting main...
