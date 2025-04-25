@@ -1,0 +1,88 @@
+[32mINFO    [0m integration.upgrade_tests.test_rollback:test_rollback.py:65 Wait for upgrade to fail
+[32mINFO    [0m integration.upgrade_tests.test_rollback:test_rollback.py:77 Re-refresh the charm
+[32mINFO    [0m integration.upgrade_tests.test_rollback:test_rollback.py:82 Wait for the charm to be rolled back
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos-k8s/0 [idle] active: MongoDB 6.0.6 running (restart pending); Charm revision 1
+  mongos-k8s/1 [idle] active: MongoDB 6.0.6 running (restart pending); Charm revision 1
+  mongos-k8s/2 [executing] maintenance: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos-k8s/0 [idle] active: MongoDB 6.0.6 running (restart pending); Charm revision 1
+  mongos-k8s/1 [idle] active: MongoDB 6.0.6 running (restart pending); Charm revision 1
+  mongos-k8s/2 [executing] active: MongoDB 6.0.6 running;  Charm revision 1
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos-k8s/0 [idle] active: MongoDB 6.0.6 running (restart pending); Charm revision 1
+  mongos-k8s/1 [idle] active: MongoDB 6.0.6 running (restart pending); Charm revision 1
+  mongos-k8s/2 [executing] active: MongoDB 6.0.6 running;  Charm revision 1
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos-k8s/0 [idle] active: MongoDB 6.0.6 running (restart pending); Charm revision 1
+  mongos-k8s/1 [executing] maintenance: 
+  mongos-k8s/2 [idle] active: MongoDB 6.0.6 running;  Charm revision 1
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos-k8s/0 [idle] active: MongoDB 6.0.6 running (restart pending); Charm revision 1
+  mongos-k8s/1 [executing] active: MongoDB 6.0.6 running;  Charm revision 1
+  mongos-k8s/2 [idle] active: MongoDB 6.0.6 running;  Charm revision 1
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos-k8s/0 [idle] active: MongoDB 6.0.6 running (restart pending); Charm revision 1
+  mongos-k8s/1 [executing] active: MongoDB 6.0.6 running;  Charm revision 1
+  mongos-k8s/2 [idle] active: MongoDB 6.0.6 running;  Charm revision 1
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos-k8s/0 [idle] active: MongoDB 6.0.6 running (restart pending); Charm revision 1
+  mongos-k8s/1 [executing] active: MongoDB 6.0.6 running;  Charm revision 1
+  mongos-k8s/2 [idle] active: MongoDB 6.0.6 running;  Charm revision 1
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos-k8s/0 [executing] active: 
+  mongos-k8s/1 [idle] active: MongoDB 6.0.6 running;  Charm revision 1
+  mongos-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos-k8s/0 [executing] active: 
+  mongos-k8s/1 [idle] active: 
+  mongos-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos-k8s/0 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos-k8s/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:834 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.6.1    unsupported  01:40:27Z
+
+App            Version  Status  Scale  Charm        Channel  Rev  Address         Exposed  Message
+config-server  6.0.6    active      1  mongodb-k8s  6/edge    63  10.152.183.230  no       
+mongos-k8s     6.0.6    active      3  mongos-k8s              2  10.152.183.232  no       
+shard0         6.0.6    active      1  mongodb-k8s  6/edge    63  10.152.183.94   no       
+
+Unit              Workload  Agent  Address       Ports  Message
+config-server/0*  active    idle   10.1.236.143         Primary
+mongos-k8s/0      active    idle   10.1.236.148         
+mongos-k8s/1      active    idle   10.1.236.147         
+mongos-k8s/2*     active    idle   10.1.236.146         
+shard0/0*         active    idle   10.1.236.144         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:840 Juju error logs:
+
+unit-config-server-0: 01:31:31 ERROR unit.config-server/0.juju-log Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:31:32 ERROR unit.config-server/0.juju-log upgrade-version-a:3: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-shard0-0: 01:31:33 ERROR unit.shard0/0.juju-log Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:31:33 ERROR unit.config-server/0.juju-log database-peers:2: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-shard0-0: 01:31:34 ERROR unit.shard0/0.juju-log database-peers:4: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-shard0-0: 01:31:35 ERROR unit.shard0/0.juju-log upgrade-version-a:5: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:32:18 ERROR unit.config-server/0.juju-log config-server:6: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-shard0-0: 01:32:18 ERROR unit.shard0/0.juju-log sharding:6: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:32:19 ERROR unit.config-server/0.juju-log config-server:6: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-shard0-0: 01:32:19 ERROR unit.shard0/0.juju-log sharding:6: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:32:20 ERROR unit.config-server/0.juju-log config-server:6: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-shard0-0: 01:32:21 ERROR unit.shard0/0.juju-log sharding:6: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:32:22 ERROR unit.config-server/0.juju-log config-server:6: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-shard0-0: 01:32:22 ERROR unit.shard0/0.juju-log sharding:6: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:32:23 ERROR unit.config-server/0.juju-log config-server:6: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-shard0-0: 01:32:23 ERROR unit.shard0/0.juju-log sharding:6: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:32:46 ERROR unit.config-server/0.juju-log cluster:7: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:32:47 ERROR unit.config-server/0.juju-log cluster:7: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:32:49 ERROR unit.config-server/0.juju-log cluster:7: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:32:51 ERROR unit.config-server/0.juju-log cluster:7: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:32:52 ERROR unit.config-server/0.juju-log cluster:7: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:32:53 ERROR unit.config-server/0.juju-log cluster:7: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:32:55 ERROR unit.config-server/0.juju-log cluster:7: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+unit-config-server-0: 01:32:56 ERROR unit.config-server/0.juju-log cluster:7: Deferring because of ContainerNotReadyError Mongo DB installation not ready yet
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:904 Forgetting main...
