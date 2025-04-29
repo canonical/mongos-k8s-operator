@@ -24,6 +24,8 @@ peers:
   ldap-peers:
     # Stores the data for the ldap relation.
     interface: ldap-peers
+  status-peers:
+    interface: status-peers
 
 requires:
   certificates:
