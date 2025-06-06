@@ -20,7 +20,6 @@ data-platform-helpers = "^0.1.2"
 # FIXME: Unpin once rustc 1.76 is available at build time
 rpds-py = "<0.19"
 overrides = "^7.7.0"
-typing-extensions = "<4.14" # Workaround for typing-extensions / pydantic-core incompatibility
 
 [tool.poetry.group.charm-libs.dependencies]
 # data_platform_libs/v0/data_interfaces.py
