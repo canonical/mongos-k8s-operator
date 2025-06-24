@@ -9,7 +9,7 @@ requires-poetry = ">=2.0.0"
 [tool.poetry.dependencies]
 lightkube = "^0.15.3"
 python = "^3.10"
-mongo-charms-single-kernel = "==0.0.6"
+mongo-charms-single-kernel = "0.0.9"
 ops = "^2.15.0"
 pymongo = "^4.7.3"
 tenacity = "^8.2.3"
@@ -20,7 +20,6 @@ data-platform-helpers = "^0.1.2"
 # FIXME: Unpin once rustc 1.76 is available at build time
 rpds-py = "<0.19"
 overrides = "^7.7.0"
-typing-extensions = "<4.14" # Workaround for typing-extensions / pydantic-core incompatibility
 
 [tool.poetry.group.charm-libs.dependencies]
 # data_platform_libs/v0/data_interfaces.py
@@ -49,13 +48,13 @@ codespell = "^2.2.6"
 shellcheck-py = "^0.10.0.1"
 
 [tool.poetry.group.unit.dependencies]
-mongo-charms-single-kernel = "==0.0.6"
+mongo-charms-single-kernel = "0.0.9"
 coverage = {extras = ["toml"], version = "^7.5.0"}
 pytest = "^8.1.1"
 parameterized = "^0.9.0"
 
 [tool.poetry.group.integration.dependencies]
-mongo-charms-single-kernel = "==0.0.6"
+mongo-charms-single-kernel = "0.0.9"
 ops = "^2.15.0"
 allure-pytest = "^2.13.5"
 tenacity = "^8.2.3"
