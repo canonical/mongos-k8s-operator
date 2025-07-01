@@ -21,7 +21,7 @@ name = "allure-pytest-collection-report"
 version = "0.1.0"
 description = ""
 optional = false
-python-versions = "^3.8"
+python-versions = ">=3.8"
 groups = ["integration"]
 files = []
 develop = false
@@ -33,8 +33,8 @@ pytest = "*"
 [package.source]
 type = "git"
 url = "https://github.com/canonical/data-platform-workflows"
-reference = "v29.0.0"
-resolved_reference = "90077c956fd22995aec4c1e5b86cf6248717d8c7"
+reference = "v29.2.0"
+resolved_reference = "396048a3aadb36423f3c416085d10a8f2422da46"
 subdirectory = "python/pytest_plugins/allure_pytest_collection_report"
 
 [[package]]
@@ -188,7 +188,7 @@ description = "Base class for creating enumerated constants that are also subcla
 optional = false
 python-versions = ">=3.8.6,<3.11"
 groups = ["integration"]
-markers = "python_version == \"3.10\""
+markers = "python_version < \"3.11\""
 files = [
     {file = "backports_strenum-1.3.1-py3-none-any.whl", hash = "sha256:cdcfe36dc897e2615dc793b7d3097f54d359918fc448754a517e6f23044ccf83"},
     {file = "backports_strenum-1.3.1.tar.gz", hash = "sha256:77c52407342898497714f0596e86188bb7084f89063226f4ba66863482f42414"},
@@ -745,7 +745,7 @@ description = "Backport of PEP 654 (exception groups)"
 optional = false
 python-versions = ">=3.7"
 groups = ["main", "integration", "unit"]
-markers = "python_version == \"3.10\""
+markers = "python_version < \"3.11\""
 files = [
     {file = "exceptiongroup-1.3.0-py3-none-any.whl", hash = "sha256:4d111e6e0c13d0644cad6ddaa7ed0261a0b36971f6d23e7ec9b4b9097da78a10"},
     {file = "exceptiongroup-1.3.0.tar.gz", hash = "sha256:b241f5885f560bc56a59ee63ca4c6a8bfa46ae4ad651af316d4e81817bb9fd88"},
@@ -1963,7 +1963,7 @@ name = "pytest-github-secrets"
 version = "0.1.0"
 description = ""
 optional = false
-python-versions = "^3.8"
+python-versions = ">=3.8"
 groups = ["integration"]
 files = []
 develop = false
@@ -1971,8 +1971,8 @@ develop = false
 [package.source]
 type = "git"
 url = "https://github.com/canonical/data-platform-workflows"
-reference = "v29.0.0"
-resolved_reference = "90077c956fd22995aec4c1e5b86cf6248717d8c7"
+reference = "v29.2.0"
+resolved_reference = "396048a3aadb36423f3c416085d10a8f2422da46"
 subdirectory = "python/pytest_plugins/github_secrets"
 
 [[package]]
@@ -2018,7 +2018,7 @@ name = "pytest-operator-cache"
 version = "0.1.0"
 description = ""
 optional = false
-python-versions = "^3.8"
+python-versions = ">=3.8"
 groups = ["integration"]
 files = []
 develop = false
@@ -2029,8 +2029,8 @@ pyyaml = "*"
 [package.source]
 type = "git"
 url = "https://github.com/canonical/data-platform-workflows"
-reference = "v29.0.0"
-resolved_reference = "90077c956fd22995aec4c1e5b86cf6248717d8c7"
+reference = "v29.2.0"
+resolved_reference = "396048a3aadb36423f3c416085d10a8f2422da46"
 subdirectory = "python/pytest_plugins/pytest_operator_cache"
 
 [[package]]
@@ -2038,7 +2038,7 @@ name = "pytest-operator-groups"
 version = "0.1.0"
 description = ""
 optional = false
-python-versions = "^3.8"
+python-versions = ">=3.8"
 groups = ["integration"]
 files = []
 develop = false
@@ -2049,8 +2049,8 @@ pytest = "*"
 [package.source]
 type = "git"
 url = "https://github.com/canonical/data-platform-workflows"
-reference = "v29.0.0"
-resolved_reference = "90077c956fd22995aec4c1e5b86cf6248717d8c7"
+reference = "v29.2.0"
+resolved_reference = "396048a3aadb36423f3c416085d10a8f2422da46"
 subdirectory = "python/pytest_plugins/pytest_operator_groups"
 
 [[package]]
@@ -2502,7 +2502,7 @@ files = [
     {file = "tomli-2.2.1-py3-none-any.whl", hash = "sha256:cb55c73c5f4408779d0cf3eef9f762b9c9f147a77de7b258bef0a5628adc85cc"},
     {file = "tomli-2.2.1.tar.gz", hash = "sha256:cd45e1dc79c835ce60f7404ec8119f2eb06d38b1deba146f07ced3bbc44505ff"},
 ]
-markers = {integration = "python_version == \"3.10\"", unit = "python_full_version <= \"3.11.0a6\""}
+markers = {integration = "python_version < \"3.11\"", unit = "python_full_version <= \"3.11.0a6\""}
 
 [[package]]
 name = "toposort"
@@ -2704,4 +2704,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "ab7e8fd6d4038e55c3c92366549dd0a7e2cabaeb1e80eddf41b5da15dbafbdee"
+content-hash = "71579df84c69b81bf2956643869ed4edbb3e4d820f883fc7d29c655423a88348"
