@@ -44,7 +44,7 @@ jobs:
 
   unit-test:
     name: Unit test charm
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Checkout
@@ -56,7 +56,7 @@ jobs:
       - name: Run tests
         run: tox run -e unit
       - name: Upload Coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
 
   build:
     strategy:
