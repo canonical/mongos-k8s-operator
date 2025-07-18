@@ -2,7 +2,6 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import subprocess
 import json
 import logging
 
@@ -245,25 +244,6 @@ async def build_cluster(ops_test: OpsTest) -> None:
     )
 
 
-async def get_application_name(ops_test: OpsTest, application_name: str) -> str:
-    """Returns the Application in the juju model that matches the provided application name.
-
-    This enables us to retrieve the name of the deployed application in an existing model, while
-     ignoring some test specific applications.
-    Note: if multiple applications with the application name exist, the first one found will be
-     returned.
-    """
-    status = await ops_test.model.get_status()
-
-    for application in ops_test.model.applications:
-        # note that format of the charm field is not exactly "mongodb" but instead takes the form
-        # of `local:focal/mongodb-6`
-        if application_name in status["applications"][application]["charm"]:
-            return application
-
-    return None
-
-
 async def get_address_of_unit(
     ops_test: OpsTest, unit_id: int, app_name: str = MONGOS_APP_NAME
 ) -> str:
@@ -394,23 +374,3 @@ async def get_direct_mongos_client(
     """Returns a direct mongodb client potentially passing over some of the units."""
     mongos_uri = uri or await get_mongos_uri(ops_test, unit_id, auth, app_name)
     return MongoClient(mongos_uri, directConnection=True)
-
-
-def get_juju_status(model_name: str, app_name: str) -> str:
-    return subprocess.check_output(
-        f"juju status --model {model_name} {app_name}".split()
-    ).decode("utf-8")
-
-
-async def get_workload_version(ops_test: OpsTest, unit_name: str) -> str:
-    """Get the workload version of the deployed router charm."""
-    return_code, output, _ = await ops_test.juju(
-        "ssh",
-        unit_name,
-        "sudo",
-        "cat",
-        f"/var/lib/juju/agents/unit-{unit_name.replace('/', '-')}/charm/workload_version",
-    )
-
-    assert return_code == 0
-    return output.strip()
