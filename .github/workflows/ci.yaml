@@ -9,7 +9,7 @@ concurrency:
 on:
   pull_request:
   schedule:
-    - cron: '53 0 * * *'  # Daily at 00:53 UTC
+    - cron: "53 0 * * *" # Daily at 00:53 UTC
   # Triggered on push to branch "main" by .github/workflows/release.yaml
   workflow_call:
     outputs:
@@ -41,6 +41,67 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           use-labels: false
           fail-build: ${{ github.event_name == 'pull_request' }}
+
+  terraform-lint:
+    name: Terraform - Lint
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install terraform snap
+        run: |
+          sudo snap install terraform --channel=latest/stable --classic
+      - name: lint charm module
+        working-directory: ./terraform
+        run: |
+          terraform init
+          terraform fmt
+          terraform validate
+      - name: lint test charm module
+        working-directory: ./terraform/tests
+        run: |
+          terraform init
+          terraform fmt
+          terraform validate
+  terraform-test:
+    name: Terraform - Run terraform tests
+    needs:
+      - terraform-lint
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install terraform snap
+        run: |
+          sudo snap install terraform --channel=latest/stable --classic
+      - name: juju set up
+        run: |
+          sudo snap install juju --channel=3.6/beta --classic
+          sudo snap install juju-wait --channel=latest/stable --classic
+      - name: microk8s setup
+        run: |
+          sudo snap install microk8s --channel=1.27-strict
+          sudo usermod -a -G snap_microk8s "$(whoami)"
+          mkdir -p ~/.kube
+          sudo chown -R "$(whoami)" ~/.kube
+          newgrp snap_microk8s
+          sudo microk8s enable dns storage ingress
+      - name: juju model
+        run: |
+          sudo --user "$USER" juju bootstrap 'microk8s' --config model-logs-size=10G
+          juju model-defaults logging-config='<root>=INFO; unit=DEBUG'
+      - name: Terraform deploy
+        working-directory: terraform/tests
+        run: |
+          juju add-model test
+          terraform init
+          terraform apply  -var "model_name=test" -target null_resource.juju_wait_deployment -auto-approve
 
   unit-test:
     name: Unit test charm
@@ -79,8 +140,8 @@ jobs:
     with:
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
       cloud: microk8s
-      microk8s-snap-channel: 1.29-strict/stable  # renovate: latest microk8s
-      juju-agent-version: 3.6.1  # renovate: juju-agent-pin-minor
+      microk8s-snap-channel: 1.29-strict/stable # renovate: latest microk8s
+      juju-agent-version: 3.6.1 # renovate: juju-agent-pin-minor
       _beta_allure_report: true
     permissions:
       contents: write # Needed for Allure Report beta

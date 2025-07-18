@@ -17,3 +17,12 @@ share/
 
 /requirements.txt
 /requirements-last-build.txt
+
+coverage.xml
+
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
