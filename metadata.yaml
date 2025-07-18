@@ -21,6 +21,11 @@ peers:
     # DA056 - Upgrading in-place upgrade protocol
     # https://docs.google.com/document/d/1H7qy5SAwLiCOKO9xMQJbbQP5_-jGV6Lhi-mJOk4gZ08/edit
     interface: upgrade
+  ldap-peers:
+    # Stores the data for the ldap relation.
+    interface: ldap-peers
+  status-peers:
+    interface: status-peers
 
 requires:
   certificates:
@@ -29,6 +34,14 @@ requires:
   cluster:
     interface: config-server
     limit: 1
+  ldap:
+    interface: ldap
+    limit: 1
+    optional: true
+  ldap-certificate-transfer:
+    interface: certificate_transfer
+    limit: 1
+    optional: true
 
 provides:
   mongos_proxy:
@@ -41,4 +54,4 @@ resources:
     type: oci-image
     description: OCI image for mongodb
     # TODO: Update sha whenever upstream rock changes
-    upstream-source: ghcr.io/canonical/charmed-mongodb@sha256:b4b3edb805b20de471da57802643bfadbf979f112d738bc540ab148d145ddcfe
+    upstream-source: ghcr.io/canonical/charmed-mongodb@sha256:7ddb80a3b5ddffa95704a8980fc11037ba1a23273a9805214bc42be9f507107f

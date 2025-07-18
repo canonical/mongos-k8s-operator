@@ -105,7 +105,7 @@ jobs:
 
   unit-test:
     name: Unit test charm
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 5
     steps:
       - name: Checkout
@@ -124,11 +124,11 @@ jobs:
       matrix:
         path:
           - .
-          - tests/integration/application
     name: Build charm | ${{ matrix.path }}
     uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v29.0.0
     with:
       path-to-charm-directory: ${{ matrix.path }}
+      cache: false
 
   integration-test:
     name: Integration test charm

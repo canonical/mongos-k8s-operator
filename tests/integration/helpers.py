@@ -2,7 +2,6 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import subprocess
 import json
 import logging
 
@@ -192,12 +191,16 @@ async def deploy_cluster_components(
         application_name=CONFIG_SERVER_APP_NAME,
         channel="6/edge",
         config={"role": "config-server"},
+        trust=True,
+        base="ubuntu@22.04",
     )
     await ops_test.model.deploy(
         MONGODB_CHARM_NAME,
         application_name=SHARD_APP_NAME,
         channel="6/edge",
         config={"role": "shard"},
+        trust=True,
+        base="ubuntu@22.04",
     )
 
     await ops_test.model.wait_for_idle(
@@ -239,25 +242,6 @@ async def build_cluster(ops_test: OpsTest) -> None:
         status="active",
         raise_on_error=False,  # Removed this once DPE-4996 is resolved.
     )
-
-
-async def get_application_name(ops_test: OpsTest, application_name: str) -> str:
-    """Returns the Application in the juju model that matches the provided application name.
-
-    This enables us to retrieve the name of the deployed application in an existing model, while
-     ignoring some test specific applications.
-    Note: if multiple applications with the application name exist, the first one found will be
-     returned.
-    """
-    status = await ops_test.model.get_status()
-
-    for application in ops_test.model.applications:
-        # note that format of the charm field is not exactly "mongodb" but instead takes the form
-        # of `local:focal/mongodb-6`
-        if application_name in status["applications"][application]["charm"]:
-            return application
-
-    return None
 
 
 async def get_address_of_unit(
@@ -305,7 +289,7 @@ async def get_application_relation_data(
     unit = ops_test.model.applications[application_name].units[0]
     raw_data = (await ops_test.juju("show-unit", unit.name))[1]
     if not raw_data:
-        raise ValueError(f"no unit info could be grabbed for { unit.name}")
+        raise ValueError(f"no unit info could be grabbed for {unit.name}")
     data = yaml.safe_load(raw_data)
     # Filter the data based on the relation name.
     relation_data = [
@@ -390,23 +374,3 @@ async def get_direct_mongos_client(
     """Returns a direct mongodb client potentially passing over some of the units."""
     mongos_uri = uri or await get_mongos_uri(ops_test, unit_id, auth, app_name)
     return MongoClient(mongos_uri, directConnection=True)
-
-
-def get_juju_status(model_name: str, app_name: str) -> str:
-    return subprocess.check_output(
-        f"juju status --model {model_name} {app_name}".split()
-    ).decode("utf-8")
-
-
-async def get_workload_version(ops_test: OpsTest, unit_name: str) -> str:
-    """Get the workload version of the deployed router charm."""
-    return_code, output, _ = await ops_test.juju(
-        "ssh",
-        unit_name,
-        "sudo",
-        "cat",
-        f"/var/lib/juju/agents/unit-{unit_name.replace('/', '-')}/charm/workload_version",
-    )
-
-    assert return_code == 0
-    return output.strip()
