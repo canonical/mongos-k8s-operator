@@ -189,18 +189,18 @@ async def deploy_cluster_components(
     await ops_test.model.deploy(
         MONGODB_CHARM_NAME,
         application_name=CONFIG_SERVER_APP_NAME,
-        channel="6/edge",
+        channel="8-transition/edge",
         config={"role": "config-server"},
         trust=True,
-        base="ubuntu@22.04",
+        base="ubuntu@24.04",
     )
     await ops_test.model.deploy(
         MONGODB_CHARM_NAME,
         application_name=SHARD_APP_NAME,
-        channel="6/edge",
+        channel="8-transition/edge",
         config={"role": "shard"},
         trust=True,
-        base="ubuntu@22.04",
+        base="ubuntu@24.04",
     )
 
     await ops_test.model.wait_for_idle(
