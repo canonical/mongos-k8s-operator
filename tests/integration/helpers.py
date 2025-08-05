@@ -180,7 +180,7 @@ async def deploy_cluster_components(
         mongos_charm,
         resources=resources,
         application_name=MONGOS_APP_NAME,
-        series="jammy",
+        series="noble",
         channel=channel,
         num_units=n_units,
         trust=True,
