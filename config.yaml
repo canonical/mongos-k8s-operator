@@ -6,10 +6,3 @@ options:
     description: "String to determine how to expose the mongos router externally from the Kubernetes cluster. Possible values: 'nodeport', 'none'"
     type: string
     default: "none"
-
-  auto-delete:
-    type: boolean
-    description: |
-      When a relation is removed, auto-delete ensures that any relevant databases
-      associated with the relation are also removed
-    default: false
