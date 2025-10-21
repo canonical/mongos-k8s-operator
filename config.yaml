@@ -6,3 +6,11 @@ options:
     description: "String to determine how to expose the mongos router externally from the Kubernetes cluster. Possible values: 'nodeport', 'none'"
     type: string
     default: "none"
+
+  pause-after-unit-refresh:
+    description: |
+      Wait for manual confirmation to resume refresh after these units refresh
+
+      Allowed values: "all", "first", "none"
+    type: string
+    default: first
