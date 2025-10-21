@@ -7,11 +7,11 @@ import pytest
 from pytest_operator.plugin import OpsTest
 
 from .helpers import (
+    MONGOS_APP_NAME,
     build_cluster,
     check_mongos,
-    wait_for_mongos_units_blocked,
-    MONGOS_APP_NAME,
     deploy_cluster_components,
+    wait_for_mongos_units_blocked,
 )
 
 TEST_USER_NAME = "TestUserName1"
@@ -35,7 +35,7 @@ async def test_waits_for_config_server(ops_test: OpsTest) -> None:
     await wait_for_mongos_units_blocked(
         ops_test,
         MONGOS_APP_NAME,
-        status="Missing relation to config-server.",
+        status="The cluster relation with the config-server is missing.",
         timeout=300,
     )
 
