@@ -16,16 +16,14 @@ summary: A mongos k8s operator charm
 peers:
   router-peers:
     interface: mongos-peers
-  upgrade-version-a:
-    # Relation versioning scheme:
-    # DA056 - Upgrading in-place upgrade protocol
-    # https://docs.google.com/document/d/1H7qy5SAwLiCOKO9xMQJbbQP5_-jGV6Lhi-mJOk4gZ08/edit
-    interface: upgrade
   ldap-peers:
     # Stores the data for the ldap relation.
     interface: ldap-peers
   status-peers:
     interface: status-peers
+  refresh-v-three:
+    # Relation versioning scheme: https://canonical-charm-refresh.readthedocs-hosted.com/latest/
+    interface: refresh
 
 requires:
   certificates:
