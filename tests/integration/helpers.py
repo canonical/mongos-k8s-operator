@@ -125,7 +125,7 @@ async def check_all_units_blocked_with_status(
         if status:
             assert (
                 unit.workload_status.message == status
-            ), f"unit {unit.name} not in blocked state, in {unit.workload_status.value}"
+            ), f"unit {unit.name} not in {status} state, in {unit.workload_status.message}"
 
 
 async def get_unit_hostname(ops_test: OpsTest, unit_id: int, app: str) -> str:
