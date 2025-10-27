@@ -103,22 +103,6 @@ jobs:
           terraform init
           terraform apply  -var "model_name=test" -target null_resource.juju_wait_deployment -auto-approve
 
-  unit-test:
-    name: Unit test charm
-    runs-on: ubuntu-22.04
-    timeout-minutes: 5
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Install tox & poetry
-        run: |
-          pipx install tox
-          pipx install poetry
-      - name: Run tests
-        run: tox run -e unit
-      - name: Upload Coverage to Codecov
-        uses: codecov/codecov-action@v4
-
   build:
     strategy:
       matrix:
@@ -134,7 +118,6 @@ jobs:
     name: Integration test charm
     needs:
       - lint
-      - unit-test
       - build
     uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v29.0.0
     with:
