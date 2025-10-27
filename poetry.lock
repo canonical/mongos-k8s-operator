@@ -1273,14 +1273,14 @@ files = [
 
 [[package]]
 name = "mongo-charms-single-kernel"
-version = "1.7.3"
+version = "1.7.7"
 description = "Shared and reusable code for Mongo-related charms"
 optional = false
 python-versions = "<4.0,>=3.10"
 groups = ["main", "integration"]
 files = [
-    {file = "mongo_charms_single_kernel-1.7.3-py3-none-any.whl", hash = "sha256:f246201cafd185de73612ecbd624b0bb8a983c905236f05237dc4889270dc49e"},
-    {file = "mongo_charms_single_kernel-1.7.3.tar.gz", hash = "sha256:208ac2180ec78f746b04253890a0da89e58944d4e0ed0d14c19272b77d76e0be"},
+    {file = "mongo_charms_single_kernel-1.7.7-py3-none-any.whl", hash = "sha256:4a2e50757975cc2ad45646fa03929d2e2df968f970bd94bc17c3d98bb45625b7"},
+    {file = "mongo_charms_single_kernel-1.7.7.tar.gz", hash = "sha256:df381651e9b892d5015411597699e88469668434d20d70c3cf0316d446b090ef"},
 ]
 
 [package.dependencies]
@@ -2742,4 +2742,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "d2c470c8fd60eec4cf445653ff0ad2000995f0b284446141486a5528543b7b3b"
+content-hash = "b3185dc86489c5d4adafcaa26ae661ca04c902f313d43cb1025e1f5593278639"
