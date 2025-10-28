@@ -35,7 +35,7 @@ async def test_waits_for_config_server(ops_test: OpsTest) -> None:
     await wait_for_mongos_units_blocked(
         ops_test,
         MONGOS_APP_NAME,
-        status="Missing relation to config-server.",
+        status="The cluster relation with the config-server is missing.",
         timeout=300,
     )
 
