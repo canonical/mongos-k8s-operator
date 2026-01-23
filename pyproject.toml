@@ -9,7 +9,6 @@ requires-poetry = ">=2.0.0"
 [tool.poetry.dependencies]
 lightkube = "^0.15.3"
 python = "^3.10"
-mongo-charms-single-kernel = "1.6.18"
 ops = ">=2.21"
 pymongo = "^4.7.3"
 pyyaml = "^6.0.1"
@@ -19,6 +18,7 @@ data-platform-helpers = "^0.1.2"
 # FIXME: Unpin once rustc 1.76 is available at build time
 rpds-py = "<0.19"
 overrides = "^7.7.0"
+mongo-charms-single-kernel = "1.6.20"
 
 [tool.poetry.group.charm-libs.dependencies]
 # data_platform_libs/v0/data_interfaces.py
@@ -47,7 +47,6 @@ codespell = "^2.2.6"
 shellcheck-py = "^0.10.0.1"
 
 [tool.poetry.group.integration.dependencies]
-mongo-charms-single-kernel = "1.6.18"
 ops = ">=2.21"
 allure-pytest = "^2.13.5"
 pymongo = "^4.7.3"
@@ -65,6 +64,7 @@ allure-pytest-collection-report = {git = "https://github.com/canonical/data-plat
 
 
 # Linting tools configuration
+mongo-charms-single-kernel = "1.6.20"
 [tool.flake8]
 max-line-length = 99
 max-doc-length = 99
