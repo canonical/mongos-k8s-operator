@@ -23,7 +23,7 @@ jobs:
     secrets:
       charmhub-token: ${{ secrets.CHARMHUB_TOKEN }}
     permissions:
-      contents: write  # Needed to create git tags
+      contents: write # Needed to create git tags
 
   release-libraries:
     name: Release libraries
@@ -43,3 +43,5 @@ jobs:
         with:
           credentials: ${{ secrets.CHARMHUB_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
+    permissions:
+      contents: read
