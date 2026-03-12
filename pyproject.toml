@@ -24,7 +24,7 @@ mongo-charms-single-kernel = "1.8.33"
 # data_platform_libs/v0/data_interfaces.py
 ops = ">=2.21"
 pydantic = "*"  # cos_agent lib
-cryptography = "^42.0.5"  # tls_certificates lib v3
+cryptography = "^46.0.5"  # tls_certificates lib v3
 jsonschema = "^4.22.0"  # tls_certificates lib v3
 cosl = "*"  # loki_push_api
 
