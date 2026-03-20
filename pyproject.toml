@@ -18,7 +18,7 @@ data-platform-helpers = "^0.1.3"
 # FIXME: Unpin once rustc 1.76 is available at build time
 rpds-py = "<0.19"
 overrides = "^7.7.0"
-mongo-charms-single-kernel = "1.8.34"
+mongo-charms-single-kernel = "1.8.35"
 
 [tool.poetry.group.charm-libs.dependencies]
 # data_platform_libs/v0/data_interfaces.py
@@ -70,7 +70,7 @@ allure-pytest-collection-report = {git = "https://github.com/canonical/data-plat
 
 
 # Linting tools configuration
-mongo-charms-single-kernel = "1.8.34"
+mongo-charms-single-kernel = "1.8.35"
 [tool.flake8]
 max-line-length = 99
 max-doc-length = 99
