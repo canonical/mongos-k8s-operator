@@ -1,0 +1,46 @@
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[32mINFO    [0m pytest_operator.plugin:plugin.py:708 Connecting to existing model microk8s-localhost:test on unspecified cloud
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHSession received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHTunneler received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SecretsRevoker received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:noble/mongos-k8s-0
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/mongodb-k8s-148
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/mongodb-k8s-148
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos-k8s/0 [allocating] waiting: installing agent
+  shard0/0 [allocating] waiting: installing agent
+  config-server/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos-k8s/0 [idle] blocked: The cluster relation with the config-server is missing.
+  shard0/0 [allocating] waiting: installing agent
+  config-server/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard0/0 [allocating] waiting: installing agent
+  config-server/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard0/0 [allocating] waiting: installing agent
+  config-server/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard0/0 [allocating] waiting: installing agent
+  config-server/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard0/0 [allocating] waiting: installing agent
+  config-server/0 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard0/0 [allocating] waiting: installing agent
+  config-server/0 [idle] error: OCI image pull error: failed to pull and unpack image "registry.jujucharms.com/charm/ai79kfdcsgq83re7pz3a8ru02irx26r0bkqc8/mongodb-image@sha256:7c05bd7fc92db23cbe342e0e87c99abb6c0b52795e0f1ff5c2aa2bb1682d5cb8": failed to resolve image: unexpected status from HEAD request to https://registry.jujucharms.com/v2/charm/ai79kfdcsgq83re7pz3a8ru02irx26r0bkqc8/mongodb-image/manifests/sha256:7c05bd7fc92db23cbe342e0e87c99abb6c0b52795e0f1ff5c2aa2bb1682d5cb8: 503 Service Unavailable
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard0/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard0/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos-k8s/0 [idle] blocked: The cluster relation with the config-server is missing.
+  shard0/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard0/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard0/0 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard0/0 [idle] error: unknown container reason "ImagePullBackOff": Back-off pulling image "registry.jujucharms.com/charm/ai79kfdcsgq83re7pz3a8ru02irx26r0bkqc8/mongodb-image@sha256:7c05bd7fc92db23cbe342e0e87c99abb6c0b52795e0f1ff5c2aa2bb1682d5cb8": ErrImagePull: failed to pull and unpack image "registry.jujucharms.com/charm/ai79kfdcsgq83re7pz3a8ru02irx26r0bkqc8/mongodb-image@sha256:7c05bd7fc92db23cbe342e0e87c99abb6c0b52795e0f1ff5c2aa2bb1682d5cb8": failed to resolve image: unexpected status from HEAD request to https://registry.jujucharms.com/v2/charm/ai79kfdcsgq83re7pz3a8ru02irx26r0bkqc8/mongodb-image/manifests/sha256:7c05bd7fc92db23cbe342e0e87c99abb6c0b52795e0f1ff5c2aa2bb1682d5cb8: 503 Service Unavailable
