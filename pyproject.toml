@@ -7,16 +7,16 @@ requires-poetry = ">=2.0.0"
 
 
 [tool.poetry.dependencies]
-lightkube = "^0.15.3"
+lightkube = "^0.19.1"
 python = "^3.10"
-ops = ">=2.21"
-pymongo = "^4.7.3"
-pyyaml = "^6.0.1"
-jinja2 = "^3.1.3"
-poetry-core = "^2.0"
-data-platform-helpers = "^0.1.3"
+ops = ">=2.23.2"
+pymongo = "^4.16.0"
+pyyaml = "^6.0.3"
+jinja2 = "^3.1.6"
+poetry-core = "^2.3.2"
+data-platform-helpers = "^0.1.7"
 # FIXME: Unpin once rustc 1.76 is available at build time
-rpds-py = "<0.19"
+rpds-py = "<0.31"
 overrides = "^7.7.0"
 mongo-charms-single-kernel = "1.8.35"
 
@@ -32,7 +32,7 @@ cosl = "*"  # loki_push_api
 optional = true
 
 [tool.poetry.group.build-refresh-version.dependencies]
-charm-refresh-build-version = "^0.4.0"
+charm-refresh-build-version = "^0.4.1"
 
 
 
@@ -43,27 +43,27 @@ poetry-plugin-export = ">=1.8"
 optional = true
 
 [tool.poetry.group.format.dependencies]
-ruff = "^0.4.5"
+ruff = "^0.15.9"
 
 [tool.poetry.group.lint]
 optional = true
 
 [tool.poetry.group.lint.dependencies]
-ruff = "^0.4.5"
-codespell = "^2.2.6"
+ruff = "^0.15.9"
+codespell = "^2.4.2"
 shellcheck-py = "^0.10.0.1"
 
 [tool.poetry.group.integration.dependencies]
-ops = ">=2.21"
-allure-pytest = "^2.13.5"
-pymongo = "^4.7.3"
+ops = ">=2.23.2"
+allure-pytest = "^2.15.3"
+pymongo = "^4.16.0"
 parameterized = "^0.9.0"
-lightkube = "^0.15.3"
+lightkube = "^0.19.1"
 kubernetes = "^30.1.0"
 juju = "^3.5.0"
-pytest = "^8.1.1"
-pytest-mock = "^3.14.0"
-pytest-operator = "^0.34.0"
+pytest = "^8.4.2"
+pytest-mock = "^3.15.1"
+pytest-operator = "^0.43.2"
 pytest-operator-groups = {git = "https://github.com/canonical/data-platform-workflows", tag = "v35.0.4", subdirectory = "python/pytest_plugins/pytest_operator_groups"}
 pytest-github-secrets = {git = "https://github.com/canonical/data-platform-workflows", tag = "v35.0.4", subdirectory = "python/pytest_plugins/github_secrets"}
 allure-pytest-collection-report = {git = "https://github.com/canonical/data-platform-workflows", tag = "v35.0.4", subdirectory = "python/pytest_plugins/allure_pytest_collection_report"}
