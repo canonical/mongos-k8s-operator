@@ -166,13 +166,13 @@ async def wait_for_mongos_units_blocked(
 
 
 async def deploy_cluster_components(
-    ops_test: OpsTest, channel: str | None = None, n_units: int = 1
+    ops_test: OpsTest, charm: str, channel: str | None = None, n_units: int = 1
 ) -> None:
     """Deploys all cluster components and waits for idle."""
     if channel:
         mongos_charm = MONGOS_APP_NAME
     else:
-        mongos_charm = await ops_test.build_charm(".")
+        mongos_charm = charm
     resources = {
         "mongodb-image": METADATA["resources"]["mongodb-image"]["upstream-source"]
     }
