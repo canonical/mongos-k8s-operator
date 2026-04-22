@@ -595,14 +595,14 @@ files = [
 
 [[package]]
 name = "click"
-version = "8.3.2"
+version = "8.3.3"
 description = "Composable command line interface toolkit"
 optional = false
 python-versions = ">=3.10"
 groups = ["main", "integration"]
 files = [
-    {file = "click-8.3.2-py3-none-any.whl", hash = "sha256:1924d2c27c5653561cd2cae4548d1406039cb79b858b747cfea24924bbc1616d"},
-    {file = "click-8.3.2.tar.gz", hash = "sha256:14162b8b3b3550a7d479eafa77dfd3c38d9dc8951f6f69c78913a8f9a7540fd5"},
+    {file = "click-8.3.3-py3-none-any.whl", hash = "sha256:a2bf429bb3033c89fa4936ffb35d5cb471e3719e1f3c8a7c3fff0b8314305613"},
+    {file = "click-8.3.3.tar.gz", hash = "sha256:398329ad4837b2ff7cbe1dd166a4c0f8900c3ca3a218de04466f38f6497f18a2"},
 ]
 
 [package.dependencies]
@@ -1606,14 +1606,14 @@ files = [
 
 [[package]]
 name = "mongo-charms-single-kernel"
-version = "1.8.41"
+version = "1.8.42"
 description = "Shared and reusable code for Mongo-related charms"
 optional = false
 python-versions = "<4.0,>=3.10"
 groups = ["main", "integration"]
 files = [
-    {file = "mongo_charms_single_kernel-1.8.41-py3-none-any.whl", hash = "sha256:920dc4ec5e87e8f2a0345b3aeccf3cc9cfff152685a57d0cc1d5a93db2d73b22"},
-    {file = "mongo_charms_single_kernel-1.8.41.tar.gz", hash = "sha256:b3ac4bef83b6b4d02ba68bbdf02a7a5fe542ff1807e973168f163e4be6102012"},
+    {file = "mongo_charms_single_kernel-1.8.42-py3-none-any.whl", hash = "sha256:5bff0f93367448d8f406b014275c1234110f5afcd00d173a71d0766ffd8bea91"},
+    {file = "mongo_charms_single_kernel-1.8.42.tar.gz", hash = "sha256:be0493e94f351f104c048721b5a3a693a9c99be5527910412e2eb8c87357c826"},
 ]
 
 [package.dependencies]
@@ -3280,4 +3280,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "b8132f34ffd12789eb250435d1f524022b569aa324e1f5599e61e54d26f1d876"
+content-hash = "33538e8d1989e2beec5da4ae66c98cee2cce48de1c57e3f24e6835690aa9ec6a"
