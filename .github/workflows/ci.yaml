@@ -89,7 +89,7 @@ jobs:
           sudo snap install juju-wait --channel=latest/stable --classic
       - name: microk8s setup
         run: |
-          sudo snap install microk8s --channel=1.29-strict
+          sudo snap install microk8s --channel=1.35-strict
           sudo usermod -a -G snap_microk8s "$(whoami)"
           mkdir -p ~/.kube
           sudo chown -R "$(whoami)" ~/.kube
