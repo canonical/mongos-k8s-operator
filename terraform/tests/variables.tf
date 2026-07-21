@@ -1,13 +1,10 @@
-variable "model_name" {
-  description = "Model name"
+variable "model_uuid" {
+  description = "Model UUID"
   type        = string
 }
 
-variable "mongos_name" {
+variable "mongos_k8s_name" {
   description = "Name for router"
   type        = string
-  default = "mongos"
+  default     = "mongos-k8s"
 }
-
-
-
