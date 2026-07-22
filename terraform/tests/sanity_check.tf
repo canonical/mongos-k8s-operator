@@ -10,6 +10,7 @@ resource "juju_application" "data-integrator" {
     name    = "data-integrator"
     channel = "latest/stable"
   }
+  config     = { "database-name" : "test", "extra-user-roles" : "admin" }
   model_uuid = var.model_uuid
 }
 
