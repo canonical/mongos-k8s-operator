@@ -1,7 +1,7 @@
 # Charmed Mongos K8s operator
 
 [![Charmhub](https://charmhub.io/mongos-k8s/badge.svg)](https://charmhub.io/mongos-k8s)
-[![Release to 6/edge](https://github.com/canonical/mongos-k8s-operator/actions/workflows/release.yaml/badge.svg)](https://github.com/canonical/mongos-k8s-operator/actions/workflows/release.yaml)
+[![Release to 8/edge](https://github.com/canonical/mongos-k8s-operator/actions/workflows/release.yaml/badge.svg)](https://github.com/canonical/mongos-k8s-operator/actions/workflows/release.yaml)
 [![Tests](https://github.com/canonical/mongos-k8s-operator/actions/workflows/ci.yaml/badge.svg)](https://github.com/canonical/mongos-k8s-operator/actions/workflows/ci.yaml)
 
 ## Overview

@@ -1,34 +1,32 @@
-module "mongos-k8s" {
-  source   = "../"
-  app_name = var.mongos_name
-  model    = var.model_name
-  units    = "1"
-  channel  = "6/edge"
+module "mongos_k8s" {
+  source     = "../"
+  app_name   = var.mongos_k8s_name
+  channel    = "8/edge"
+  model_uuid = var.model_uuid
 }
 
+resource "juju_application" "data-integrator" {
+  charm {
+    name    = "data-integrator"
+    channel = "latest/stable"
+  }
+  config     = { "database-name" : "test", "extra-user-roles" : "admin" }
+  model_uuid = var.model_uuid
+}
 
-resource "juju_integration" "data-integrator_mongos-integration" {
-  model = var.model_name
+resource "juju_integration" "mongos_client" {
+  model_uuid = module.mongos_k8s.application.model_uuid
 
   application {
-    name = juju_application.data-integrator.name
+    name     = juju_application.data-integrator.name
+    endpoint = "mongodb"
   }
   application {
-    name = var.mongos_name
+    name     = module.mongos_k8s.provides["mongos_proxy"].name
+    endpoint = module.mongos_k8s.provides["mongos_proxy"].endpoint
   }
   depends_on = [
     juju_application.data-integrator,
-    module.mongos-k8s
+    module.mongos_k8s.application
   ]
-
-}
-
-
-resource "null_resource" "juju_wait_deployment" {
-  provisioner "local-exec" {
-    command = <<-EOT
-    juju-wait -v --model ${var.model_name}
-    EOT
-  }
-
 }
