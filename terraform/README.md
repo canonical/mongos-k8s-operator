@@ -3,64 +3,52 @@
 This is a Terraform module facilitating the deployment of the Mongos charm with [Terraform juju provider](https://github.com/juju/terraform-provider-juju/). For more information, refer to the provider [documentation](https://registry.terraform.io/providers/juju/juju/latest/docs). 
 
 ## Requirements
-This module requires a `juju` model to be available. Refer to the [usage section](#usage) below for more details.
+
+| Name | Version |
+| ---- | ------- |
+| `terraform` | >= 1.6 |
+| `juju` | ~> 2.0 |
+
+## Providers
+
+| Name | Version |
+| ---- | ------- |
+| `juju` | ~> 2.0 |
+
+## Modules
+
+No modules.
+
+## Resources
+
+| Name | Type |
+|------|------|
+| `juju_application.mongos` | [Juju application](https://registry.terraform.io/providers/juju/juju/latest/docs/resources/application) |
 
 ## API
 
 ### Inputs
 The module offers the following configurable inputs:
 
-| Name | Type | Description | Required |
-| - | - | - | - |
-| `app_name`| string | Application name | False |
-| `channel`| string | Channel that the charm is deployed from | False |
-| `base`| string | The series to be used for this charm | False |
-| `config`| map(string) | Map of the charm configuration options | False |
-| `model`| string | Name of the model that the charm is deployed on | True |
-| `resources`| map(string) | Map of the charm resources | False |
-| `revision`| number | Revision number of the charm name | False |
-| `units`| number | Number of units to be deployed | False |
-| `constraints`| string | Machine constraints for the charm | False |
-| `storage`| map(string) | Storage description, must follow the juju provider schema | False |
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| `app_name` | Application name | `string` | `"mongos"` | no |
+| `base` | Charm base (old name: series) | `string` | `"ubuntu@24.04"` | no |
+| `channel` | Charm channel | `string` | `"8/stable"` | no |
+| `config` | Map of charm configuration options | `map(string)` | `{}` | no |
+| `constraints` | String listing constraints for this application | `string` | `null` | no |
+| `endpoint_bindings` | Map of endpoint bindings | `set(object)` | `[]` | no |
+| `model_uuid` | Model UUID | `string` | n/a | yes |
+| `revision` | Charm revision | `number` | `null` | no |
+| `units` | Charm units | `number` | `1` | no |
 
 
 ### Outputs
 Upon applied, the module exports the following outputs:
 
 | Name | Description |
-| - | - |
-| `app_name`|  Application name |
-| `provides`| Map of `provides` endpoints |
-| `requires`| Map of `requires` endpoints |
-
-## Usage
-
-This module is intended to be used as part of a higher-level module. When defining one, users should ensure that Terraform is aware of the `juju_model` dependency of the charm module. There are two options to do so when creating a high-level module:
-
-### Define a `juju_model` resource
-Define a `juju_model` resource and pass to the `model` input a reference to the `juju_model` resource's name. For example:
-
-```
-resource "juju_model" "mongos-k8s" {
-  name = mongos-k8s
-}
-
-module "mongos-k8s-operator" {
-  source = "<path-to-this-directory>"
-  model = juju_model.mongos-k8s.name
-}
-```
-
-### Define a `data` source
-Define a `data` source and pass to the `model` input a reference to the `data.juju_model` resource's name. This will enable Terraform to look for a `juju_model` resource with a name attribute equal to the one provided, and apply only if this is present. Otherwise, it will fail before applying anything.
-
-```
-data "juju_model" "mongos-k8s" {
-  name = var.model_name
-}
-
-module "mongos-k8s" {
-  source = "<path-to-this-directory>"
-  model = data.juju_model.mongos-k8s.name
-}
-```
+|------|-------------|
+| `application` | Object representing the deployed mongos application |
+| `offers` | Map of all offers exposed by the single charm. |
+| `provides` | Map of all "provides" endpoints |
+| `requires` | Map of all "requires" endpoints |
