@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 
 variable "app_name" {
-  default     = "mongos-k8s"
+  default = "mongos-k8s"
 }
 
 variable "base" {
