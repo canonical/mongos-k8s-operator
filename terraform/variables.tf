@@ -2,6 +2,8 @@
 # See LICENSE file for licensing details.
 
 variable "app_name" {
+  description = "Application name"
+  type        = string
   default     = "mongos-k8s"
 }
 

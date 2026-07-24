@@ -2,7 +2,7 @@ terraform {
   required_providers {
     juju = {
       source  = "juju/juju"
-      version = "~> 2.0.0"
+      version = "~> 2.0"
     }
     http = {
       source  = "hashicorp/http"

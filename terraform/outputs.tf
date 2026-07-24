@@ -8,12 +8,7 @@ output "application" {
 
 output "offers" {
   description = "Map of all offers exposed by the single charm."
-  value = {
-    mongos_proxy = {
-      kind = "offer"
-      url  = juju_offer.mongos_proxy.url
-    }
-  }
+  value       = {}
 }
 
 output "provides" {

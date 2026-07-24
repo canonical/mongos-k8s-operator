@@ -29,3 +29,4 @@ resource "juju_integration" "mongos_client" {
     juju_application.data-integrator,
     module.mongos_k8s.application
   ]
+}
