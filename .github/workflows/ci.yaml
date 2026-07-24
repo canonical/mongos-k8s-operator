@@ -55,9 +55,6 @@ jobs:
       - name: Install terraform snap
         run: |
           sudo snap install terraform --channel=latest/stable --classic
-            - name: Install terraform snap
-        run: |
-          sudo snap install terraform --channel=latest/stable --classic
 
       - name: Install tox
         run: pipx install tox
