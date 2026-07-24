@@ -48,25 +48,19 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           persist-credentials: false
       - name: Install terraform snap
         run: |
           sudo snap install terraform --channel=latest/stable --classic
-      - name: lint charm module
-        working-directory: ./terraform
-        run: |
-          terraform init
-          terraform fmt
-          terraform validate
-      - name: lint test charm module
-        working-directory: ./terraform/tests
-        run: |
-          terraform init
-          terraform fmt
-          terraform validate
+
+      - name: Install tox
+        run: pipx install tox
+
+      - name: Lint / format / validate TF modules
+        run: tox run -e terraform-lint
   terraform-test:
     name: Terraform - Run terraform tests
     needs:
@@ -89,7 +83,7 @@ jobs:
           sudo snap install juju-wait --channel=latest/stable --classic
       - name: microk8s setup
         run: |
-          sudo snap install microk8s --channel=1.29-strict
+          sudo snap install microk8s --channel=1.35-strict
           sudo usermod -a -G snap_microk8s "$(whoami)"
           mkdir -p ~/.kube
           sudo chown -R "$(whoami)" ~/.kube
@@ -102,9 +96,21 @@ jobs:
       - name: Terraform deploy
         working-directory: terraform/tests
         run: |
-          juju add-model test
+          model_name="test"
+          juju add-model "${model_name}"
+          model_uuid="$(juju show-model "${model_name}" | awk -F': ' '/model-uuid/ {print $2}')"
           terraform init
-          terraform apply  -var "model_name=test" -target null_resource.juju_wait_deployment -auto-approve
+          terraform apply -var "model_uuid=${model_uuid}" -auto-approve
+
+      - name: Wait for juju deployment
+        run: |
+          # TODO - remove this when juju wait-for starts reporting the up to date status
+          until timeout 2m juju wait-for model "test" --query='life=="alive" && status=="available"'
+          do
+            echo "Retrying in 5 seconds..."
+            juju status -m test
+            sleep 5
+          done
 
   build:
     name: Build charm
