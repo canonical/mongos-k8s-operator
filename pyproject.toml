@@ -14,10 +14,10 @@ pymongo = "*"
 pyyaml = "*"
 jinja2 = "*"
 poetry-core = ">=2.0"
-rpds-py = "0.18.0"
+rpds-py = "2026.6.3"
 charm-refresh = ">=3.1.0.3,<4.0.0.0"
 lightkube = "*"
-mongo-charms-single-kernel = "1.8.57"
+mongo-charms-single-kernel = "1.8.59"
 pydantic = "*"  # cos_agent lib
 cryptography = "*"  # tls_certificates lib v3
 jsonschema = "*"  # tls_certificates lib v3
@@ -62,7 +62,7 @@ pytest-operator = "^0.34.0"
 
 
 # Linting tools configuration
-mongo-charms-single-kernel = "1.8.57"
+mongo-charms-single-kernel = "1.8.59"
 [tool.flake8]
 max-line-length = 99
 max-doc-length = 99
