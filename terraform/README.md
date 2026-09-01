@@ -34,7 +34,7 @@ The module offers the following configurable inputs:
 |------|-------------|------|---------|:--------:|
 | `app_name` | Application name | `string` | `"mongos"` | no |
 | `base` | Charm base (old name: series) | `string` | `"ubuntu@24.04"` | no |
-| `channel` | Charm channel | `string` | `"8/stable"` | no |
+| `channel` | Charm channel | `string` | `"8-transition/edge"` | no |
 | `config` | Map of charm configuration options | `map(string)` | `{}` | no |
 | `constraints` | String listing constraints for this application | `string` | `null` | no |
 | `endpoint_bindings` | Map of endpoint bindings | `set(object)` | `[]` | no |
