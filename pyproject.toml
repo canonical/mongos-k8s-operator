@@ -21,7 +21,7 @@ pydantic = "*"  # cos_agent lib
 cryptography = "*"  # tls_certificates lib v3
 jsonschema = "*"  # tls_certificates lib v3
 cosl = "*"  # loki_push_api
-mongo-charms-single-kernel = "1.8.61"
+mongo-charms-single-kernel = "1.8.62"
 
 [tool.poetry.group.build-refresh-version]
 optional = true
@@ -62,7 +62,7 @@ pytest-operator = "^0.34.0"
 
 
 # Linting tools configuration
-mongo-charms-single-kernel = "1.8.61"
+mongo-charms-single-kernel = "1.8.62"
 [tool.flake8]
 max-line-length = 99
 max-doc-length = 99
