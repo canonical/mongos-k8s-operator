@@ -1744,14 +1744,14 @@ files = [
 
 [[package]]
 name = "mongo-charms-single-kernel"
-version = "1.8.63"
+version = "1.8.64"
 description = "Shared and reusable code for Mongo-related charms"
 optional = false
 python-versions = "<4.0,>=3.12"
 groups = ["main", "integration"]
 files = [
-    {file = "mongo_charms_single_kernel-1.8.63-py3-none-any.whl", hash = "sha256:cdd596cfd4d00bd0cf9cd2915c00d860db6fd00cda97d05fee7696c5a715c95f"},
-    {file = "mongo_charms_single_kernel-1.8.63.tar.gz", hash = "sha256:1f81a3d4b0388c0652b4ea743d685c5f712166ebbc6f3a3c7729f6539d8e8fed"},
+    {file = "mongo_charms_single_kernel-1.8.64-py3-none-any.whl", hash = "sha256:3861e47b8f2d8f8cf35b92c7596e79a287059be29cc82c1035d5833b4a6f570b"},
+    {file = "mongo_charms_single_kernel-1.8.64.tar.gz", hash = "sha256:19eb36692cbbef574a581ebec5ead2dc50e5cdd15b579e72bd370ede88bb5f47"},
 ]
 
 [package.dependencies]
@@ -3561,4 +3561,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12.0"
-content-hash = "947b04e55040bf3c892007d20878d7a6255b9dca0f113cca2796e5c6cbd493c8"
+content-hash = "8fb6bbaf1378aa460cfa3bfda2e1f146c6c84489f7d132f082506af36345de8e"
