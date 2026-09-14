@@ -39,6 +39,7 @@ requires:
   cluster:
     interface: config-server
     limit: 1
+    optional: false
   ldap:
     interface: ldap
     limit: 1
@@ -51,6 +52,8 @@ requires:
 provides:
   mongos_proxy:
     interface: mongodb_client
+    optional: true
+
 containers:
   mongos:
     resource: mongodb-image
