@@ -12,7 +12,7 @@ resource "juju_application" "mongos_k8s" {
   endpoint_bindings = var.endpoint_bindings
   model_uuid        = var.model_uuid
   name              = var.app_name
-  trust              = true
+  trust             = true
   units             = var.units
 }
 
