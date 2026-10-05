@@ -20,7 +20,7 @@ pydantic = "*"  # cos_agent lib
 cryptography = "*"  # tls_certificates lib v3
 jsonschema = "*"  # tls_certificates lib v3
 cosl = "*"  # loki_push_api
-mongo-charms-single-kernel = "1.7.24"
+mongo-charms-single-kernel = "1.7.25"
 
 [tool.poetry.requires-plugins]
 poetry-plugin-export = ">=1.8"
@@ -51,7 +51,7 @@ pytest = "^8.1.1"
 pytest-mock = "^3.14.0"
 pytest-operator = "^0.34.0"
 # Linting tools configuration
-mongo-charms-single-kernel = "1.7.24"
+mongo-charms-single-kernel = "1.7.25"
 
 
 [tool.flake8]
