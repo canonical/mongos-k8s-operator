@@ -17,7 +17,7 @@ poetry-core = ">=2.0"
 lightkube = "*"
 setuptools = "^72.0.0"
 rpds-py = "0.18.0"
-mongo-charms-single-kernel = "1.6.34"
+mongo-charms-single-kernel = "1.6.35"
 
 [tool.poetry.requires-plugins]
 poetry-plugin-export = ">=1.8"
@@ -54,7 +54,7 @@ allure-pytest-collection-report = {git = "https://github.com/canonical/data-plat
 
 
 # Linting tools configuration
-mongo-charms-single-kernel = "1.6.34"
+mongo-charms-single-kernel = "1.6.35"
 [tool.flake8]
 max-line-length = 99
 max-doc-length = 99
