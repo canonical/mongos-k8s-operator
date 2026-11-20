@@ -44,7 +44,7 @@ parameterized = "^0.9.0"
 lightkube = "^0.15.3"
 kubernetes = "^30.1.0"
 juju = "~3.6.0"
-pytest = "^9.0.3"
+pytest = "<9.2"
 pytest-mock = "^3.14.0"
 pytest-operator = "^0.34.0"
 pytest-operator-cache = {git = "https://github.com/canonical/data-platform-workflows", tag = "v29.0.0", subdirectory = "python/pytest_plugins/pytest_operator_cache"}
